@@ -1,12 +1,16 @@
 import session from "express-session";
-import { Pool } from '@neondatabase/serverless';
+import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from 'ws';
 import connectPg from "connect-pg-simple";
 import * as schema from "@shared/schema";
 import { 
   eq, 
   and 
 } from "drizzle-orm";
+
+// Configurar o WebSocket para Neon Serverless
+neonConfig.webSocketConstructor = ws;
 
 // Verificar se a URL do banco de dados está definida
 if (!process.env.DATABASE_URL) {

@@ -211,6 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertPaymentSchema.parse({
         ...req.body,
         userId: req.user!.id,
+        organizationId: req.user!.organizationId,
       });
       const payment = await storage.createPayment(validatedData);
       res.status(201).json(payment);
@@ -308,6 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         clientId,
         userId: req.user!.id,
+        organizationId: req.user!.organizationId,
         isFromClient: false,
       });
       
@@ -339,6 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         clientId,
         userId: req.user!.id,
+        organizationId: req.user!.organizationId,
       });
       
       const call = await storage.createCall(validatedData);
