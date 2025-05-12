@@ -56,13 +56,20 @@ const asteriskConfigSchema = z.object({
 type AsteriskConfigFormValues = z.infer<typeof asteriskConfigSchema>;
 
 // Schema para o plano de discagem
+const dialPlanNextStepSchema = z.object({
+  stepId: z.string(),
+  condition: z.string().optional(),
+  label: z.string().optional()
+});
+
 const dialPlanStepSchema = z.object({
   id: z.string(),
   type: z.enum(["answer", "playback", "dial", "voicemail", "hangup", "wait", "gotoif", "set"]),
   parameters: z.record(z.string(), z.string()).optional(),
-  condition: z.string().optional(),
-  nextStep: z.string().optional(),
+  nextSteps: z.array(dialPlanNextStepSchema).optional(),
   label: z.string().optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
 });
 
 type DialPlanStep = z.infer<typeof dialPlanStepSchema>;
@@ -74,25 +81,47 @@ export default function AsteriskConfigPage() {
     {
       id: "start",
       type: "answer",
-      label: "Atender Chamada"
+      label: "Atender Chamada",
+      x: 100,
+      y: 50,
+      nextSteps: [{ stepId: "greeting", label: "Continuar" }]
     },
     {
       id: "greeting",
       type: "playback",
       parameters: { file: "bem-vindo" },
-      label: "Reproduzir Saudação"
+      label: "Reproduzir Saudação",
+      x: 100,
+      y: 150,
+      nextSteps: [{ stepId: "menu", label: "Continuar" }]
+    },
+    {
+      id: "menu",
+      type: "playback",
+      parameters: { file: "menu-options" },
+      label: "Menu de Opções",
+      x: 100,
+      y: 250,
+      nextSteps: [
+        { stepId: "dial", condition: "${OPCAO}=1", label: "Opção 1" },
+        { stepId: "voicemail", condition: "${OPCAO}=2", label: "Opção 2" }
+      ]
     },
     {
       id: "dial",
       type: "dial",
       parameters: { extension: "100", timeout: "20" },
-      label: "Discar para Ramal"
+      label: "Discar para Ramal",
+      x: 300,
+      y: 350
     },
     {
       id: "voicemail",
       type: "voicemail",
       parameters: { mailbox: "100" },
-      label: "Caixa Postal"
+      label: "Caixa Postal",
+      x: 100,
+      y: 350
     }
   ]);
   
@@ -188,11 +217,19 @@ export default function AsteriskConfigPage() {
 
   // Adicionar novo passo ao plano de discagem
   const addDialPlanStep = (type: DialPlanStep["type"]) => {
+    // Calcular posição para o novo passo
+    const lastStep = dialPlanSteps[dialPlanSteps.length - 1];
+    const x = lastStep?.x || 100;
+    const y = (lastStep?.y || 0) + 100;
+    
     const newStep: DialPlanStep = {
       id: `step-${Date.now()}`,
       type,
       label: getDefaultLabel(type),
       parameters: getDefaultParameters(type),
+      x,
+      y,
+      nextSteps: [],
     };
     
     setDialPlanSteps([...dialPlanSteps, newStep]);
@@ -201,7 +238,23 @@ export default function AsteriskConfigPage() {
 
   // Remover passo do plano de discagem
   const removeDialPlanStep = (id: string) => {
-    setDialPlanSteps(dialPlanSteps.filter(step => step.id !== id));
+    // Remover o passo
+    const updatedSteps = dialPlanSteps.filter(step => step.id !== id);
+    
+    // Remover referências a esse passo em nextSteps de outros passos
+    const cleanedSteps = updatedSteps.map(step => {
+      if (step.nextSteps && step.nextSteps.length > 0) {
+        return {
+          ...step,
+          nextSteps: step.nextSteps.filter(next => next.stepId !== id)
+        };
+      }
+      return step;
+    });
+    
+    setDialPlanSteps(cleanedSteps);
+    
+    // Desselecionar se o passo removido estava selecionado
     if (selectedStep?.id === id) {
       setSelectedStep(null);
     }
@@ -212,6 +265,40 @@ export default function AsteriskConfigPage() {
     setDialPlanSteps(dialPlanSteps.map(step => 
       step.id === updatedStep.id ? updatedStep : step
     ));
+  };
+
+  // Adicionar uma conexão entre dois passos
+  const addConnection = (fromStepId: string, toStepId: string, condition?: string, label?: string) => {
+    const fromStep = dialPlanSteps.find(step => step.id === fromStepId);
+    
+    if (!fromStep) return;
+    
+    const newConnection = {
+      stepId: toStepId,
+      condition,
+      label: label || (condition ? `Se ${condition}` : 'Continuar')
+    };
+    
+    const updatedFromStep = {
+      ...fromStep,
+      nextSteps: [...(fromStep.nextSteps || []), newConnection]
+    };
+    
+    updateDialPlanStep(updatedFromStep);
+  };
+  
+  // Remover uma conexão entre dois passos
+  const removeConnection = (fromStepId: string, toStepId: string) => {
+    const fromStep = dialPlanSteps.find(step => step.id === fromStepId);
+    
+    if (!fromStep || !fromStep.nextSteps) return;
+    
+    const updatedFromStep = {
+      ...fromStep,
+      nextSteps: fromStep.nextSteps.filter(next => next.stepId !== toStepId)
+    };
+    
+    updateDialPlanStep(updatedFromStep);
   };
 
   // Salvar plano de discagem
@@ -437,33 +524,6 @@ export default function AsteriskConfigPage() {
               <p className="text-sm text-neutral-500 mt-1">
                 Condição para avaliação (ex: ${"{COND}=1"})
               </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Destino</label>
-              <Select 
-                value={selectedStep.parameters?.destination || ""} 
-                onValueChange={(value) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      destination: value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione o destino" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dialPlanSteps.map((step) => (
-                    <SelectItem key={step.id} value={step.id}>
-                      {step.label || step.type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         );
