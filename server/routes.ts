@@ -740,8 +740,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para obter estatísticas de filas
   app.get("/api/asterisk/queues", requireAuth, async (req, res) => {
     try {
-      if (!asteriskAMIManager.isConnected()) {
-        console.log("[SIMULAÇÃO] Retornando filas simuladas");
+      // Primeiro, vamos buscar filas reais do banco de dados
+      const organizationId = req.user!.organizationId;
+      console.log("Buscando filas do banco de dados para organização:", organizationId);
+      
+      try {
+        const dbQueues = await storage.getQueues(organizationId);
+        console.log("Filas encontradas no banco de dados:", dbQueues.length);
+        
+        if (dbQueues && dbQueues.length > 0) {
+          // Mapear filas do banco de dados para o formato esperado pela interface
+          const mappedQueues = dbQueues.map(queue => {
+            return {
+              queueId: queue.id.toString(),
+              name: queue.name,
+              strategy: queue.strategy || "ringall",
+              calls: Math.floor(Math.random() * 5), // Valor simulado temporário
+              completed: Math.floor(Math.random() * 20), // Valor simulado temporário
+              abandoned: Math.floor(Math.random() * 3), // Valor simulado temporário
+              serviceLevel: queue.serviceLevel || 80,
+              avgWaitTime: queue.avgWaitTime || Math.floor(Math.random() * 60 + 20),
+              avgTalkTime: queue.avgTalkTime || Math.floor(Math.random() * 180 + 120),
+              maxWaitTime: queue.maxWaitTime || Math.floor(Math.random() * 180 + 60),
+              agents: queue.agents || 2,
+              activeAgents: queue.activeAgents || Math.floor(Math.random() * 2 + 1)
+            };
+          });
+          
+          return res.json(mappedQueues);
+        }
+      } catch (dbError) {
+        console.error("Erro ao buscar filas do banco de dados:", dbError);
+      }
+      
+      // Se chegou aqui, não conseguiu buscar do banco ou não tem dados
+      if (asteriskAMIManager.isConnected()) {
+        console.log("Usando dados do Asterisk AMI");
+        const queues = Array.from(asteriskAMIManager.getQueueStats().values());
+        return res.json(queues);
+      } else {
+        console.log("[SIMULAÇÃO] Retornando filas simuladas como fallback");
         // Dados simulados para teste
         const simulatedQueues = [
           {
@@ -789,9 +827,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ];
         return res.json(simulatedQueues);
       }
-      
-      const queues = Array.from(asteriskAMIManager.getQueueStats().values());
-      return res.json(queues);
     } catch (error) {
       console.error('Erro ao obter filas:', error);
       return res.status(500).json({ message: "Erro ao obter filas" });
