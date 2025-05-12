@@ -175,6 +175,7 @@ export default function AsteriskConfigPage() {
   // Estados para gerenciamento de arquivos de áudio
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [selectedAudioFile, setSelectedAudioFile] = useState<AudioFile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -339,6 +340,7 @@ export default function AsteriskConfigPage() {
   
   const loadAudioFiles = async () => {
     try {
+      setIsLoadingAudio(true);
       // Esta API precisará ser implementada no backend
       const response = await fetch('/api/asterisk/audio');
       
@@ -352,6 +354,8 @@ export default function AsteriskConfigPage() {
     } catch (error) {
       console.error("Erro ao carregar arquivos de áudio:", error);
       // Podemos optar por não mostrar um toast de erro aqui para não incomodar o usuário
+    } finally {
+      setIsLoadingAudio(false);
     }
   };
 
@@ -747,13 +751,17 @@ export default function AsteriskConfigPage() {
   };
 
   // Iniciar arrastamento de um passo
-  const handleDragStart = (stepId: string) => {
+  const handleDragStart = (e: React.MouseEvent, stepId: string) => {
+    e.stopPropagation();
     setDraggedStep(stepId);
   };
 
   // Mover um passo durante arrastamento
   const handleDrag = (e: React.MouseEvent, step: DialPlanStep) => {
     if (draggedStep !== step.id || !diagramRef.current) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
     
     const rect = diagramRef.current.getBoundingClientRect();
     const newX = e.clientX - rect.left;
@@ -762,6 +770,20 @@ export default function AsteriskConfigPage() {
     const updatedStep = { ...step, x: newX, y: newY };
     updateDialPlanStep(updatedStep);
   };
+  
+  // Manipulador para o evento mouseup global
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (draggedStep) {
+        setDraggedStep(null);
+      }
+    };
+    
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggedStep]);
 
   // Renderização do componente
   return (
@@ -851,7 +873,7 @@ export default function AsteriskConfigPage() {
                             variant="ghost" 
                             size="icon" 
                             className="h-7 w-7"
-                            onClick={() => handleDeleteAudio(file.id)}
+                            onClick={() => handleDeleteAudioFile(file.id)}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
@@ -997,7 +1019,8 @@ export default function AsteriskConfigPage() {
                 <div className="lg:col-span-3 p-4">
                   <div 
                     ref={diagramRef}
-                    className="dialplan-editor w-full h-full relative" 
+                    className="dialplan-editor w-full h-[500px] border rounded-md p-4 relative overflow-auto"
+                    style={{ background: "repeating-linear-gradient(0deg, #f5f5f5 0px, #f5f5f5 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, #f5f5f5 0px, #f5f5f5 1px, transparent 1px, transparent 20px)" }}
                   >
                     {/* Aqui será renderizado o diagrama do plano de discagem */}
                     {dialPlanSteps.map(step => (
@@ -1010,7 +1033,7 @@ export default function AsteriskConfigPage() {
                           zIndex: draggedStep === step.id ? 10 : 1
                         }}
                         onClick={() => setSelectedStep(step)}
-                        onMouseDown={() => handleDragStart(step.id)}
+                        onMouseDown={(e) => handleDragStart(e, step.id)}
                         onMouseMove={(e) => handleDrag(e, step)}
                         onMouseUp={() => setDraggedStep(null)}
                       >
