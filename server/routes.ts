@@ -610,9 +610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               connected: true
             });
           } else {
-            // Criar novas configurações
-            await storage.createAsteriskSettings({
-              organizationId: req.user!.organizationId,
+            // Criar novas configurações usando updateAsteriskSettings
+            await storage.updateAsteriskSettings(req.user!.organizationId, {
               host,
               port: parseInt(port),
               username,
@@ -722,6 +721,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Erro ao retomar agente:', error);
       return res.status(500).json({ message: "Erro ao retomar agente" });
+    }
+  });
+  
+  // Rota para testar conexão com o Asterisk
+  app.post("/api/asterisk/test", requireAuth, async (req, res) => {
+    try {
+      const { host, port, username, password } = req.body;
+      
+      // Validar os dados
+      if (!host || !port || !username || !password) {
+        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+      }
+      
+      // Criar um cliente AMI temporário apenas para teste
+      const AsteriskAmi = require('asterisk-ami-client');
+      const client = new AsteriskAmi();
+      
+      try {
+        // Tentativa de conexão com timeout de 5 segundos
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            client.disconnect();
+            reject(new Error("Timeout ao conectar ao Asterisk"));
+          }, 5000);
+          
+          client.connect(host, parseInt(port), username, password)
+            .then(() => {
+              clearTimeout(timeout);
+              client.disconnect();
+              resolve(true);
+            })
+            .catch((err: Error) => {
+              clearTimeout(timeout);
+              reject(err);
+            });
+        });
+        
+        return res.json({ 
+          success: true, 
+          message: "Teste de conexão com o Asterisk AMI bem-sucedido" 
+        });
+      } catch (error) {
+        const connError = error as Error;
+        return res.status(400).json({ 
+          success: false, 
+          message: `Falha ao testar conexão: ${connError.message || 'Erro desconhecido'}` 
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao testar conexão com Asterisk:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao testar conexão com o Asterisk" 
+      });
     }
   });
 
