@@ -958,42 +958,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Rota para obter chamadas ativas simuladas
+  // Rota para obter chamadas ativas
   app.get("/api/asterisk/active-calls", requireAuth, async (req, res) => {
     try {
-      if (!asteriskAMIManager.isConnected()) {
-        console.log("[SIMULAÇÃO] Retornando chamadas ativas simuladas");
-        
-        // Dados simulados de chamadas ativas
-        const simulatedActiveCalls = [];
-        
-        // Gerar entre 0 e 3 chamadas ativas simuladas aleatoriamente
-        const callCount = Math.floor(Math.random() * 4);
-        
-        for (let i = 0; i < callCount; i++) {
-          const callerId = `551198765${Math.floor(Math.random() * 10000)}`;
-          const agentId = `agent${Math.floor(Math.random() * 4) + 1}`;
-          const agentName = ["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Pereira"][parseInt(agentId.slice(-1)) - 1];
-          
-          simulatedActiveCalls.push({
-            uniqueId: `call-${Date.now()}-${i}`,
-            callerId,
-            callerIdName: `Cliente Ativo ${i + 1}`,
-            queue: `queue${Math.floor(Math.random() * 3) + 1}`,
-            agentId,
-            memberName: agentName,
-            timestamp: Date.now() - Math.floor(Math.random() * 300000),
-            duration: Math.floor(Math.random() * 600)
-          });
-        }
-        
-        return res.json(simulatedActiveCalls);
-      }
+      console.log("Retornando lista vazia de chamadas ativas");
       
-      // Dados reais, se disponíveis
-      // TODO: Implementar obtenção de chamadas ativas reais quando o Asterisk estiver conectado
-      const calls = [];
-      return res.json(calls);
+      // Retornar array vazio - nenhuma chamada ativa
+      return res.json([]);
     } catch (error) {
       console.error('Erro ao obter chamadas ativas:', error);
       return res.status(500).json({ message: "Erro ao obter chamadas ativas" });
