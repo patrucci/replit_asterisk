@@ -37,13 +37,13 @@ export function MainLayout({ children }: MainLayoutProps) {
   const title = pageTitle[location] || "ProConnect CRM";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-50">
+    <div className="flex h-screen bg-neutral-50">
       <Sidebar />
       
       {/* Main content */}
-      <main className="flex-1 relative lg:ml-64 transition-all duration-300">
+      <main className="flex-1 flex flex-col relative lg:ml-64 transition-all duration-300 overflow-hidden">
         {/* Top navbar */}
-        <header className="bg-white shadow-sm z-10 relative">
+        <header className="bg-white shadow-sm z-20 sticky top-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
@@ -70,19 +70,21 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </header>
         
-        {/* Page content */}
-        <div className="py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Welcome section - only on dashboard */}
-            {location === "/" && (
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-neutral-800">Olá, {firstName}!</h2>
-                <p className="text-sm text-neutral-500">Bem-vindo de volta ao seu escritório virtual.</p>
-              </div>
-            )}
-            
-            {/* Main content */}
-            {children}
+        {/* Page content - scrollable container */}
+        <div className="flex-1 overflow-auto">
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {/* Welcome section - only on dashboard */}
+              {location === "/" && (
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-neutral-800">Olá, {firstName}!</h2>
+                  <p className="text-sm text-neutral-500">Bem-vindo de volta ao seu escritório virtual.</p>
+                </div>
+              )}
+              
+              {/* Main content */}
+              {children}
+            </div>
           </div>
         </div>
       </main>

@@ -789,7 +789,7 @@ export default function AsteriskConfigPage() {
                 </Alert>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="queue-stats-container">
                     <Card>
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg">Suporte</CardTitle>
@@ -873,22 +873,20 @@ export default function AsteriskConfigPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
-                <div className="lg:col-span-3 border rounded-md p-4" style={{ minHeight: "500px" }}>
+                <div className="lg:col-span-3 p-4">
                   <div 
                     ref={diagramRef}
-                    className="w-full h-full relative" 
-                    style={{ minHeight: "500px" }}
+                    className="dialplan-editor w-full h-full relative" 
                   >
                     {/* Aqui será renderizado o diagrama do plano de discagem */}
                     {dialPlanSteps.map(step => (
                       <div
                         key={step.id}
-                        className="absolute bg-white border rounded-md shadow-sm p-3 cursor-move"
+                        className={`dialplan-step ${selectedStep?.id === step.id ? 'selected' : ''}`}
                         style={{ 
                           left: `${step.x}px`, 
                           top: `${step.y}px`,
-                          zIndex: draggedStep === step.id ? 10 : 1,
-                          width: "180px"
+                          zIndex: draggedStep === step.id ? 10 : 1
                         }}
                         onClick={() => setSelectedStep(step)}
                         onMouseDown={() => handleDragStart(step.id)}

@@ -75,7 +75,47 @@
     min-height: calc(100vh - 80px);
     width: 100%;
     overflow-y: auto;
-    padding-bottom: 1rem;
+    padding-bottom: 2rem;
+  }
+
+  /* Estilos para o editor de plano de discagem no Asterisk */
+  .dialplan-editor {
+    min-height: 500px;
+    overflow: auto;
+    position: relative;
+    border-radius: 0.5rem;
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Melhorar estilo do plano de discagem */
+  .dialplan-step {
+    position: absolute;
+    padding: 0.75rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: move;
+    width: 180px;
+    user-select: none;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+
+  .dialplan-step:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .dialplan-step.selected {
+    border: 2px solid hsl(var(--primary));
+    box-shadow: 0 0 0 2px rgba(var(--primary), 0.2);
+  }
+
+  /* Estilos para a visualização de filas no Asterisk */
+  .queue-stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
   }
 
   /* Adicionar scrollbars mais visíveis */
