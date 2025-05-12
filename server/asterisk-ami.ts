@@ -343,7 +343,7 @@ class AsteriskAMIManager extends EventEmitter {
   
   // Configurar WebSocket server para comunicação em tempo real
   private simulationTimer: NodeJS.Timeout | null = null;
-  private simulationMode = true; // Modo de simulação ativado por padrão
+  private simulationMode = false; // Desativar modo de simulação para usar dados reais do Asterisk
   
   setupWebsocket(server: Server, path: string = '/queue-events') {
     this.wss = new WebSocketServer({ server, path });
@@ -355,10 +355,7 @@ class AsteriskAMIManager extends EventEmitter {
       // Enviar estatísticas atuais para o novo cliente
       this.sendStatsToClient(ws);
       
-      // Se estiver em modo simulação, iniciar simulação de eventos
-      if (this.simulationMode && !this.simulationTimer) {
-        this.startSimulation();
-      }
+      // Modo de simulação está desativado, não iniciar simulação de eventos
       
       ws.on('message', (message: string) => {
         try {
@@ -492,11 +489,7 @@ class AsteriskAMIManager extends EventEmitter {
   private sendStatsToClient(ws: WebSocket) {
     console.log('Enviando estatísticas para cliente WebSocket');
     
-    // Se estamos em modo de simulação e não temos dados, gerá-los
-    if (this.simulationMode && this.queueStats.size === 0) {
-      console.log('Inicializando dados simulados para cliente');
-      this.initializeSimulatedData();
-    }
+    // Modo de simulação desativado, apenas estatísticas reais são enviadas
     
     const statsData = {
       type: 'stats',

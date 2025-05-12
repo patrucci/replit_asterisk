@@ -41,15 +41,30 @@ export default function AsteriskConnect() {
     refetchInterval: 10000, // Atualizar a cada 10 segundos
   });
   
-  // Preencher o formulário com configurações existentes
+  // Buscar configurações existentes do servidor
   useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/api/asterisk/config');
+        const data = await response.json();
+        
+        // Se houver configurações, preencher o formulário
+        if (data?.configured && data.host) {
+          setSettings({
+            host: data.host || "",
+            port: String(data.port || "5038"),
+            username: data.username || "",
+            password: "" // Nunca preencher a senha
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao buscar configurações:", error);
+      }
+    };
+
+    // Buscar configurações apenas se o status indicar que está configurado
     if (status?.configured) {
-      setSettings({
-        host: status.host || "",
-        port: String(status.port || "5038"),
-        username: status.username || "",
-        password: "" // Nunca preencher a senha
-      });
+      fetchConfig();
     }
   }, [status]);
   
@@ -78,7 +93,7 @@ export default function AsteriskConnect() {
   // Teste de conexão
   const testMutation = useMutation({
     mutationFn: async (data: AsteriskConnectionSettings) => {
-      const response = await apiRequest("POST", "/api/asterisk/test", data);
+      const response = await apiRequest("POST", "/api/asterisk/test-connection", data);
       return await response.json();
     },
     onSuccess: (data) => {
