@@ -159,11 +159,9 @@ class AsteriskAMIManager extends EventEmitter {
         this.setupEventListeners();
         
         // Conectar ao servidor Asterisk
-        await this.client.connect({
-          host: host,
+        await this.client.connect(username, password, {
+          host: host, 
           port: port,
-          username: username,
-          password: password,
           keepAlive: true,
           emitEventsByTypes: true,
           reconnect: true
@@ -1038,11 +1036,9 @@ class AsteriskAMIManager extends EventEmitter {
           console.log(`Tentando conectar ao AMI em ${host}:${port}...`);
           
           // Tentar conectar
-          testClient.connect({
+          testClient.connect(username, password, {
             host: host,
             port: port,
-            username: username,
-            password: password,
             keepAlive: false,
             emitEventsByTypes: true,
             reconnect: false
