@@ -731,53 +731,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const queues = Array.from(asteriskAMIManager.getQueueStats().values());
         return res.json(queues);
       } else {
-        console.log("[SIMULAÇÃO] Retornando filas simuladas como fallback");
-        // Dados simulados para teste
-        const simulatedQueues = [
-          {
-            queueId: "queue1",
-            name: "suporte",
-            strategy: "leastrecent",
-            calls: Math.floor(Math.random() * 10),
-            completed: Math.floor(Math.random() * 50),
-            abandoned: Math.floor(Math.random() * 10),
-            serviceLevel: 80,
-            avgWaitTime: Math.floor(Math.random() * 120 + 30),
-            avgTalkTime: Math.floor(Math.random() * 300 + 120),
-            maxWaitTime: Math.floor(Math.random() * 300 + 60),
-            agents: 3,
-            activeAgents: Math.floor(Math.random() * 3 + 1)
-          },
-          {
-            queueId: "queue2",
-            name: "vendas",
-            strategy: "ringall",
-            calls: Math.floor(Math.random() * 15),
-            completed: Math.floor(Math.random() * 80),
-            abandoned: Math.floor(Math.random() * 15),
-            serviceLevel: 75,
-            avgWaitTime: Math.floor(Math.random() * 150 + 45),
-            avgTalkTime: Math.floor(Math.random() * 400 + 180),
-            maxWaitTime: Math.floor(Math.random() * 400 + 120),
-            agents: 5,
-            activeAgents: Math.floor(Math.random() * 4 + 2)
-          },
-          {
-            queueId: "queue3",
-            name: "financeiro",
-            strategy: "random",
-            calls: Math.floor(Math.random() * 5),
-            completed: Math.floor(Math.random() * 30),
-            abandoned: Math.floor(Math.random() * 5),
-            serviceLevel: 90,
-            avgWaitTime: Math.floor(Math.random() * 90 + 20),
-            avgTalkTime: Math.floor(Math.random() * 250 + 100),
-            maxWaitTime: Math.floor(Math.random() * 200 + 40),
-            agents: 2,
-            activeAgents: Math.floor(Math.random() * 2 + 1)
-          }
-        ];
-        return res.json(simulatedQueues);
+        console.log("Retornando lista vazia de filas quando não há conexão com Asterisk");
+        // Retornar um array vazio se não houver conexão com Asterisk
+        return res.json([]);
       }
     } catch (error) {
       console.error('Erro ao obter filas:', error);
@@ -803,14 +759,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               name: agent.name,
               extension: agent.extension,
               status: agent.status,
-              lastCall: new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString(),
-              callsTaken: Math.floor(Math.random() * 10), // Simulado temporariamente
-              callsAbandoned: Math.floor(Math.random() * 2), // Simulado temporariamente
-              avgTalkTime: Math.floor(Math.random() * 180 + 60), // Simulado temporariamente
-              totalTalkTime: Math.floor(Math.random() * 1800 + 600), // Simulado temporariamente
-              pauseTime: agent.status === 'paused' ? Math.floor(Math.random() * 600) : 0,
-              loginTime: new Date(Date.now() - Math.floor(Math.random() * 28800000)).toISOString(),
-              queues: ["queue1"] // Simplificado por enquanto
+              lastCall: null, // Sem chamada recente real
+              callsTaken: 0, // Sem chamadas atendidas simuladas
+              callsAbandoned: 0, // Sem chamadas abandonadas simuladas
+              avgTalkTime: 0, // Sem tempo médio de conversa simulado
+              totalTalkTime: 0, // Sem tempo total de conversa simulado
+              pauseTime: agent.status === 'paused' ? 0 : 0, // Sem tempo de pausa simulado
+              loginTime: new Date().toISOString(), // Hora atual como login time
+              queues: [] // Lista vazia de filas associadas
             };
           });
           
@@ -821,43 +777,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Se chegou aqui, não conseguiu buscar do banco ou não tem dados
-      if (asteriskAMIManager.isConnected()) {
-        console.log("Usando dados do Asterisk AMI para agentes");
-        const agents = Array.from(asteriskAMIManager.getAgentStats().values());
-        return res.json(agents);
-      } else {
-        console.log("[SIMULAÇÃO] Retornando agentes simulados como fallback");
-        // Dados simulados para teste
-        const simulatedAgents = [
-          {
-            agentId: "agent1",
-            name: "João Silva",
-            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
-            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-            callsTaken: Math.floor(Math.random() * 20),
-            callsAbandoned: Math.floor(Math.random() * 5),
-            avgTalkTime: Math.floor(120 + Math.random() * 180),
-            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
-            pauseTime: Math.floor(Math.random() * 1200),
-            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
-            queues: ["queue1", "queue2"]
-          },
-          {
-            agentId: "agent2",
-            name: "Maria Santos",
-            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
-            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-            callsTaken: Math.floor(Math.random() * 20),
-            callsAbandoned: Math.floor(Math.random() * 5),
-            avgTalkTime: Math.floor(120 + Math.random() * 180),
-            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
-            pauseTime: Math.floor(Math.random() * 1200),
-            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
-            queues: ["queue1", "queue3"]
-          }
-        ];
-        return res.json(simulatedAgents);
-      }
+      // Mesmo se o Asterisk estiver conectado, não queremos obter agentes simulados
+      console.log("Apenas retornando os agentes do banco de dados");
+      
+      // Já estamos buscando os agentes do banco de dados e retornando-os acima,
+      // então se chegou aqui, significa que não temos agentes do banco de dados
+      // ou houve algum erro ao recuperá-los. Nesse caso, retornamos um array vazio.
+      return res.json([]);
     } catch (error) {
       console.error('Erro ao obter agentes:', error);
       return res.status(500).json({ message: "Erro ao obter agentes" });
