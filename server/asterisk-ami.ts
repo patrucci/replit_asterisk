@@ -342,6 +342,9 @@ class AsteriskAMIManager extends EventEmitter {
   }
   
   // Configurar WebSocket server para comunicação em tempo real
+  private simulationTimer: NodeJS.Timeout | null = null;
+  private simulationMode = true; // Modo de simulação ativado por padrão
+  
   setupWebsocket(server: Server, path: string = '/queue-events') {
     this.wss = new WebSocketServer({ server, path });
     
@@ -352,12 +355,19 @@ class AsteriskAMIManager extends EventEmitter {
       // Enviar estatísticas atuais para o novo cliente
       this.sendStatsToClient(ws);
       
+      // Se estiver em modo simulação, iniciar simulação de eventos
+      if (this.simulationMode && !this.simulationTimer) {
+        this.startSimulation();
+      }
+      
       ws.on('message', (message: string) => {
         try {
           const data = JSON.parse(message);
+          console.log('Mensagem WebSocket recebida:', data);
           
           // Processar comandos do cliente
           if (data.command === 'getStats') {
+            console.log('Enviando estatísticas para o cliente');
             this.sendStatsToClient(ws);
           } else if (data.command === 'getAgentDetails' && data.agentId) {
             this.sendAgentDetailsToClient(ws, data.agentId);
@@ -376,6 +386,12 @@ class AsteriskAMIManager extends EventEmitter {
       ws.on('close', () => {
         console.log('Conexão WebSocket fechada');
         this.clients.delete(ws);
+        
+        // Se não houver mais clientes conectados, parar simulação
+        if (this.simulationMode && this.clients.size === 0 && this.simulationTimer) {
+          clearInterval(this.simulationTimer);
+          this.simulationTimer = null;
+        }
       });
     });
   }
@@ -525,6 +541,364 @@ class AsteriskAMIManager extends EventEmitter {
         client.send(messageString);
       }
     });
+  }
+  
+  // Iniciar simulação de eventos de fila
+  private startSimulation() {
+    console.log('Iniciando simulação de eventos de fila');
+    
+    // Inicializar alguns dados simulados se não existirem ainda
+    if (this.queueStats.size === 0) {
+      this.initializeSimulatedData();
+    }
+    
+    // Transmitir estatísticas iniciais
+    this.broadcastStats();
+    
+    // Configurar timer para gerar eventos aleatórios
+    this.simulationTimer = setInterval(() => {
+      this.generateSimulatedEvent();
+    }, 5000); // Gerar evento a cada 5 segundos
+  }
+  
+  // Gerar dados iniciais simulados
+  private initializeSimulatedData() {
+    // Simular filas
+    const queues = ['suporte', 'vendas', 'financeiro'];
+    
+    queues.forEach((queueName, index) => {
+      const queueId = `queue${index + 1}`;
+      this.queueStats.set(queueId, {
+        queueId,
+        name: queueName,
+        strategy: 'leastrecent',
+        calls: 0,
+        completed: 0,
+        abandoned: 0,
+        serviceLevel: 80,
+        avgWaitTime: 45,
+        avgTalkTime: 180,
+        maxWaitTime: 120,
+        agents: 3,
+        activeAgents: 2
+      });
+    });
+    
+    // Simular agentes
+    const agents = [
+      { id: 'agent1', name: 'João Silva', status: 'available' },
+      { id: 'agent2', name: 'Maria Santos', status: 'busy' },
+      { id: 'agent3', name: 'Carlos Oliveira', status: 'available' },
+      { id: 'agent4', name: 'Ana Pereira', status: 'paused' },
+      { id: 'agent5', name: 'Rafael Costa', status: 'unavailable' }
+    ];
+    
+    agents.forEach(agent => {
+      this.agentStats.set(agent.id, {
+        agentId: agent.id,
+        name: agent.name,
+        status: agent.status,
+        lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+        callsTaken: Math.floor(Math.random() * 20),
+        callsAbandoned: Math.floor(Math.random() * 5),
+        avgTalkTime: Math.floor(120 + Math.random() * 180),
+        totalTalkTime: Math.floor(1800 + Math.random() * 3600),
+        pauseTime: Math.floor(Math.random() * 1200),
+        loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
+        queues: queues.filter(() => Math.random() > 0.3).map((q, i) => `queue${i + 1}`)
+      });
+    });
+  }
+  
+  // Gerar evento simulado aleatório
+  private generateSimulatedEvent() {
+    const eventTypes = [
+      'QueueCallerJoin',
+      'QueueCallerLeave',
+      'QueueCallerAbandon',
+      'AgentConnect',
+      'AgentComplete',
+      'AgentStatusChange'
+    ];
+    
+    const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+    const queues = Array.from(this.queueStats.keys());
+    const agents = Array.from(this.agentStats.keys());
+    
+    // Escolher uma fila e um agente aleatório
+    const queueId = queues[Math.floor(Math.random() * queues.length)];
+    const agentId = agents[Math.floor(Math.random() * agents.length)];
+    
+    // Gerar ID único para a chamada
+    const callId = `call-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    switch (eventType) {
+      case 'QueueCallerJoin':
+        // Simular novo caller na fila
+        this.simulateQueueCallerJoin(queueId, callId);
+        break;
+        
+      case 'QueueCallerLeave':
+        // Simular caller saindo da fila
+        this.simulateQueueCallerLeave(queueId);
+        break;
+        
+      case 'QueueCallerAbandon':
+        // Simular caller abandonando a fila
+        this.simulateQueueCallerAbandon(queueId);
+        break;
+        
+      case 'AgentConnect':
+        // Simular agente atendendo chamada
+        this.simulateAgentConnect(queueId, agentId);
+        break;
+        
+      case 'AgentComplete':
+        // Simular agente completando chamada
+        this.simulateAgentComplete(agentId);
+        break;
+        
+      case 'AgentStatusChange':
+        // Simular mudança de status de agente
+        this.simulateAgentStatusChange(agentId);
+        break;
+    }
+    
+    // Atualizar estatísticas para todos os clientes
+    this.broadcastStats();
+  }
+  
+  // Simulações de eventos específicos
+  private simulateQueueCallerJoin(queueId: string, callId: string) {
+    const callerNames = ['Cliente A', 'Cliente B', 'Cliente C', 'Cliente D', 'Cliente E'];
+    const callerPhones = ['5511987654321', '5511976543210', '5511965432109', '5511954321098', '5511943210987'];
+    
+    const callerIndex = Math.floor(Math.random() * callerNames.length);
+    const callerName = callerNames[callerIndex];
+    const callerPhone = callerPhones[callerIndex];
+    
+    const queueStat = this.queueStats.get(queueId);
+    if (queueStat) {
+      queueStat.calls++;
+      this.queueStats.set(queueId, queueStat);
+    }
+    
+    const queueEvent: CallEvent = {
+      event: 'QueueCallerJoin',
+      callerId: callerPhone,
+      callerIdName: callerName,
+      queue: queueId,
+      position: 1,
+      channel: `SIP/${callerPhone}`,
+      uniqueId: callId,
+      timestamp: Date.now(),
+      waitTime: 0
+    };
+    
+    // Adicionar à lista de chamadas na fila
+    const queueCalls = this.queueCalls.get(queueId) || [];
+    queueCalls.push(queueEvent);
+    this.queueCalls.set(queueId, queueCalls);
+    
+    // Enviar evento
+    this.broadcastToClients({
+      type: 'event',
+      data: {
+        eventType: 'QueueCallerJoin',
+        call: queueEvent
+      }
+    });
+    
+    console.log('Simulado: Nova chamada na fila', queueId);
+  }
+  
+  private simulateQueueCallerLeave(queueId: string) {
+    const queueCalls = this.queueCalls.get(queueId) || [];
+    if (queueCalls.length === 0) return;
+    
+    // Remover um chamador aleatório da fila
+    const callIndex = Math.floor(Math.random() * queueCalls.length);
+    const call = queueCalls[callIndex];
+    
+    queueCalls.splice(callIndex, 1);
+    this.queueCalls.set(queueId, queueCalls);
+    
+    const queueStat = this.queueStats.get(queueId);
+    if (queueStat) {
+      queueStat.completed++;
+      this.queueStats.set(queueId, queueStat);
+    }
+    
+    // Enviar evento
+    this.broadcastToClients({
+      type: 'event',
+      data: {
+        eventType: 'QueueCallerLeave',
+        call: {
+          ...call,
+          event: 'QueueCallerLeave'
+        }
+      }
+    });
+    
+    console.log('Simulado: Chamada saiu da fila', queueId);
+  }
+  
+  private simulateQueueCallerAbandon(queueId: string) {
+    const queueCalls = this.queueCalls.get(queueId) || [];
+    if (queueCalls.length === 0) return;
+    
+    // Remover um chamador aleatório da fila
+    const callIndex = Math.floor(Math.random() * queueCalls.length);
+    const call = queueCalls[callIndex];
+    
+    queueCalls.splice(callIndex, 1);
+    this.queueCalls.set(queueId, queueCalls);
+    
+    const queueStat = this.queueStats.get(queueId);
+    if (queueStat) {
+      queueStat.abandoned++;
+      this.queueStats.set(queueId, queueStat);
+    }
+    
+    // Enviar evento
+    this.broadcastToClients({
+      type: 'event',
+      data: {
+        eventType: 'QueueCallerAbandon',
+        call: {
+          ...call,
+          event: 'QueueCallerAbandon'
+        }
+      }
+    });
+    
+    console.log('Simulado: Chamada abandonou a fila', queueId);
+  }
+  
+  private simulateAgentConnect(queueId: string, agentId: string) {
+    const queueCalls = this.queueCalls.get(queueId) || [];
+    if (queueCalls.length === 0) return;
+    
+    // Pegar o primeiro chamador da fila
+    const call = queueCalls[0];
+    queueCalls.shift();
+    this.queueCalls.set(queueId, queueCalls);
+    
+    // Atualizar estatísticas do agente
+    const agentStat = this.agentStats.get(agentId);
+    if (agentStat) {
+      agentStat.status = 'busy';
+      agentStat.lastCall = new Date().toISOString();
+      agentStat.callsTaken++;
+      this.agentStats.set(agentId, agentStat);
+    }
+    
+    // Atualizar chamada ativa
+    const activeCall: CallEvent = {
+      ...call,
+      event: 'AgentConnect',
+      agentId,
+      memberName: agentStat?.name || 'Unknown Agent'
+    };
+    
+    this.activeCalls.set(call.uniqueId || '', activeCall);
+    
+    // Enviar evento
+    this.broadcastToClients({
+      type: 'event',
+      data: {
+        eventType: 'AgentConnect',
+        call: activeCall
+      }
+    });
+    
+    console.log('Simulado: Agente conectado à chamada', agentId, queueId);
+  }
+  
+  private simulateAgentComplete(agentId: string) {
+    // Encontrar chamadas ativas deste agente
+    let callToComplete: [string, CallEvent] | undefined;
+    
+    for (const [callId, call] of this.activeCalls.entries()) {
+      if (call.agentId === agentId) {
+        callToComplete = [callId, call];
+        break;
+      }
+    }
+    
+    if (!callToComplete) return;
+    
+    const [callId, call] = callToComplete;
+    
+    // Remover chamada ativa
+    this.activeCalls.delete(callId);
+    
+    // Atualizar estatísticas do agente
+    const agentStat = this.agentStats.get(agentId);
+    if (agentStat) {
+      agentStat.status = 'available';
+      agentStat.avgTalkTime = Math.floor((agentStat.avgTalkTime + Math.floor(Math.random() * 120 + 60)) / 2);
+      agentStat.totalTalkTime += Math.floor(Math.random() * 120 + 60);
+      this.agentStats.set(agentId, agentStat);
+    }
+    
+    // Adicionar ao histórico de chamadas
+    this.callHistory.push({
+      ...call,
+      event: 'AgentComplete',
+      duration: Math.floor(Math.random() * 300 + 60) // 1-6 minutos
+    });
+    
+    // Enviar evento
+    this.broadcastToClients({
+      type: 'event',
+      data: {
+        eventType: 'AgentComplete',
+        call: {
+          ...call,
+          event: 'AgentComplete',
+          duration: Math.floor(Math.random() * 300 + 60)
+        }
+      }
+    });
+    
+    console.log('Simulado: Agente completou chamada', agentId);
+  }
+  
+  private simulateAgentStatusChange(agentId: string) {
+    const statuses = ['available', 'paused', 'unavailable'];
+    
+    const agentStat = this.agentStats.get(agentId);
+    if (!agentStat) return;
+    
+    // Não mudar status se agente estiver em chamada
+    if (agentStat.status === 'busy') return;
+    
+    // Escolher um novo status aleatório diferente do atual
+    let newStatus = agentStat.status;
+    while (newStatus === agentStat.status) {
+      newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    }
+    
+    // Atualizar status do agente
+    agentStat.status = newStatus;
+    if (newStatus === 'paused') {
+      agentStat.pauseTime += Math.floor(Math.random() * 300);
+    }
+    
+    this.agentStats.set(agentId, agentStat);
+    
+    // Enviar evento
+    this.broadcastToClients({
+      type: 'event',
+      data: {
+        eventType: 'AgentStatusChange',
+        agent: agentStat
+      }
+    });
+    
+    console.log('Simulado: Agente mudou status', agentId, newStatus);
   }
   
   // Handlers para eventos de fila
