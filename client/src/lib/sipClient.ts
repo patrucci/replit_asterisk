@@ -329,8 +329,19 @@ export class SipClient extends EventEmitter implements ISipClient {
             }
           };
           
+          // Formatação do número
+          let target = number;
+          
+          // Adiciona o prefixo sip: e sufixo @domínio apenas se o número não já tiver formato SIP
+          if (!target.startsWith("sip:")) {
+            // Se é apenas um número/ramal, adicione o formato SIP completo
+            target = `sip:${number}@${this.config?.domain}`;
+          }
+          
+          console.log(`Discando para: ${target}`);
+          
           // Iniciar a chamada
-          this.session = this.ua!.call(`sip:${number}@${this.config?.domain}`, options);
+          this.session = this.ua!.call(target, options);
           this.setupSessionEvents();
           this.updateCallState(CallState.CONNECTING);
         })
