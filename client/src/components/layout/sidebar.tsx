@@ -121,19 +121,23 @@ export function Sidebar({ className }: SidebarProps) {
             <ul>
               {navItems.map((item) => (
                 <li key={item.path}>
-                  <Link href={item.path}>
-                    <a
-                      className={cn(
-                        "flex items-center px-4 py-3 text-sm font-medium rounded-r-lg transition-colors",
-                        location === item.path
-                          ? "bg-primary/10 text-primary border-l-4 border-primary"
-                          : "text-neutral-700 hover:bg-neutral-100"
-                      )}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </a>
-                  </Link>
+                  <Button
+                    variant="ghost"
+                    asChild
+                    className={cn(
+                      "w-full justify-start px-4 py-3 text-sm font-medium rounded-r-lg transition-colors",
+                      location === item.path
+                        ? "bg-primary/10 text-primary border-l-4 border-primary"
+                        : "text-neutral-700 hover:bg-neutral-100"
+                    )}
+                  >
+                    <Link href={item.path}>
+                      <div className="flex items-center">
+                        {item.icon}
+                        {item.label}
+                      </div>
+                    </Link>
+                  </Button>
                 </li>
               ))}
             </ul>

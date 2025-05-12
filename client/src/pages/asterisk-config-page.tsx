@@ -111,12 +111,12 @@ export default function AsteriskConfigPage() {
   const form = useForm<AsteriskConfigFormValues>({
     resolver: zodResolver(asteriskConfigSchema),
     defaultValues: {
-      serverAddress: configData?.serverAddress || "",
-      port: configData?.port || "5060",
-      username: configData?.username || "",
-      password: configData?.password || "",
-      context: configData?.context || "default",
-      enabled: configData?.enabled || false,
+      serverAddress: "",
+      port: "5060",
+      username: "",
+      password: "",
+      context: "default",
+      enabled: false,
     },
   });
 
@@ -261,264 +261,211 @@ export default function AsteriskConfigPage() {
     switch (selectedStep.type) {
       case "playback":
         return (
-          <FormField
-            name="file"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Arquivo de Áudio</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Nome do arquivo" 
-                    value={selectedStep.parameters?.file || ""} 
-                    onChange={(e) => {
-                      const updated = { 
-                        ...selectedStep, 
-                        parameters: { 
-                          ...selectedStep.parameters, 
-                          file: e.target.value 
-                        } 
-                      };
-                      updateDialPlanStep(updated);
-                    }} 
-                  />
-                </FormControl>
-                <FormDescription>
-                  Nome do arquivo de áudio a ser reproduzido
-                </FormDescription>
-              </FormItem>
-            )}
-          />
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Arquivo de Áudio</label>
+              <Input 
+                placeholder="Nome do arquivo" 
+                value={selectedStep.parameters?.file || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      file: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+              <p className="text-sm text-neutral-500 mt-1">
+                Nome do arquivo de áudio a ser reproduzido
+              </p>
+            </div>
+          </div>
         );
       
       case "dial":
         return (
-          <>
-            <FormField
-              name="extension"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ramal</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Número do ramal" 
-                      value={selectedStep.parameters?.extension || ""} 
-                      onChange={(e) => {
-                        const updated = { 
-                          ...selectedStep, 
-                          parameters: { 
-                            ...selectedStep.parameters, 
-                            extension: e.target.value 
-                          } 
-                        };
-                        updateDialPlanStep(updated);
-                      }} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              name="timeout"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tempo limite (segundos)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="20" 
-                      value={selectedStep.parameters?.timeout || ""} 
-                      onChange={(e) => {
-                        const updated = { 
-                          ...selectedStep, 
-                          parameters: { 
-                            ...selectedStep.parameters, 
-                            timeout: e.target.value 
-                          } 
-                        };
-                        updateDialPlanStep(updated);
-                      }} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Ramal</label>
+              <Input 
+                placeholder="Número do ramal" 
+                value={selectedStep.parameters?.extension || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      extension: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Tempo limite (segundos)</label>
+              <Input 
+                placeholder="20" 
+                value={selectedStep.parameters?.timeout || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      timeout: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+            </div>
+          </div>
         );
       
       case "wait":
         return (
-          <FormField
-            name="seconds"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Segundos</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="5" 
-                    value={selectedStep.parameters?.seconds || ""} 
-                    onChange={(e) => {
-                      const updated = { 
-                        ...selectedStep, 
-                        parameters: { 
-                          ...selectedStep.parameters, 
-                          seconds: e.target.value 
-                        } 
-                      };
-                      updateDialPlanStep(updated);
-                    }} 
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          <div>
+            <label className="text-sm font-medium">Segundos</label>
+            <Input 
+              placeholder="5" 
+              value={selectedStep.parameters?.seconds || ""} 
+              onChange={(e) => {
+                const updated = { 
+                  ...selectedStep, 
+                  parameters: { 
+                    ...selectedStep.parameters, 
+                    seconds: e.target.value 
+                  } 
+                };
+                updateDialPlanStep(updated);
+              }}
+              className="mt-1"
+            />
+          </div>
         );
         
       case "voicemail":
         return (
-          <FormField
-            name="mailbox"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Caixa Postal</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Número da caixa postal" 
-                    value={selectedStep.parameters?.mailbox || ""} 
-                    onChange={(e) => {
-                      const updated = { 
-                        ...selectedStep, 
-                        parameters: { 
-                          ...selectedStep.parameters, 
-                          mailbox: e.target.value 
-                        } 
-                      };
-                      updateDialPlanStep(updated);
-                    }} 
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          <div>
+            <label className="text-sm font-medium">Caixa Postal</label>
+            <Input 
+              placeholder="Número da caixa postal" 
+              value={selectedStep.parameters?.mailbox || ""} 
+              onChange={(e) => {
+                const updated = { 
+                  ...selectedStep, 
+                  parameters: { 
+                    ...selectedStep.parameters, 
+                    mailbox: e.target.value 
+                  } 
+                };
+                updateDialPlanStep(updated);
+              }}
+              className="mt-1"
+            />
+          </div>
         );
       
       case "set":
         return (
-          <>
-            <FormField
-              name="variable"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Variável</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Nome da variável" 
-                      value={selectedStep.parameters?.variable || ""} 
-                      onChange={(e) => {
-                        const updated = { 
-                          ...selectedStep, 
-                          parameters: { 
-                            ...selectedStep.parameters, 
-                            variable: e.target.value 
-                          } 
-                        };
-                        updateDialPlanStep(updated);
-                      }} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              name="value"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Valor" 
-                      value={selectedStep.parameters?.value || ""} 
-                      onChange={(e) => {
-                        const updated = { 
-                          ...selectedStep, 
-                          parameters: { 
-                            ...selectedStep.parameters, 
-                            value: e.target.value 
-                          } 
-                        };
-                        updateDialPlanStep(updated);
-                      }} 
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Variável</label>
+              <Input 
+                placeholder="Nome da variável" 
+                value={selectedStep.parameters?.variable || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      variable: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Valor</label>
+              <Input 
+                placeholder="Valor" 
+                value={selectedStep.parameters?.value || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      value: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+            </div>
+          </div>
         );
       
       case "gotoif":
         return (
-          <>
-            <FormField
-              name="expression"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Expressão</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="${COND}=1" 
-                      value={selectedStep.parameters?.expression || ""} 
-                      onChange={(e) => {
-                        const updated = { 
-                          ...selectedStep, 
-                          parameters: { 
-                            ...selectedStep.parameters, 
-                            expression: e.target.value 
-                          } 
-                        };
-                        updateDialPlanStep(updated);
-                      }} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Condição para avaliação (ex: ${"{COND}=1"})
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-            <FormField
-              name="destination"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Destino</FormLabel>
-                  <FormControl>
-                    <Select 
-                      value={selectedStep.parameters?.destination || ""} 
-                      onValueChange={(value) => {
-                        const updated = { 
-                          ...selectedStep, 
-                          parameters: { 
-                            ...selectedStep.parameters, 
-                            destination: value 
-                          } 
-                        };
-                        updateDialPlanStep(updated);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o destino" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dialPlanSteps.map((step) => (
-                          <SelectItem key={step.id} value={step.id}>
-                            {step.label || step.type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Expressão</label>
+              <Input 
+                placeholder="${COND}=1" 
+                value={selectedStep.parameters?.expression || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      expression: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+              <p className="text-sm text-neutral-500 mt-1">
+                Condição para avaliação (ex: ${"{COND}=1"})
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Destino</label>
+              <Select 
+                value={selectedStep.parameters?.destination || ""} 
+                onValueChange={(value) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      destination: value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecione o destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dialPlanSteps.map((step) => (
+                    <SelectItem key={step.id} value={step.id}>
+                      {step.label || step.type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         );
       
       default:
@@ -785,24 +732,18 @@ export default function AsteriskConfigPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <FormField
-                      name="label"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Rótulo</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Rótulo do passo" 
-                              value={selectedStep.label || ""} 
-                              onChange={(e) => {
-                                const updated = { ...selectedStep, label: e.target.value };
-                                updateDialPlanStep(updated);
-                              }} 
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                    <div>
+                      <label className="text-sm font-medium">Rótulo</label>
+                      <Input 
+                        placeholder="Rótulo do passo" 
+                        value={selectedStep.label || ""} 
+                        onChange={(e) => {
+                          const updated = { ...selectedStep, label: e.target.value };
+                          updateDialPlanStep(updated);
+                        }} 
+                        className="mt-1"
+                      />
+                    </div>
                     
                     <Separator />
                     
