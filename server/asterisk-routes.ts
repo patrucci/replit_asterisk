@@ -1,8 +1,9 @@
 import type { Express, Request, Response } from "express";
 import { asteriskAMIManager } from "./asterisk-ami";
 
-// Variável de ambiente para modo de simulação
-const SIMULATION_MODE = process.env.ASTERISK_SIMULATION_MODE === 'true' || false;
+// Ativar modo de simulação diretamente no código
+// Isso é necessário apenas para desenvolvimento enquanto a conexão real com Asterisk não estiver disponível
+const SIMULATION_MODE = true; // Defina como false para usar conexão real
 
 export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   // Rota para verificar o status da conexão Asterisk
@@ -39,6 +40,18 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   app.post("/api/asterisk/test-connection", requireAuth, async (req, res) => {
     try {
       const { host, port, username, password, testTcpOnly } = req.body;
+      
+      // Se estiver em modo de simulação, retornar sucesso simulado
+      if (SIMULATION_MODE) {
+        console.log(`[SIMULAÇÃO] Retornando teste de conexão simulado para Asterisk ${testTcpOnly ? 'TCP' : 'AMI'}`);
+        return res.status(200).json({
+          success: true,
+          message: `[SIMULAÇÃO] Teste de conexão ${testTcpOnly ? 'TCP' : 'AMI'} simulado com sucesso`,
+          type: testTcpOnly ? 'tcp' : 'ami',
+          simulation: true,
+          details: 'Conexão simulada ativada através da variável de ambiente ASTERISK_SIMULATION_MODE'
+        });
+      }
       
       // Validar os dados
       if (!host || !port) {

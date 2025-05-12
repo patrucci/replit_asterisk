@@ -5,9 +5,6 @@ import { Server } from 'http';
 import * as net from 'net';
 import * as util from 'util';
 
-// Configuração do modo de simulação
-const SIMULATION_MODE = process.env.ASTERISK_SIMULATION_MODE === 'true' || false;
-
 // Interface para eventos de chamada
 interface CallEvent {
   event: string;
