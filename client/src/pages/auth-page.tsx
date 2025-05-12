@@ -19,13 +19,16 @@ const loginSchema = z.object({
 });
 
 // Registration schema
-const registerSchema = insertUserSchema.extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const registerSchema = insertUserSchema
+  .omit({ organizationId: true, isActive: true, lastLogin: true }) // Omitimos campos automáticos
+  .extend({
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -60,9 +63,25 @@ export default function AuthPage() {
     loginMutation.mutate(data);
   };
 
-  const onRegisterSubmit = (data: RegisterFormValues) => {
-    const { confirmPassword, ...userData } = data;
-    registerMutation.mutate(userData);
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
+    try {
+      console.log("Form data:", data);
+      const { confirmPassword, ...userData } = data;
+      
+      // Inclui campo obrigatório organizationId se ausente
+      if (!('organizationId' in userData)) {
+        userData.organizationId = 1; // Valor padrão para organização demo
+      }
+      
+      registerMutation.mutate(userData);
+    } catch (error) {
+      console.error("Erro ao registrar:", error);
+      toast({
+        title: "Erro no registro",
+        description: error instanceof Error ? error.message : "Não foi possível criar sua conta",
+        variant: "destructive",
+      });
+    }
   };
 
   // Redirect if already logged in

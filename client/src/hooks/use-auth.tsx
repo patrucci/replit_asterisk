@@ -54,7 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
+      console.log("Submitting registration:", credentials);
+      // Inclui a organizationId padrão (1) para a organização demo
+      const data = { ...credentials, organizationId: 1 };
+      const res = await apiRequest("POST", "/api/register", data);
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
