@@ -78,65 +78,104 @@ export class SipClient extends EventEmitter implements ISipClient {
   // Método para fazer o registro no servidor SIP
   async register(): Promise<void> {
     if (!this.config) {
+      console.error("SIP config is not set.");
       throw new Error("SIP config is not set. Call setConfig first.");
     }
     
-    // Configuração do JsSIP
-    const socket = new JsSIP.WebSocketInterface(this.config.wsUri);
+    console.log("Iniciando registro SIP...");
+    console.log(`Domínio: ${this.config.domain}`);
+    console.log(`WebSocket URI: ${this.config.wsUri}`);
+    console.log(`Usuário: ${this.config.authorizationUser}`);
+    console.log(`Tempo de registro: ${this.config.registerExpires || 600} segundos`);
     
-    // Obter acesso ao microfone/câmera
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      // Configuração do JsSIP
+      console.log("Criando WebSocket interface...");
+      const socket = new JsSIP.WebSocketInterface(this.config.wsUri);
+      
+      // Obter acesso ao microfone/câmera
+      console.log("Solicitando permissão para acesso ao microfone...");
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        console.log("Permissão do microfone concedida.");
+      } catch (error) {
+        console.error(`Falha ao acessar o microfone: ${error}`);
+        throw new Error(`Failed to get media access: ${error}`);
+      }
+      
+      const uaConfig = {
+        uri: `sip:${this.config.authorizationUser}@${this.config.domain}`,
+        password: this.config.password,
+        display_name: this.config.displayName,
+        sockets: [socket],
+        registrar_server: `sip:${this.config.domain}`,
+        contact_uri: `sip:${this.config.authorizationUser}@${this.config.domain}`,
+        authorization_user: this.config.authorizationUser,
+        register_expires: this.config.registerExpires || 600,
+        session_timers: false,
+        use_preloaded_route: false
+      };
+      
+      console.log("Criando UA (User Agent)...");
+      this.ua = new JsSIP.UA(uaConfig);
+      
+      // Configurar eventos do UA
+      console.log("Configurando eventos do UA...");
+      this.setupUaEvents();
+      
+      // Configurar debugging
+      if (this.config.debug) {
+        console.log("Ativando modo de debug JsSIP...");
+        JsSIP.debug.enable('JsSIP:*');
+      } else {
+        JsSIP.debug.disable();
+      }
+      
+      // Iniciar o UA
+      console.log("Iniciando UA...");
+      this.ua.start();
+      
+      this.updateRegisterState(RegisterState.REGISTERING);
     } catch (error) {
-      throw new Error(`Failed to get media access: ${error}`);
+      console.error(`Erro ao registrar: ${error.message}`);
+      this.updateRegisterState(RegisterState.FAILED);
+      throw error;
     }
-    
-    const uaConfig = {
-      uri: `sip:${this.config.authorizationUser}@${this.config.domain}`,
-      password: this.config.password,
-      display_name: this.config.displayName,
-      sockets: [socket],
-      registrar_server: `sip:${this.config.domain}`,
-      contact_uri: `sip:${this.config.authorizationUser}@${this.config.domain}`,
-      authorization_user: this.config.authorizationUser,
-      register_expires: this.config.registerExpires || 600,
-      session_timers: false,
-      use_preloaded_route: false
-    };
-    
-    this.ua = new JsSIP.UA(uaConfig);
-    
-    // Configurar eventos do UA
-    this.setupUaEvents();
-    
-    // Configurar debugging
-    if (this.config.debug) {
-      JsSIP.debug.enable('JsSIP:*');
-    } else {
-      JsSIP.debug.disable();
-    }
-    
-    // Iniciar o UA
-    this.ua.start();
-    
-    this.updateRegisterState(RegisterState.REGISTERING);
   }
   
   // Configurar eventos do User Agent
   private setupUaEvents(): void {
-    if (!this.ua) return;
+    if (!this.ua) {
+      console.error("UA não inicializado ao configurar eventos");
+      return;
+    }
     
-    this.ua.on('registered', (e) => {
+    this.ua.on('connecting', (e: any) => {
+      console.log("UA: Conectando ao servidor WebSocket...");
+    });
+    
+    this.ua.on('connected', (e: any) => {
+      console.log("UA: Conexão WebSocket estabelecida com sucesso.");
+    });
+    
+    this.ua.on('disconnected', (e: any) => {
+      console.log("UA: Conexão WebSocket perdida.", e?.cause || "");
+    });
+    
+    this.ua.on('registered', (e: any) => {
+      console.log("UA: Registrado com sucesso no servidor SIP.");
       this.updateRegisterState(RegisterState.REGISTERED);
       this.emit('registered', e);
     });
     
-    this.ua.on('unregistered', (e) => {
+    this.ua.on('unregistered', (e: any) => {
+      console.log("UA: Desregistrado do servidor SIP.", e?.cause || "");
       this.updateRegisterState(RegisterState.UNREGISTERED);
       this.emit('unregistered', e);
     });
     
-    this.ua.on('registrationFailed', (e) => {
+    this.ua.on('registrationFailed', (e: any) => {
+      console.error("UA: Falha no registro SIP.", e?.cause || "", e?.response?.status_code || "");
       this.updateRegisterState(RegisterState.FAILED);
       this.emit('registrationFailed', e);
     });

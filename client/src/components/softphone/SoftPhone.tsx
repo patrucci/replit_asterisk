@@ -313,6 +313,16 @@ export function SoftPhone({
         return;
       }
       
+      // Verificar se o wsUri tem o protocolo correto
+      if (!config.wsUri.startsWith('ws://') && !config.wsUri.startsWith('wss://')) {
+        toast({
+          title: "URI WebSocket inválido",
+          description: "O URI WebSocket deve iniciar com ws:// ou wss://",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Se não tiver senha, perguntar se deseja continuar
       if (!config.password) {
         if (!confirm("Você não inseriu uma senha. Deseja continuar com a tentativa de registro sem senha?")) {
@@ -325,7 +335,9 @@ export function SoftPhone({
       // Salvar configurações antes de registrar para garantir persistência
       localStorage.setItem('softphone_config', JSON.stringify(config));
       
-      // Configurar o cliente SIP
+      console.log("Definindo configurações para o cliente SIP...");
+      
+      // Configurar o cliente SIP com debug ativado para facilitar diagnóstico
       sipClient.setConfig({
         domain: config.domain,
         wsUri: config.wsUri,
@@ -333,35 +345,61 @@ export function SoftPhone({
         password: config.password,
         displayName: config.displayName,
         registerExpires: config.registerExpires,
-        debug: config.debug,
+        debug: true, // Forçar modo debug para melhor diagnóstico
       });
       
-      // Registrar
-      sipClient.register().catch(error => {
-        console.error('Registration error:', error);
-        setIsRegistering(false);
-        
-        // Mensagens de erro mais específicas
-        let errorMsg = error.message;
-        if (error.message.includes('WebSocket')) {
-          errorMsg = "Erro de conexão WebSocket. Verifique se o URI do WebSocket está correto e acessível.";
-        } else if (error.message.includes('authentication')) {
-          errorMsg = "Falha de autenticação. Verifique seu ramal e senha.";
+      // Colocar timeout de 15 segundos para não ficar tentando para sempre
+      const timeout = setTimeout(() => {
+        if (registerState !== RegisterState.REGISTERED) {
+          setIsRegistering(false);
+          toast({
+            title: "Tempo esgotado",
+            description: "Não foi possível conectar ao servidor SIP após 15 segundos. Verifique os dados e a conectividade.",
+            variant: "destructive",
+          });
         }
-        
-        toast({
-          title: "Erro de registro",
-          description: errorMsg,
-          variant: "destructive",
+      }, 15000);
+      
+      console.log("Iniciando registro SIP...");
+      
+      // Registrar
+      sipClient.register()
+        .then(() => {
+          console.log("Registro iniciado com sucesso");
+          // O estado será atualizado pelos eventos
+        })
+        .catch(error => {
+          console.error('Erro de registro:', error);
+          setIsRegistering(false);
+          clearTimeout(timeout);
+          
+          // Mensagens de erro mais específicas
+          let errorMsg = error.message;
+          if (typeof errorMsg === 'string') {
+            if (errorMsg.includes('WebSocket')) {
+              errorMsg = "Erro de conexão WebSocket. Verifique se o URI do WebSocket está correto e acessível.";
+            } else if (errorMsg.includes('authentication')) {
+              errorMsg = "Falha de autenticação. Verifique seu ramal e senha.";
+            } else if (errorMsg.includes('media')) {
+              errorMsg = "Falha ao acessar o microfone. Verifique as permissões do navegador.";
+            }
+          } else {
+            errorMsg = "Erro desconhecido durante o registro SIP";
+          }
+          
+          toast({
+            title: "Erro de registro",
+            description: errorMsg,
+            variant: "destructive",
+          });
         });
-      });
-    } catch (error) {
-      console.error('Register error:', error);
+    } catch (error: any) {
+      console.error('Erro no processo de registro:', error);
       setIsRegistering(false);
       
       toast({
         title: "Erro de registro",
-        description: "Não foi possível conectar ao servidor SIP",
+        description: error.message || "Não foi possível conectar ao servidor SIP",
         variant: "destructive",
       });
     }
