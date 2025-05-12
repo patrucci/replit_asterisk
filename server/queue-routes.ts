@@ -1,15 +1,21 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import { z } from "zod";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 import { 
   insertQueueSchema, 
   insertAgentSchema,
   insertQueueAgentSchema,
-  insertAgentGroupSchema 
+  insertAgentGroupSchema,
+  queues,
+  agents,
+  agentGroups,
+  queueAgents
 } from "@shared/queue-schema";
 
 // Modo de simulação
-const SIMULATION_MODE = true; // Defina como false para usar dados reais
+const SIMULATION_MODE = false; // Agora usaremos dados reais do banco de dados
 
 export function setupQueueRoutes(app: Express, requireAuth: any) {
   // Rota pública para verificar o status de conexão da API de filas
