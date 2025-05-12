@@ -12,6 +12,11 @@ import createMemoryStore from "memorystore";
 const MemoryStore = createMemoryStore(session);
 
 // Interface for storage operations
+import { AgentGroup, Agent, Queue, QueueAgent, QueueCall, AgentPause, QueueSla, 
+  QueueAnnouncement, QueueDashboard, DashboardWidget, InsertAgentGroup, InsertAgent, 
+  InsertQueue, InsertQueueAgent, InsertQueueCall, InsertAgentPause, InsertQueueSla, 
+  InsertQueueAnnouncement, InsertQueueDashboard, InsertDashboardWidget } from "@shared/queue-schema";
+
 export interface IStorage {
   // Session store
   sessionStore: session.SessionStore;
@@ -51,6 +56,72 @@ export interface IStorage {
   getCalls(clientId: number): Promise<Call[]>;
   getCall(id: number): Promise<Call | undefined>;
   createCall(call: InsertCall): Promise<Call>;
+  
+  // Queue operations - Agent Groups
+  getAgentGroups(userId: number): Promise<AgentGroup[]>;
+  getAgentGroup(id: number): Promise<AgentGroup | undefined>;
+  createAgentGroup(group: InsertAgentGroup): Promise<AgentGroup>;
+  updateAgentGroup(id: number, group: Partial<InsertAgentGroup>): Promise<AgentGroup | undefined>;
+  deleteAgentGroup(id: number): Promise<boolean>;
+  
+  // Queue operations - Agents
+  getAgents(userId: number): Promise<Agent[]>;
+  getAgentsByGroup(groupId: number): Promise<Agent[]>;
+  getAgent(id: number): Promise<Agent | undefined>;
+  createAgent(agent: InsertAgent): Promise<Agent>;
+  updateAgent(id: number, agent: Partial<InsertAgent>): Promise<Agent | undefined>;
+  deleteAgent(id: number): Promise<boolean>;
+  
+  // Queue operations - Queues
+  getQueues(userId: number): Promise<Queue[]>;
+  getQueue(id: number): Promise<Queue | undefined>;
+  createQueue(queue: InsertQueue): Promise<Queue>;
+  updateQueue(id: number, queue: Partial<InsertQueue>): Promise<Queue | undefined>;
+  deleteQueue(id: number): Promise<boolean>;
+  
+  // Queue operations - Queue-Agent mappings
+  getQueueAgents(queueId: number): Promise<QueueAgent[]>;
+  getAgentQueues(agentId: number): Promise<QueueAgent[]>;
+  createQueueAgent(queueAgent: InsertQueueAgent): Promise<QueueAgent>;
+  updateQueueAgent(id: number, queueAgent: Partial<InsertQueueAgent>): Promise<QueueAgent | undefined>;
+  deleteQueueAgent(id: number): Promise<boolean>;
+  
+  // Queue operations - Queue Calls
+  getQueueCalls(queueId: number): Promise<QueueCall[]>;
+  getAgentCalls(agentId: number): Promise<QueueCall[]>;
+  getQueueCall(id: number): Promise<QueueCall | undefined>;
+  createQueueCall(call: InsertQueueCall): Promise<QueueCall>;
+  updateQueueCall(id: number, call: Partial<InsertQueueCall>): Promise<QueueCall | undefined>;
+  
+  // Queue operations - Agent Pauses
+  getAgentPauses(agentId: number): Promise<AgentPause[]>;
+  createAgentPause(pause: InsertAgentPause): Promise<AgentPause>;
+  updateAgentPause(id: number, pause: Partial<InsertAgentPause>): Promise<AgentPause | undefined>;
+  
+  // Queue operations - SLAs
+  getQueueSlas(queueId: number): Promise<QueueSla[]>;
+  createQueueSla(sla: InsertQueueSla): Promise<QueueSla>;
+  updateQueueSla(id: number, sla: Partial<InsertQueueSla>): Promise<QueueSla | undefined>;
+  deleteQueueSla(id: number): Promise<boolean>;
+  
+  // Queue operations - Announcements
+  getQueueAnnouncements(queueId: number): Promise<QueueAnnouncement[]>;
+  createQueueAnnouncement(announcement: InsertQueueAnnouncement): Promise<QueueAnnouncement>;
+  updateQueueAnnouncement(id: number, announcement: Partial<InsertQueueAnnouncement>): Promise<QueueAnnouncement | undefined>;
+  deleteQueueAnnouncement(id: number): Promise<boolean>;
+  
+  // Queue operations - Dashboards
+  getQueueDashboards(userId: number): Promise<QueueDashboard[]>;
+  getQueueDashboard(id: number): Promise<QueueDashboard | undefined>;
+  createQueueDashboard(dashboard: InsertQueueDashboard): Promise<QueueDashboard>;
+  updateQueueDashboard(id: number, dashboard: Partial<InsertQueueDashboard>): Promise<QueueDashboard | undefined>;
+  deleteQueueDashboard(id: number): Promise<boolean>;
+  
+  // Queue operations - Dashboard Widgets
+  getDashboardWidgets(dashboardId: number): Promise<DashboardWidget[]>;
+  createDashboardWidget(widget: InsertDashboardWidget): Promise<DashboardWidget>;
+  updateDashboardWidget(id: number, widget: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined>;
+  deleteDashboardWidget(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -61,6 +132,18 @@ export class MemStorage implements IStorage {
   private messagesMap: Map<number, Message>;
   private callsMap: Map<number, Call>;
   
+  // Queue Maps
+  private agentGroupsMap: Map<number, AgentGroup>;
+  private agentsMap: Map<number, Agent>;
+  private queuesMap: Map<number, Queue>;
+  private queueAgentsMap: Map<number, QueueAgent>;
+  private queueCallsMap: Map<number, QueueCall>;
+  private agentPausesMap: Map<number, AgentPause>;
+  private queueSlasMap: Map<number, QueueSla>;
+  private queueAnnouncementsMap: Map<number, QueueAnnouncement>;
+  private queueDashboardsMap: Map<number, QueueDashboard>;
+  private dashboardWidgetsMap: Map<number, DashboardWidget>;
+  
   sessionStore: session.SessionStore;
   
   private userId: number;
@@ -69,6 +152,18 @@ export class MemStorage implements IStorage {
   private paymentId: number;
   private messageId: number;
   private callId: number;
+  
+  // Queue IDs
+  private agentGroupId: number;
+  private agentId: number;
+  private queueId: number;
+  private queueAgentId: number;
+  private queueCallId: number;
+  private agentPauseId: number;
+  private queueSlaId: number;
+  private queueAnnouncementId: number;
+  private queueDashboardId: number;
+  private dashboardWidgetId: number;
 
   constructor() {
     this.usersMap = new Map();
@@ -77,6 +172,18 @@ export class MemStorage implements IStorage {
     this.paymentsMap = new Map();
     this.messagesMap = new Map();
     this.callsMap = new Map();
+    
+    // Initialize Queue Maps
+    this.agentGroupsMap = new Map();
+    this.agentsMap = new Map();
+    this.queuesMap = new Map();
+    this.queueAgentsMap = new Map();
+    this.queueCallsMap = new Map();
+    this.agentPausesMap = new Map();
+    this.queueSlasMap = new Map();
+    this.queueAnnouncementsMap = new Map();
+    this.queueDashboardsMap = new Map();
+    this.dashboardWidgetsMap = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // 24 hours
@@ -88,6 +195,18 @@ export class MemStorage implements IStorage {
     this.paymentId = 1;
     this.messageId = 1;
     this.callId = 1;
+    
+    // Initialize Queue IDs
+    this.agentGroupId = 1;
+    this.agentId = 1;
+    this.queueId = 1;
+    this.queueAgentId = 1;
+    this.queueCallId = 1;
+    this.agentPauseId = 1;
+    this.queueSlaId = 1;
+    this.queueAnnouncementId = 1;
+    this.queueDashboardId = 1;
+    this.dashboardWidgetId = 1;
   }
 
   // User methods
