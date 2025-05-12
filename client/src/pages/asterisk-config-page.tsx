@@ -29,6 +29,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import AsteriskConnect from "@/components/asterisk/AsteriskConnect";
 import { 
   PhoneForwarded, 
   PhoneIncoming, 
@@ -43,7 +45,10 @@ import {
   ArrowDown,
   Clock,
   MessageSquare,
-  Voicemail
+  Voicemail,
+  CheckCheck,
+  FileQuestion,
+  Server
 } from "lucide-react";
 
 // Schema para validação do formulário de configuração do Asterisk
@@ -77,9 +82,25 @@ const dialPlanStepSchema = z.object({
 
 type DialPlanStep = z.infer<typeof dialPlanStepSchema>;
 
+interface AsteriskConnectionStatus {
+  connected: boolean;
+  configured: boolean;
+  host?: string;
+  port?: number;
+  username?: string;
+  message?: string;
+}
+
 export default function AsteriskConfigPage() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("server");
+  const [activeTab, setActiveTab] = useState("connection");
+  
+  // Carregar status da conexão
+  const { data: status, isLoading: isStatusLoading } = useQuery<AsteriskConnectionStatus>({
+    queryKey: ["/api/asterisk/status"],
+    refetchInterval: 10000, // Atualizar a cada 10 segundos
+  });
+  
   const [dialPlanSteps, setDialPlanSteps] = useState<DialPlanStep[]>([
     {
       id: "start",
