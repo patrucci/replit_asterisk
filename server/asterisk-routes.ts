@@ -105,7 +105,16 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
       if (testTcpOnly) {
         // Testar apenas a conexão TCP
         const tcpResult = await asteriskAMIManager.testTCPConnection(host, port);
-        return res.status(tcpResult.success ? 200 : 400).json(tcpResult);
+        
+        // Incluir informações de diagnóstico na resposta
+        const responseData = {
+          success: tcpResult.success,
+          message: tcpResult.message || "",
+          diagnosticInfo: tcpResult.diagnosticInfo || "",
+          type: "tcp"
+        };
+        
+        return res.status(tcpResult.success ? 200 : 400).json(responseData);
       } else {
         // Testar a conexão AMI completa
         const result = await asteriskAMIManager.testConnection(host, port, username, password);
@@ -113,12 +122,18 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
         if (result.success) {
           return res.json({ 
             success: true, 
-            message: "Teste de conexão com o Asterisk AMI bem-sucedido" 
+            message: "Teste de conexão com o Asterisk AMI bem-sucedido",
+            type: "ami"
           });
         } else {
+          // Se a conexão AMI falhar, tente executar o diagnóstico TCP para obter mais informações
+          const tcpDiagnostic = await asteriskAMIManager.testTCPConnection(host, port);
+          
           return res.status(400).json({ 
             success: false, 
-            message: result.message || "Não foi possível estabelecer conexão com o Asterisk AMI" 
+            message: result.message || "Não foi possível estabelecer conexão com o Asterisk AMI",
+            diagnosticInfo: tcpDiagnostic.diagnosticInfo || "",
+            type: "ami"
           });
         }
       }

@@ -1466,7 +1466,7 @@ class AsteriskAMIManager extends EventEmitter {
   }
   
   // Método adicional para testar apenas a conectividade TCP
-  testTCPConnection(host: string, port: number): Promise<{success: boolean, message?: string}> {
+  testTCPConnection(host: string, port: number): Promise<{success: boolean, message?: string, diagnosticInfo?: string}> {
     return new Promise((resolve) => {
       console.log(`Iniciando teste TCP básico para ${host}:${port}...`);
       
@@ -1477,9 +1477,19 @@ class AsteriskAMIManager extends EventEmitter {
       timeoutId = setTimeout(() => {
         socket.destroy();
         console.log(`TCP timeout atingido para ${host}:${port}`);
-        resolve({
-          success: false,
-          message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos. Verifique se o servidor está online e acessível.`
+        
+        this.runConnectionDiagnostics(host, port).then(diagnosticInfo => {
+          resolve({
+            success: false,
+            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos. Verifique se o servidor está online e acessível.`,
+            diagnosticInfo
+          });
+        }).catch(err => {
+          resolve({
+            success: false,
+            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos. Verifique se o servidor está online e acessível.`,
+            diagnosticInfo: `Erro ao executar diagnóstico adicional: ${err instanceof Error ? err.message : String(err)}`
+          });
         });
       }, 5000); // 5 segundos de timeout
       
@@ -1498,21 +1508,55 @@ class AsteriskAMIManager extends EventEmitter {
         clearTimeout(timeoutId);
         console.error(`Erro TCP para ${host}:${port}:`, err);
         
+        // Gerar mensagem de erro detalhada
         let errorMsg = `Erro ao conectar via TCP: `;
+        let detalhes = "";
+        
         if (err.code === 'ECONNREFUSED') {
-          errorMsg += `Conexão recusada em ${host}:${port}. Verifique se o servidor está rodando e a porta está correta.`;
+          errorMsg += `Conexão recusada em ${host}:${port}.`;
+          detalhes = `O servidor está recusando conexões nesta porta. Causas possíveis:
+
+1. O serviço Asterisk não está em execução
+2. O Asterisk Manager Interface (AMI) não está habilitado
+3. O AMI está configurado para ouvir apenas em endereços IP específicos
+4. A porta AMI configurada é diferente de ${port}
+5. Um firewall está bloqueando a conexão
+
+Verifique as configurações do Asterisk no arquivo 'manager.conf':
+- O parâmetro 'enabled' deve ser 'yes'
+- O parâmetro 'bindaddr' deve permitir conexões externas (0.0.0.0)
+- A 'port' deve corresponder ao valor que você está tentando conectar (${port})
+- As credenciais de usuário devem ter as permissões corretas`;
         } else if (err.code === 'ETIMEDOUT') {
-          errorMsg += `Timeout ao conectar em ${host}:${port}. Verifique se o servidor é acessível pela rede.`;
+          errorMsg += `Timeout ao conectar em ${host}:${port}.`;
+          detalhes = `O servidor não respondeu a tempo. Causas possíveis:
+
+1. Problemas de rede entre este cliente e o servidor
+2. Um firewall está bloqueando silenciosamente as conexões
+3. O endereço IP ou hostname está incorreto`;
         } else if (err.code === 'ENOTFOUND') {
-          errorMsg += `Host não encontrado: ${host}. Verifique se o nome ou IP está correto.`;
+          errorMsg += `Host não encontrado: ${host}.`;
+          detalhes = `O hostname não pôde ser resolvido para um endereço IP. Verifique se o nome do servidor está correto.`;
         } else {
           errorMsg += `${err.message || String(err)}`;
+          detalhes = "Erro não reconhecido. Verifique os logs do servidor para mais detalhes.";
         }
         
         socket.destroy();
-        resolve({
-          success: false,
-          message: errorMsg
+        
+        // Executar diagnóstico adicional
+        this.runConnectionDiagnostics(host, port).then(diagnosticInfo => {
+          resolve({
+            success: false,
+            message: errorMsg,
+            diagnosticInfo: detalhes + "\n\n" + diagnosticInfo
+          });
+        }).catch(diagErr => {
+          resolve({
+            success: false,
+            message: errorMsg,
+            diagnosticInfo: detalhes + "\n\nErro ao executar diagnóstico adicional: " + (diagErr instanceof Error ? diagErr.message : String(diagErr))
+          });
         });
       });
       
@@ -1524,12 +1568,127 @@ class AsteriskAMIManager extends EventEmitter {
         clearTimeout(timeoutId);
         console.error(`Exceção ao conectar socket para ${host}:${port}:`, err);
         socket.destroy();
-        resolve({
-          success: false,
-          message: `Exceção ao conectar: ${err instanceof Error ? err.message : String(err)}`
+        
+        this.runConnectionDiagnostics(host, port).then(diagnosticInfo => {
+          resolve({
+            success: false,
+            message: `Exceção ao conectar: ${err instanceof Error ? err.message : String(err)}`,
+            diagnosticInfo
+          });
+        }).catch(diagErr => {
+          resolve({
+            success: false,
+            message: `Exceção ao conectar: ${err instanceof Error ? err.message : String(err)}`,
+            diagnosticInfo: `Erro ao executar diagnóstico adicional: ${diagErr instanceof Error ? diagErr.message : String(diagErr)}`
+          });
         });
       }
     });
+  }
+  
+  // Método para diagnóstico avançado da conexão Asterisk
+  async runConnectionDiagnostics(host: string, port: number): Promise<string> {
+    console.log(`Executando diagnóstico avançado para ${host}:${port}...`);
+    
+    let diagnosticInfo = "## Diagnóstico de Conexão Asterisk\n\n";
+    
+    try {
+      // Verificar portas alternativas comuns para Asterisk AMI
+      const portasAlternativas = [5039, 5037, 8088, 8089];
+      let portaAlternativaEncontrada = false;
+      let portaSugerida = 0;
+      
+      // Verificar resolução DNS
+      try {
+        // Usar NodeJS DNS para resolver o hostname
+        const dns = require('dns');
+        const { promisify } = require('util');
+        const lookup = promisify(dns.lookup);
+        
+        const resultado = await lookup(host);
+        diagnosticInfo += `* Resolução DNS: ${host} => ${resultado.address}\n`;
+      } catch (dnsErr) {
+        diagnosticInfo += `* Resolução DNS: Falhou - ${dnsErr instanceof Error ? dnsErr.message : String(dnsErr)}\n`;
+      }
+      
+      // Verificar portas alternativas
+      diagnosticInfo += `* Porta principal ${port}: FALHA - Conexão recusada\n`;
+      
+      for (const portaAlternativa of portasAlternativas) {
+        if (portaAlternativa === port) continue;
+        
+        try {
+          console.log(`Verificando porta alternativa ${portaAlternativa}...`);
+          
+          const testResult = await new Promise<boolean>((resolve) => {
+            const testSocket = new net.Socket();
+            let testTimeoutId: NodeJS.Timeout;
+            
+            testSocket.on('connect', () => {
+              clearTimeout(testTimeoutId);
+              testSocket.destroy();
+              resolve(true);
+            });
+            
+            testSocket.on('error', () => {
+              clearTimeout(testTimeoutId);
+              testSocket.destroy();
+              resolve(false);
+            });
+            
+            testTimeoutId = setTimeout(() => {
+              testSocket.destroy();
+              resolve(false);
+            }, 2000);
+            
+            testSocket.connect(portaAlternativa, host);
+          });
+          
+          if (testResult) {
+            diagnosticInfo += `* Porta alternativa ${portaAlternativa}: DISPONÍVEL - Tente usar esta porta!\n`;
+            portaAlternativaEncontrada = true;
+            portaSugerida = portaAlternativa;
+          } else {
+            diagnosticInfo += `* Porta alternativa ${portaAlternativa}: FECHADA\n`;
+          }
+        } catch (err) {
+          diagnosticInfo += `* Porta alternativa ${portaAlternativa}: ERRO - ${err instanceof Error ? err.message : String(err)}\n`;
+        }
+      }
+      
+      diagnosticInfo += "\n";
+      
+      // Adicionar recomendações com base nos resultados
+      if (portaAlternativaEncontrada) {
+        diagnosticInfo += `### Porta alternativa encontrada!\n`;
+        diagnosticInfo += `Parece que o servidor Asterisk pode estar rodando na porta ${portaSugerida} em vez da porta padrão ${port}.\n`;
+        diagnosticInfo += `Recomendação: Tente conectar usando a porta ${portaSugerida} em vez de ${port}.\n\n`;
+      }
+      
+      // Adicionar recomendações gerais
+      diagnosticInfo += "### Recomendações para resolver o problema:\n\n";
+      diagnosticInfo += "1. **Verifique o arquivo `manager.conf` no servidor Asterisk**\n";
+      diagnosticInfo += "   - Certifique-se que `enabled = yes`\n";
+      diagnosticInfo += "   - Verifique a porta configurada em `port = 5038`\n";
+      diagnosticInfo += "   - Certifique-se que `bindaddr = 0.0.0.0` para permitir conexões externas\n\n";
+      
+      diagnosticInfo += "2. **Verifique o firewall do servidor**\n";
+      diagnosticInfo += "   - A porta 5038 (ou a porta configurada) precisa estar aberta para conexões TCP\n";
+      diagnosticInfo += "   - Execute `sudo ufw status` ou `sudo iptables -L` para verificar regras de firewall\n\n";
+      
+      diagnosticInfo += "3. **Verifique se o serviço Asterisk está rodando**\n";
+      diagnosticInfo += "   - No servidor, execute `sudo systemctl status asterisk` ou `sudo service asterisk status`\n";
+      diagnosticInfo += "   - Se não estiver rodando, inicie com `sudo systemctl start asterisk`\n\n";
+      
+      diagnosticInfo += "4. **Verifique a configuração de usuário no AMI**\n";
+      diagnosticInfo += "   - O usuário deve ter as permissões corretas configuradas\n";
+      diagnosticInfo += "   - A senha deve corresponder exatamente à configurada no servidor\n\n";
+      
+      return diagnosticInfo;
+    } catch (error) {
+      console.error("Erro ao executar diagnóstico de conexão:", error);
+      return `Erro ao executar diagnóstico: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
   
   close() {
