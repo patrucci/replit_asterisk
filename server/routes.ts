@@ -536,43 +536,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get call history
   app.get("/api/asterisk/call-history", requireAuth, async (req, res) => {
     try {
-      // In a real implementation, we would fetch real call history from a database
-      // For this example, we'll just return a mock response
-      res.json([
-        {
-          id: "call1",
-          clientName: "João Silva",
-          clientPhone: "(11) 99123-4567",
-          callDate: "2025-05-10 14:30",
-          duration: "2:45",
-          purpose: "Agendamento",
-          status: "completed",
-          recording: "call_joao_20250510.mp3",
-          transcription: "Transcrição da conversa com João...",
-          analysis: {
-            sentiment: "positive",
-            nextSteps: ["Confirmar consulta um dia antes", "Preparar documentação"],
-            keyInsights: ["Cliente prefere horários pela manhã", "Mencionou dor nas costas"]
-          }
-        },
-        {
-          id: "call2",
-          clientName: "Maria Oliveira",
-          clientPhone: "(21) 98765-4321",
-          callDate: "2025-05-11 10:15",
-          duration: "3:20",
-          purpose: "Confirmação",
-          status: "completed",
-          recording: "call_maria_20250511.mp3",
-          analysis: {
-            sentiment: "neutral",
-            nextSteps: ["Enviar lembretes adicionais"],
-            keyInsights: ["Cliente confirmou presença com ressalvas", "Pode se atrasar"]
-          }
-        }
-      ]);
+      console.log("Retornando lista vazia de histórico de chamadas");
+      
+      // Em um ambiente real, buscaríamos o histórico de chamadas do banco de dados
+      // Por enquanto, retornamos um array vazio em vez de dados simulados
+      res.json([]);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch call history" });
+      res.status(500).json({ message: "Erro ao buscar histórico de chamadas" });
     }
   });
   
@@ -580,31 +550,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/asterisk/calls/:callId", requireAuth, async (req, res) => {
     try {
       const { callId } = req.params;
+      console.log(`Buscando detalhes da chamada ${callId}`);
       
-      // In a real implementation, we would fetch the call details from a database
-      // For this example, we'll just return a mock response based on the call ID
-      if (callId === "call1") {
-        res.json({
-          id: "call1",
-          clientName: "João Silva",
-          clientPhone: "(11) 99123-4567",
-          callDate: "2025-05-10 14:30",
-          duration: "2:45",
-          purpose: "Agendamento",
-          status: "completed",
-          recording: "call_joao_20250510.mp3",
-          transcription: "Transcrição da conversa com João...",
-          analysis: {
-            sentiment: "positive",
-            nextSteps: ["Confirmar consulta um dia antes", "Preparar documentação"],
-            keyInsights: ["Cliente prefere horários pela manhã", "Mencionou dor nas costas"]
-          }
-        });
-      } else {
-        res.status(404).json({ message: "Call not found" });
-      }
+      // Em um ambiente real, buscaríamos os detalhes da chamada do banco de dados
+      // Por enquanto, retornamos 404 para qualquer ID de chamada
+      res.status(404).json({ message: "Chamada não encontrada" });
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch call details" });
+      res.status(500).json({ message: "Erro ao buscar detalhes da chamada" });
     }
   });
   
@@ -755,15 +707,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               queueId: queue.id.toString(),
               name: queue.name,
               strategy: queue.strategy || "ringall",
-              calls: Math.floor(Math.random() * 5), // Valor simulado temporário
-              completed: Math.floor(Math.random() * 20), // Valor simulado temporário
-              abandoned: Math.floor(Math.random() * 3), // Valor simulado temporário
-              serviceLevel: queue.serviceLevel || 80,
-              avgWaitTime: queue.avgWaitTime || Math.floor(Math.random() * 60 + 20),
-              avgTalkTime: queue.avgTalkTime || Math.floor(Math.random() * 180 + 120),
-              maxWaitTime: queue.maxWaitTime || Math.floor(Math.random() * 180 + 60),
-              agents: queue.agents || 2,
-              activeAgents: queue.activeAgents || Math.floor(Math.random() * 2 + 1)
+              calls: 0, // Sem chamadas simuladas
+              completed: 0, // Sem chamadas completadas simuladas
+              abandoned: 0, // Sem chamadas abandonadas simuladas
+              serviceLevel: 0, // Sem dados de SLA simulados
+              avgWaitTime: 0, // Sem tempo de espera médio simulado
+              avgTalkTime: 0, // Sem tempo de conversa médio simulado
+              maxWaitTime: queue.maxWaitTime || 0,
+              agents: 0, // Valor será atualizado com agentes reais do banco
+              activeAgents: 0 // Valor será atualizado com agentes ativos reais
             };
           });
           
