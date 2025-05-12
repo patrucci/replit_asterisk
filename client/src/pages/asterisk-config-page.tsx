@@ -55,7 +55,8 @@ import {
   Music,
   ListMusic,
   Folder,
-  Volume2
+  Volume2,
+  RefreshCw
 } from "lucide-react";
 
 // Schema para validação do formulário de configuração do Asterisk
@@ -772,9 +773,10 @@ export default function AsteriskConfigPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full mb-6 sticky top-0 z-10 bg-background" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+          <TabsList className="grid w-full mb-6 sticky top-0 z-10 bg-background" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
             <TabsTrigger value="connection">Conexão AMI</TabsTrigger>
             <TabsTrigger value="diagnóstico">Diagnóstico</TabsTrigger>
+            <TabsTrigger value="audio">Arquivos de Áudio</TabsTrigger>
             <TabsTrigger value="dialplan">Plano de Discagem</TabsTrigger>
             <TabsTrigger value="queues" disabled={!status?.connected}>Filas</TabsTrigger>
           </TabsList>
@@ -793,6 +795,98 @@ export default function AsteriskConfigPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <AsteriskConnect />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="audio" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Arquivos de Áudio</CardTitle>
+              <CardDescription>
+                Gerencie os arquivos de áudio utilizados no sistema de URA.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">Arquivos Disponíveis</h3>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    accept="audio/*"
+                    onChange={handleFileChange}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="flex items-center space-x-1"
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    {uploadingFile ? 'Enviando...' : 'Enviar Arquivo'}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={loadAudioFiles}
+                    disabled={isLoadingAudio}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoadingAudio ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </div>
+
+              {audioFiles.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {audioFiles.map((file) => (
+                    <Card key={file.id} className="overflow-hidden">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex justify-between items-center">
+                          <div className="flex items-center">
+                            <Music className="h-4 w-4 mr-2 text-blue-500" />
+                            <span className="truncate">{file.name}</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => handleDeleteAudio(file.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </CardTitle>
+                        <CardDescription className="text-xs pt-1">
+                          {file.duration ? `${file.duration}s` : 'Duração desconhecida'} · {file.filename}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-3">
+                        <audio 
+                          controls 
+                          className="w-full h-10"
+                          src={`/api/asterisk/audio/${file.id}`} 
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 border border-dashed rounded-md">
+                  <File className="h-12 w-12 mx-auto text-neutral-300 mb-4" />
+                  <h3 className="text-lg font-medium text-neutral-600 mb-2">Nenhum arquivo encontrado</h3>
+                  <p className="text-sm text-neutral-500 mb-6">
+                    Envie arquivos de áudio para utilizar no plano de discagem.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Enviar Arquivo
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
