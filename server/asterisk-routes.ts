@@ -1,9 +1,9 @@
 import type { Express, Request, Response } from "express";
 import { asteriskAMIManager } from "./asterisk-ami";
 
-// Ativar modo de simulação diretamente no código
-// Isso é necessário apenas para desenvolvimento enquanto a conexão real com Asterisk não estiver disponível
-const SIMULATION_MODE = true; // Defina como false para usar conexão real
+// Desativar modo de simulação para usar conexão real com Asterisk
+// Somente use o modo de simulação em situações onde não há servidor Asterisk disponível
+const SIMULATION_MODE = false; // false = usar conexão real, true = usar simulação
 
 export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   // Rota para verificar o status da conexão Asterisk
