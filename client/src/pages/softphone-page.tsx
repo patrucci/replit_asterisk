@@ -22,13 +22,7 @@ export default function SoftphonePage() {
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
   const [audioTestActive, setAudioTestActive] = useState(false);
   const [g729Enabled, setG729Enabled] = useState(true);
-  const [defaultConfig, setDefaultConfig] = useState({
-    domain: "seu-servidor-sip.com",
-    wsUri: "wss://seu-servidor-sip.com:8089/ws",
-    extension: "",
-    displayName: "",
-    autoRegister: false
-  });
+  // Removemos o estado defaultConfig pois a configuração agora está centralizada no componente SoftPhone
 
   // Efeito para obter lista de dispositivos de áudio
   useEffect(() => {
@@ -186,11 +180,6 @@ export default function SoftphonePage() {
           {/* Coluna do Softphone */}
           <div className="md:col-span-2">
             <SoftPhone 
-              extension={defaultConfig.extension || undefined}
-              displayName={defaultConfig.displayName || undefined}
-              domain={defaultConfig.domain}
-              wsUri={defaultConfig.wsUri}
-              autoRegister={defaultConfig.autoRegister}
               onCallStateChange={handleCallStateChange}
               onRegisterStateChange={handleRegisterStateChange}
             />
