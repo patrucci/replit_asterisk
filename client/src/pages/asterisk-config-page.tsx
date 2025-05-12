@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import AsteriskConnect from "@/components/asterisk/AsteriskConnect";
+import AsteriskDiagnostic from "@/components/asterisk/AsteriskDiagnostic";
 import { 
   PhoneForwarded, 
   PhoneIncoming, 
@@ -750,11 +751,16 @@ export default function AsteriskConfigPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full mb-6 sticky top-0 z-10 bg-background" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          <TabsList className="grid w-full mb-6 sticky top-0 z-10 bg-background" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
             <TabsTrigger value="connection">Conexão AMI</TabsTrigger>
+            <TabsTrigger value="diagnóstico">Diagnóstico</TabsTrigger>
             <TabsTrigger value="dialplan">Plano de Discagem</TabsTrigger>
             <TabsTrigger value="queues" disabled={!status?.connected}>Filas</TabsTrigger>
           </TabsList>
+
+        <TabsContent value="diagnóstico" className="space-y-6">
+          <AsteriskDiagnostic />
+        </TabsContent>
 
         <TabsContent value="connection" className="space-y-6">
           <Card>
