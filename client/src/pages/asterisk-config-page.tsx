@@ -753,9 +753,8 @@ export default function AsteriskConfigPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full mb-6" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+        <TabsList className="grid w-full mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
           <TabsTrigger value="connection">Conexão AMI</TabsTrigger>
-          <TabsTrigger value="server">Configuração SIP</TabsTrigger>
           <TabsTrigger value="dialplan">Plano de Discagem</TabsTrigger>
           <TabsTrigger value="queues" disabled={!status?.connected}>Filas</TabsTrigger>
         </TabsList>
