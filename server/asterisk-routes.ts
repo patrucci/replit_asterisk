@@ -1,5 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { asteriskAMIManager } from "./asterisk-ami";
+import { db } from "./db";
+import { asteriskSettings } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // Desativar modo de simulação para usar conexão real com Asterisk
 // Somente use o modo de simulação em situações onde não há servidor Asterisk disponível
@@ -20,11 +23,39 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
       }
 
       const connected = asteriskAMIManager.isConnected();
-      const isConfigured = false; // TODO: Verificar se há configurações salvas no banco de dados
+      
+      // Verificar se há configurações salvas no banco de dados
+      let isConfigured = false;
+      let configDetails = {};
+      
+      try {
+        // Buscar a organização do usuário
+        const organizationId = req.user!.organizationId;
+        
+        if (organizationId) {
+          const [settings] = await db.select()
+            .from(asteriskSettings)
+            .where(eq(asteriskSettings.organizationId, organizationId));
+          
+          if (settings) {
+            isConfigured = true;
+            configDetails = {
+              host: settings.host,
+              port: settings.port,
+              username: settings.username,
+              enabled: settings.enabled
+            };
+          }
+        }
+      } catch (dbError) {
+        console.error('Erro ao verificar configurações no banco de dados:', dbError);
+        // Não falhar toda a requisição por causa do erro no banco
+      }
       
       return res.json({
         connected,
-        configured: isConfigured
+        configured: isConfigured,
+        ...configDetails
       });
     } catch (error) {
       console.error('Erro ao verificar status do Asterisk:', error);
@@ -114,6 +145,15 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
         });
       }
       
+      // Verificar a organização do usuário
+      const organizationId = req.user!.organizationId;
+      if (!organizationId) {
+        return res.status(400).json({
+          success: false,
+          message: "Usuário não pertence a uma organização"
+        });
+      }
+      
       console.log(`Tentando conectar ao AMI: ${host}:${port} com usuário ${username}...`);
       
       // Primeiro testar a conexão
@@ -130,7 +170,36 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
       const connected = await asteriskAMIManager.connect(host, parseInt(port), username, password);
       
       if (connected) {
-        // TODO: Salvar configurações no banco de dados
+        // Salvar as configurações no banco de dados
+        // Primeiro verificar se já existe configuração para essa organização
+        const [existingSettings] = await db.select()
+          .from(asteriskSettings)
+          .where(eq(asteriskSettings.organizationId, organizationId));
+        
+        if (existingSettings) {
+          // Atualizar configurações existentes
+          await db.update(asteriskSettings)
+            .set({
+              host,
+              port: parseInt(port),
+              username,
+              password,
+              enabled: true,
+              updatedAt: new Date()
+            })
+            .where(eq(asteriskSettings.id, existingSettings.id));
+        } else {
+          // Inserir novas configurações
+          await db.insert(asteriskSettings)
+            .values({
+              organizationId,
+              host,
+              port: parseInt(port),
+              username,
+              password,
+              enabled: true
+            });
+        }
         
         return res.json({
           success: true,
@@ -156,13 +225,45 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
     }
   });
   
-  // Rota para testar configurações de asterisk existentes
+  // Rota para buscar configurações do Asterisk
   app.get("/api/asterisk/config", requireAuth, async (req, res) => {
     try {
-      // TODO: Implementar busca de configurações salvas no banco de dados
+      const userId = req.user!.id;
+      
+      // Buscar a organização do usuário
+      const organizationId = req.user!.organizationId;
+      
+      if (!organizationId) {
+        return res.status(400).json({
+          success: false,
+          message: "Usuário não pertence a uma organização"
+        });
+      }
+      
+      // Buscar as configurações no banco de dados
+      const [settings] = await db.select()
+        .from(asteriskSettings)
+        .where(eq(asteriskSettings.organizationId, organizationId));
+      
+      if (!settings) {
+        return res.status(200).json({
+          configured: false,
+          message: "Nenhuma configuração encontrada"
+        });
+      }
+      
+      // Retornar configurações, mas nunca a senha
       return res.status(200).json({
-        configured: false,
-        message: "Nenhuma configuração encontrada"
+        configured: true,
+        id: settings.id,
+        host: settings.host,
+        port: settings.port,
+        username: settings.username,
+        sipDomain: settings.sipDomain,
+        wsUri: settings.wsUri,
+        enabled: settings.enabled,
+        createdAt: settings.createdAt,
+        message: "Configurações encontradas"
       });
     } catch (error) {
       console.error('Erro ao buscar configurações do Asterisk:', error);

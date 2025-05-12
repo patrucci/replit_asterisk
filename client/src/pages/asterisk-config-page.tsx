@@ -358,18 +358,39 @@ export default function AsteriskConfigPage() {
   const testConnection = async () => {
     setConnectionStatus("testing");
     try {
-      // Será implementado quando a API estiver disponível
-      await apiRequest("POST", "/api/asterisk/test", form.getValues());
-      setConnectionStatus("connected");
-      toast({
-        title: "Conexão estabelecida",
-        description: "A conexão com o servidor Asterisk foi estabelecida com sucesso.",
-      });
+      // Construir os dados de teste a partir do formulário
+      const formData = form.getValues();
+      const testData = {
+        host: formData.serverAddress,
+        port: formData.port,
+        username: formData.username,
+        password: formData.password,
+        testTcpOnly: false // teste completo da conexão AMI
+      };
+      
+      // Enviar requisição para testar a conexão
+      const response = await apiRequest("POST", "/api/asterisk/test-connection", testData);
+      const result = await response.json();
+      
+      if (result.success) {
+        setConnectionStatus("connected");
+        toast({
+          title: "Conexão estabelecida",
+          description: "A conexão com o servidor Asterisk foi estabelecida com sucesso.",
+        });
+      } else {
+        setConnectionStatus("disconnected");
+        toast({
+          title: "Falha na conexão",
+          description: result.message || "Não foi possível conectar ao servidor Asterisk. Verifique as configurações.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       setConnectionStatus("disconnected");
       toast({
         title: "Falha na conexão",
-        description: "Não foi possível conectar ao servidor Asterisk. Verifique as configurações.",
+        description: "Não foi possível conectar ao servidor Asterisk. Verifique as configurações e certifique-se de que o servidor está acessível.",
         variant: "destructive",
       });
     }
