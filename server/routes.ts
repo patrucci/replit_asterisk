@@ -735,28 +735,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Criar um cliente AMI temporário apenas para teste
-      const AsteriskAmi = require('asterisk-ami-client');
-      const client = new AsteriskAmi();
+      // Usando a implementação existente do asteriskAMIManager
+      const client = asteriskAMIManager;
       
       try {
         // Tentativa de conexão com timeout de 5 segundos
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            client.disconnect();
+        // Definir um timeout para a tentativa de conexão
+        const timeoutPromise = new Promise<boolean>((_, reject) => {
+          setTimeout(() => {
             reject(new Error("Timeout ao conectar ao Asterisk"));
           }, 5000);
-          
-          client.connect(host, parseInt(port), username, password)
-            .then(() => {
-              clearTimeout(timeout);
-              client.disconnect();
-              resolve(true);
-            })
-            .catch((err: Error) => {
-              clearTimeout(timeout);
-              reject(err);
-            });
         });
+        
+        // Tentar conectar
+        const connectPromise = client.connect(host, parseInt(port), username, password);
+        
+        // Race entre conexão bem-sucedida e timeout
+        await Promise.race([connectPromise, timeoutPromise]);
         
         return res.json({ 
           success: true, 
