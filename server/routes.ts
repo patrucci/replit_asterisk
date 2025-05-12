@@ -836,8 +836,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para obter estatísticas de agentes
   app.get("/api/asterisk/agents", requireAuth, async (req, res) => {
     try {
-      if (!asteriskAMIManager.isConnected()) {
-        console.log("[SIMULAÇÃO] Retornando agentes simulados");
+      const organizationId = req.user!.organizationId;
+      console.log("Buscando agentes do banco de dados para organização:", organizationId);
+
+      try {
+        const dbAgents = await storage.getAgents(organizationId);
+        console.log("Encontrados", dbAgents.length, "agentes no banco de dados");
+
+        if (dbAgents && dbAgents.length > 0) {
+          // Mapear os agentes do banco de dados para o formato esperado pela interface
+          const mappedAgents = dbAgents.map(agent => {
+            return {
+              agentId: agent.id.toString(),
+              name: agent.name,
+              extension: agent.extension,
+              status: agent.status,
+              lastCall: new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString(),
+              callsTaken: Math.floor(Math.random() * 10), // Simulado temporariamente
+              callsAbandoned: Math.floor(Math.random() * 2), // Simulado temporariamente
+              avgTalkTime: Math.floor(Math.random() * 180 + 60), // Simulado temporariamente
+              totalTalkTime: Math.floor(Math.random() * 1800 + 600), // Simulado temporariamente
+              pauseTime: agent.status === 'paused' ? Math.floor(Math.random() * 600) : 0,
+              loginTime: new Date(Date.now() - Math.floor(Math.random() * 28800000)).toISOString(),
+              queues: ["queue1"] // Simplificado por enquanto
+            };
+          });
+          
+          return res.json(mappedAgents);
+        }
+      } catch (dbError) {
+        console.error("Erro ao buscar agentes do banco de dados:", dbError);
+      }
+
+      // Se chegou aqui, não conseguiu buscar do banco ou não tem dados
+      if (asteriskAMIManager.isConnected()) {
+        console.log("Usando dados do Asterisk AMI para agentes");
+        const agents = Array.from(asteriskAMIManager.getAgentStats().values());
+        return res.json(agents);
+      } else {
+        console.log("[SIMULAÇÃO] Retornando agentes simulados como fallback");
         // Dados simulados para teste
         const simulatedAgents = [
           {
@@ -865,39 +902,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pauseTime: Math.floor(Math.random() * 1200),
             loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
             queues: ["queue1", "queue3"]
-          },
-          {
-            agentId: "agent3",
-            name: "Carlos Oliveira",
-            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
-            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-            callsTaken: Math.floor(Math.random() * 20),
-            callsAbandoned: Math.floor(Math.random() * 5),
-            avgTalkTime: Math.floor(120 + Math.random() * 180),
-            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
-            pauseTime: Math.floor(Math.random() * 1200),
-            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
-            queues: ["queue2", "queue3"]
-          },
-          {
-            agentId: "agent4",
-            name: "Ana Pereira",
-            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
-            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-            callsTaken: Math.floor(Math.random() * 20),
-            callsAbandoned: Math.floor(Math.random() * 5),
-            avgTalkTime: Math.floor(120 + Math.random() * 180),
-            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
-            pauseTime: Math.floor(Math.random() * 1200),
-            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
-            queues: ["queue1", "queue2", "queue3"]
           }
         ];
         return res.json(simulatedAgents);
       }
-      
-      const agents = Array.from(asteriskAMIManager.getAgentStats().values());
-      return res.json(agents);
     } catch (error) {
       console.error('Erro ao obter agentes:', error);
       return res.status(500).json({ message: "Erro ao obter agentes" });
