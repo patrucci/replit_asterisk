@@ -885,6 +885,27 @@ class AsteriskAMIManager extends EventEmitter {
   }
   
   // Limpar recursos ao fechar
+  // Método para testar a conexão sem estabelecer uma conexão permanente
+  async testConnection(host: string, port: number, username: string, password: string): Promise<boolean> {
+    try {
+      // Criar um cliente AMI temporário apenas para teste
+      const client = new AsteriskAmi();
+      
+      // Tentativa de conexão com timeout de 5 segundos
+      await Promise.race([
+        client.connect(host, parseInt(port.toString()), username, password),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout de conexão")), 5000))
+      ]);
+      
+      // Se chegou aqui, a conexão foi bem-sucedida
+      client.disconnect();
+      return true;
+    } catch (error) {
+      console.error('Erro ao testar conexão Asterisk:', error);
+      return false;
+    }
+  }
+  
   close() {
     if (this.client) {
       this.client.disconnect();
