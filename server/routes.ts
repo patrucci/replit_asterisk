@@ -1,8 +1,12 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
 import { 
   insertClientSchema, 
   insertAppointmentSchema, 
@@ -26,6 +30,56 @@ const requireAuth = (req: any, res: any, next: any) => {
   }
   next();
 };
+
+// Configuração para armazenamento de arquivos de áudio
+const storage_audio = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Criar pasta de áudio se não existir
+    const audioDir = path.join(process.cwd(), 'uploads', 'audio');
+    fs.mkdirSync(audioDir, { recursive: true });
+    cb(null, audioDir);
+  },
+  filename: (req, file, cb) => {
+    // Garantir nomes de arquivo únicos
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + extension);
+  }
+});
+
+// Filtro para tipos de arquivo de áudio
+const audioFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/gsm', 'audio/x-gsm'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Tipo de arquivo não suportado. Apenas WAV, MP3 e GSM são permitidos.'));
+  }
+};
+
+// Configuração do Multer para upload de arquivos
+const upload = multer({ 
+  storage: storage_audio,
+  fileFilter: audioFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // Limite de 10MB
+  }
+});
+
+// Interface para arquivos de áudio
+interface AudioFile {
+  id: string;
+  name: string;
+  filename: string;
+  duration?: number;
+  size?: number;
+  uploaded: string;
+  language?: string;
+}
+
+// Armazenamento em memória para arquivos de áudio
+// Em uma implementação completa, isso estaria no banco de dados
+let audioFiles: AudioFile[] = [];
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
