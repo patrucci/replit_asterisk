@@ -618,11 +618,121 @@ export default function AsteriskConfigPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full mb-6">
-          <TabsTrigger value="server">Configuração do Servidor</TabsTrigger>
-          <TabsTrigger value="dialplan">Plano de Discagem (WYSIWYG)</TabsTrigger>
+        <TabsList className="grid w-full mb-6" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+          <TabsTrigger value="connection">Conexão AMI</TabsTrigger>
+          <TabsTrigger value="server">Configuração SIP</TabsTrigger>
+          <TabsTrigger value="dialplan">Plano de Discagem</TabsTrigger>
+          <TabsTrigger value="queues" disabled={!status?.connected}>Filas</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="connection" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Conexão com Asterisk AMI</CardTitle>
+              <CardDescription>
+                Configure a conexão com o Asterisk Manager Interface para gerenciar filas e planos de discagem
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <AsteriskConnect />
+              
+              {status?.connected && (
+                <Alert className="mt-4">
+                  <CheckCheck className="h-4 w-4" />
+                  <AlertTitle>Conexão estabelecida!</AlertTitle>
+                  <AlertDescription>
+                    O sistema está conectado ao servidor Asterisk. Agora você pode configurar filas, agentes e planos de discagem.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <Card className="p-4">
+                  <CardHeader className="p-0 pb-2">
+                    <CardTitle className="text-lg flex items-center">
+                      <Server className="h-5 w-5 mr-2 text-primary" />
+                      Conexão com Asterisk
+                    </CardTitle>
+                  </CardHeader>
+                  <p className="text-sm text-muted-foreground">
+                    Configure a conexão com o servidor Asterisk para acessar todas as funcionalidades de telefonia.
+                  </p>
+                </Card>
+                
+                <Card className="p-4">
+                  <CardHeader className="p-0 pb-2">
+                    <CardTitle className="text-lg flex items-center">
+                      <PhoneForwarded className="h-5 w-5 mr-2 text-primary" />
+                      Funções Disponíveis
+                    </CardTitle>
+                  </CardHeader>
+                  <p className="text-sm text-muted-foreground">
+                    Com o servidor conectado, você pode gerenciar filas, agentes, e planos de discagem personalizados.
+                  </p>
+                </Card>
+                
+                <Card className="p-4">
+                  <CardHeader className="p-0 pb-2">
+                    <CardTitle className="text-lg flex items-center">
+                      <MessageSquare className="h-5 w-5 mr-2 text-primary" />
+                      Suporte AMI
+                    </CardTitle>
+                  </CardHeader>
+                  <p className="text-sm text-muted-foreground">
+                    A integração utiliza Asterisk Manager Interface (AMI) para comunicação bidirecional em tempo real.
+                  </p>
+                </Card>
+              </div>
+              
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-2">Perguntas Frequentes</h3>
+                <Separator className="mb-4" />
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-base font-medium flex items-center">
+                      <FileQuestion className="h-4 w-4 mr-2 text-muted-foreground" />
+                      O que é o Asterisk AMI?
+                    </h4>
+                    <p className="text-sm text-muted-foreground ml-6 mt-1">
+                      Asterisk Manager Interface (AMI) é uma interface de controle que permite gerenciar remotamente um servidor Asterisk,
+                      monitorar eventos e executar ações como pausar agentes ou monitorar filas.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-base font-medium flex items-center">
+                      <FileQuestion className="h-4 w-4 mr-2 text-muted-foreground" />
+                      Preciso ter um servidor Asterisk?
+                    </h4>
+                    <p className="text-sm text-muted-foreground ml-6 mt-1">
+                      Sim, você precisa ter acesso a um servidor Asterisk com o AMI habilitado. Configure as permissões
+                      no arquivo manager.conf do Asterisk para permitir acesso ao ProConnect CRM.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-base font-medium flex items-center">
+                      <FileQuestion className="h-4 w-4 mr-2 text-muted-foreground" />
+                      Como configurar o AMI no Asterisk?
+                    </h4>
+                    <p className="text-sm text-muted-foreground ml-6 mt-1">
+                      Edite o arquivo <code>manager.conf</code> no seu servidor Asterisk e adicione um usuário com permissões
+                      adequadas. Exemplo:
+                    </p>
+                    <pre className="bg-secondary p-2 rounded-md text-xs mt-2 ml-6">
+{`[proconnect]
+secret=senhaamicomplexaseconfirme
+read=system,call,agent
+write=system,call,agent,command`}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
         <TabsContent value="server" className="space-y-6">
           <Card>
             <CardHeader>
@@ -748,6 +858,59 @@ export default function AsteriskConfigPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="queues" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gerenciamento de Filas</CardTitle>
+              <CardDescription>
+                Configure e monitore filas de atendimento do Asterisk
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!status?.connected ? (
+                <div className="flex flex-col items-center justify-center p-8">
+                  <p className="text-center text-muted-foreground mb-4">
+                    Conecte-se ao servidor Asterisk primeiro para gerenciar filas.
+                  </p>
+                  <Button variant="outline" onClick={() => setActiveTab("connection")}>
+                    Ir para configuração de conexão <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-lg mb-4">Configuração e monitoramento de filas será implementado em breve.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <Card className="p-4">
+                      <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-lg flex items-center">
+                          <Phone className="h-5 w-5 mr-2 text-primary" />
+                          Filas de Atendimento
+                        </CardTitle>
+                      </CardHeader>
+                      <p className="text-sm text-muted-foreground">
+                        Configure estratégias de distribuição, timeouts, anúncios e outras configurações para suas filas.
+                      </p>
+                    </Card>
+                    
+                    <Card className="p-4">
+                      <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-lg flex items-center">
+                          <PhoneForwarded className="h-5 w-5 mr-2 text-primary" />
+                          Gestão de Agentes
+                        </CardTitle>
+                      </CardHeader>
+                      <p className="text-sm text-muted-foreground">
+                        Adicione, remova e configure agentes para suas filas de atendimento.
+                      </p>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
         <TabsContent value="dialplan" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
