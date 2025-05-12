@@ -583,6 +583,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota para configurar a conexão com o Asterisk AMI
+  app.post("/api/asterisk/connect", requireAuth, async (req, res) => {
+    try {
+      const { host, port, username, password } = req.body;
+      
+      // Validar os dados
+      if (!host || !port || !username || !password) {
+        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+      }
+      
+      // Tentar conectar ao AMI
+      const connected = await asteriskAMIManager.connect(host, parseInt(port), username, password);
+      
+      if (connected) {
+        // Salvar as configurações no banco de dados
+        try {
+          const settings = await storage.getAsteriskSettings(req.user!.organizationId);
+          
+          if (settings) {
+            await storage.updateAsteriskSettings(req.user!.organizationId, {
+              host,
+              port: parseInt(port),
+              username,
+              password,
+              connected: true
+            });
+          } else {
+            // Criar novas configurações
+            await storage.createAsteriskSettings({
+              organizationId: req.user!.organizationId,
+              host,
+              port: parseInt(port),
+              username,
+              password,
+              connected: true
+            });
+          }
+        } catch (dbError) {
+          console.error("Erro ao salvar configurações do Asterisk:", dbError);
+          // Continuar mesmo com erro de banco, pois a conexão já foi feita
+        }
+        
+        return res.json({ success: true, message: "Conectado ao Asterisk AMI com sucesso" });
+      } else {
+        return res.status(500).json({ success: false, message: "Falha ao conectar com o Asterisk AMI" });
+      }
+    } catch (error) {
+      console.error('Erro ao conectar com Asterisk:', error);
+      return res.status(500).json({ message: "Erro ao conectar com o Asterisk" });
+    }
+  });
+  
+  // Rota para verificar o status da conexão Asterisk
+  app.get("/api/asterisk/status", requireAuth, async (req, res) => {
+    try {
+      let settings;
+      try {
+        settings = await storage.getAsteriskSettings(req.user!.organizationId);
+      } catch (dbError) {
+        console.error("Erro ao obter configurações do Asterisk:", dbError);
+      }
+      
+      // Verificar se o asteriskAMIManager está conectado
+      const isConnected = asteriskAMIManager.isConnected();
+      
+      return res.json({
+        connected: isConnected,
+        configured: !!settings,
+        host: settings?.host,
+        port: settings?.port,
+        username: settings?.username,
+        message: isConnected ? "Conectado ao Asterisk AMI" : "Desconectado do Asterisk AMI"
+      });
+    } catch (error) {
+      console.error('Erro ao verificar status do Asterisk:', error);
+      return res.status(500).json({ message: "Erro ao verificar status do Asterisk" });
+    }
+  });
+  
+  // Rota para obter estatísticas de filas
+  app.get("/api/asterisk/queues", requireAuth, async (req, res) => {
+    try {
+      if (!asteriskAMIManager.isConnected()) {
+        return res.status(400).json({ message: "Não conectado ao Asterisk AMI" });
+      }
+      
+      const queues = Array.from(asteriskAMIManager.getQueueStats().values());
+      return res.json(queues);
+    } catch (error) {
+      console.error('Erro ao obter filas:', error);
+      return res.status(500).json({ message: "Erro ao obter filas" });
+    }
+  });
+  
+  // Rota para obter estatísticas de agentes
+  app.get("/api/asterisk/agents", requireAuth, async (req, res) => {
+    try {
+      if (!asteriskAMIManager.isConnected()) {
+        return res.status(400).json({ message: "Não conectado ao Asterisk AMI" });
+      }
+      
+      const agents = Array.from(asteriskAMIManager.getAgentStats().values());
+      return res.json(agents);
+    } catch (error) {
+      console.error('Erro ao obter agentes:', error);
+      return res.status(500).json({ message: "Erro ao obter agentes" });
+    }
+  });
+  
+  // Rota para controlar o status de agentes
+  app.post("/api/asterisk/agent/pause", requireAuth, async (req, res) => {
+    try {
+      const { agentId, reason } = req.body;
+      
+      if (!agentId) {
+        return res.status(400).json({ message: "ID do agente é obrigatório" });
+      }
+      
+      await asteriskAMIManager.pauseAgent(agentId, reason || "Pausa via ProConnect CRM");
+      return res.json({ success: true, message: "Agente pausado com sucesso" });
+    } catch (error) {
+      console.error('Erro ao pausar agente:', error);
+      return res.status(500).json({ message: "Erro ao pausar agente" });
+    }
+  });
+  
+  app.post("/api/asterisk/agent/unpause", requireAuth, async (req, res) => {
+    try {
+      const { agentId } = req.body;
+      
+      if (!agentId) {
+        return res.status(400).json({ message: "ID do agente é obrigatório" });
+      }
+      
+      await asteriskAMIManager.unpauseAgent(agentId);
+      return res.json({ success: true, message: "Agente retomado com sucesso" });
+    } catch (error) {
+      console.error('Erro ao retomar agente:', error);
+      return res.status(500).json({ message: "Erro ao retomar agente" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Configurar WebSocket para Asterisk AMI
@@ -590,22 +732,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Inicializar conexão com Asterisk AMI
     asteriskAMIManager.setupWebsocket(httpServer, '/queue-events');
     
-    // Para ambiente de desenvolvimento, você pode se conectar a um servidor Asterisk
-    // Descomente e configure as linhas abaixo quando tiver um servidor Asterisk disponível
-    /*
-    asteriskAMIManager.connect(
-      process.env.ASTERISK_HOST || 'localhost',
-      parseInt(process.env.ASTERISK_PORT || '5038', 10),
-      process.env.ASTERISK_USERNAME || 'admin',
-      process.env.ASTERISK_PASSWORD || 'password'
-    ).then(connected => {
-      if (connected) {
-        console.log('Conexão com Asterisk AMI estabelecida com sucesso');
-      } else {
-        console.error('Não foi possível conectar ao Asterisk AMI');
-      }
-    });
-    */
+    // Tentar carregar e conectar com configurações salvas
+    const organizationId = 1; // Organização padrão
+    storage.getAsteriskSettings(organizationId)
+      .then(settings => {
+        if (settings && settings.host && settings.port && settings.username && settings.password) {
+          asteriskAMIManager.connect(
+            settings.host,
+            settings.port,
+            settings.username,
+            settings.password
+          ).then(connected => {
+            if (connected) {
+              console.log('Conectado automaticamente ao Asterisk AMI com as configurações salvas');
+            }
+          }).catch(err => {
+            console.error('Erro ao conectar automaticamente ao Asterisk AMI:', err);
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Erro ao buscar configurações do Asterisk:', err);
+      });
     
     console.log('WebSocket para Asterisk AMI configurado em /queue-events');
   } catch (error) {

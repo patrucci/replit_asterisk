@@ -93,6 +93,21 @@ class AsteriskAMIManager extends EventEmitter {
     this.setupEventListeners();
   }
 
+  // Verifica se está conectado
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  // Retorna as estatísticas de filas
+  getQueueStats(): Map<string, QueueStats> {
+    return this.queueStats;
+  }
+
+  // Retorna as estatísticas de agentes
+  getAgentStats(): Map<string, AgentStats> {
+    return this.agentStats;
+  }
+
   // Inicializar conexão com o Asterisk
   async connect(host: string, port: number, username: string, password: string) {
     try {
