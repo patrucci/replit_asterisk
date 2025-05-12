@@ -4,10 +4,14 @@ import {
   appointments, type Appointment, type InsertAppointment,
   payments, type Payment, type InsertPayment,
   messages, type Message, type InsertMessage,
-  calls, type Call, type InsertCall
+  calls, type Call, type InsertCall,
+  organizations
 } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+import { db, pool } from "./storage/index";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -124,237 +128,209 @@ export interface IStorage {
   deleteDashboardWidget(id: number): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private usersMap: Map<number, User>;
-  private clientsMap: Map<number, Client>;
-  private appointmentsMap: Map<number, Appointment>;
-  private paymentsMap: Map<number, Payment>;
-  private messagesMap: Map<number, Message>;
-  private callsMap: Map<number, Call>;
-  
-  // Queue Maps
-  private agentGroupsMap: Map<number, AgentGroup>;
-  private agentsMap: Map<number, Agent>;
-  private queuesMap: Map<number, Queue>;
-  private queueAgentsMap: Map<number, QueueAgent>;
-  private queueCallsMap: Map<number, QueueCall>;
-  private agentPausesMap: Map<number, AgentPause>;
-  private queueSlasMap: Map<number, QueueSla>;
-  private queueAnnouncementsMap: Map<number, QueueAnnouncement>;
-  private queueDashboardsMap: Map<number, QueueDashboard>;
-  private dashboardWidgetsMap: Map<number, DashboardWidget>;
+export class DbStorage implements IStorage {
   
   sessionStore: session.SessionStore;
-  
-  private userId: number;
-  private clientId: number;
-  private appointmentId: number;
-  private paymentId: number;
-  private messageId: number;
-  private callId: number;
-  
-  // Queue IDs
-  private agentGroupId: number;
-  private agentId: number;
-  private queueId: number;
-  private queueAgentId: number;
-  private queueCallId: number;
-  private agentPauseId: number;
-  private queueSlaId: number;
-  private queueAnnouncementId: number;
-  private queueDashboardId: number;
-  private dashboardWidgetId: number;
 
   constructor() {
-    this.usersMap = new Map();
-    this.clientsMap = new Map();
-    this.appointmentsMap = new Map();
-    this.paymentsMap = new Map();
-    this.messagesMap = new Map();
-    this.callsMap = new Map();
+    // Importar pool e configurar o session store
+    const Pool = require('connect-pg-simple');
+    const PostgresSessionStore = Pool(session);
     
-    // Initialize Queue Maps
-    this.agentGroupsMap = new Map();
-    this.agentsMap = new Map();
-    this.queuesMap = new Map();
-    this.queueAgentsMap = new Map();
-    this.queueCallsMap = new Map();
-    this.agentPausesMap = new Map();
-    this.queueSlasMap = new Map();
-    this.queueAnnouncementsMap = new Map();
-    this.queueDashboardsMap = new Map();
-    this.dashboardWidgetsMap = new Map();
-    
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // 24 hours
+    this.sessionStore = new PostgresSessionStore({
+      createTableIfMissing: true,
+      pool, // Já está importado a partir do arquivo de storage/index.ts
     });
-    
-    this.userId = 1;
-    this.clientId = 1;
-    this.appointmentId = 1;
-    this.paymentId = 1;
-    this.messageId = 1;
-    this.callId = 1;
-    
-    // Initialize Queue IDs
-    this.agentGroupId = 1;
-    this.agentId = 1;
-    this.queueId = 1;
-    this.queueAgentId = 1;
-    this.queueCallId = 1;
-    this.agentPauseId = 1;
-    this.queueSlaId = 1;
-    this.queueAnnouncementId = 1;
-    this.queueDashboardId = 1;
-    this.dashboardWidgetId = 1;
   }
 
-  // User methods
+  // User methods - com suporte a multitenancy
   async getUser(id: number): Promise<User | undefined> {
-    return this.usersMap.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.usersMap.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const user: User = { ...insertUser, id };
-    this.usersMap.set(id, user);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  // Client methods
-  async getClients(userId: number): Promise<Client[]> {
-    return Array.from(this.clientsMap.values()).filter(
-      (client) => client.userId === userId
-    );
+  async getUserByUsername(username: string, organizationId?: number): Promise<User | undefined> {
+    let query = db.select().from(users).where(eq(users.username, username));
+    if (organizationId) {
+      query = query.where(eq(users.organizationId, organizationId));
+    }
+    const [user] = await query;
+    return user;
+  }
+
+  async createUser(userData: InsertUser & { organizationId: number }): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
+    return user;
+  }
+
+  // Client methods - com suporte a multitenancy
+  async getClients(userId: number, organizationId: number): Promise<Client[]> {
+    const result = await db.select()
+      .from(clients)
+      .where(and(
+        eq(clients.userId, userId),
+        eq(clients.organizationId, organizationId)
+      ));
+    return result;
   }
 
   async getClient(id: number): Promise<Client | undefined> {
-    return this.clientsMap.get(id);
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client;
   }
 
-  async createClient(insertClient: InsertClient): Promise<Client> {
-    const id = this.clientId++;
-    const client: Client = { ...insertClient, id };
-    this.clientsMap.set(id, client);
+  async createClient(clientData: InsertClient & { organizationId: number }): Promise<Client> {
+    const [client] = await db.insert(clients).values(clientData).returning();
     return client;
   }
 
   async updateClient(id: number, clientUpdate: Partial<InsertClient>): Promise<Client | undefined> {
-    const existingClient = this.clientsMap.get(id);
-    if (!existingClient) return undefined;
-    
-    const updatedClient = { ...existingClient, ...clientUpdate };
-    this.clientsMap.set(id, updatedClient);
-    return updatedClient;
+    const [client] = await db.update(clients)
+      .set(clientUpdate)
+      .where(eq(clients.id, id))
+      .returning();
+    return client;
   }
 
   async deleteClient(id: number): Promise<boolean> {
-    return this.clientsMap.delete(id);
+    const result = await db.delete(clients).where(eq(clients.id, id));
+    return !!result;
   }
 
-  // Appointment methods
-  async getAppointments(userId: number): Promise<Appointment[]> {
-    return Array.from(this.appointmentsMap.values()).filter(
-      (appointment) => appointment.userId === userId
-    );
+  // Appointment methods - com suporte a multitenancy
+  async getAppointments(userId: number, organizationId: number): Promise<Appointment[]> {
+    const result = await db.select()
+      .from(appointments)
+      .where(and(
+        eq(appointments.userId, userId),
+        eq(appointments.organizationId, organizationId)
+      ));
+    return result;
   }
 
   async getAppointment(id: number): Promise<Appointment | undefined> {
-    return this.appointmentsMap.get(id);
+    const [appointment] = await db.select().from(appointments).where(eq(appointments.id, id));
+    return appointment;
   }
 
-  async createAppointment(insertAppointment: InsertAppointment): Promise<Appointment> {
-    const id = this.appointmentId++;
-    const appointment: Appointment = { ...insertAppointment, id };
-    this.appointmentsMap.set(id, appointment);
+  async createAppointment(appointmentData: InsertAppointment & { organizationId: number }): Promise<Appointment> {
+    const [appointment] = await db.insert(appointments).values(appointmentData).returning();
     return appointment;
   }
 
   async updateAppointment(id: number, appointmentUpdate: Partial<InsertAppointment>): Promise<Appointment | undefined> {
-    const existingAppointment = this.appointmentsMap.get(id);
-    if (!existingAppointment) return undefined;
-    
-    const updatedAppointment = { ...existingAppointment, ...appointmentUpdate };
-    this.appointmentsMap.set(id, updatedAppointment);
-    return updatedAppointment;
+    const [appointment] = await db.update(appointments)
+      .set(appointmentUpdate)
+      .where(eq(appointments.id, id))
+      .returning();
+    return appointment;
   }
 
   async deleteAppointment(id: number): Promise<boolean> {
-    return this.appointmentsMap.delete(id);
+    const result = await db.delete(appointments).where(eq(appointments.id, id));
+    return !!result;
   }
 
-  // Payment methods
-  async getPayments(userId: number): Promise<Payment[]> {
-    return Array.from(this.paymentsMap.values()).filter(
-      (payment) => payment.userId === userId
-    );
+  // Payment methods - com suporte a multitenancy
+  async getPayments(userId: number, organizationId: number): Promise<Payment[]> {
+    const result = await db.select()
+      .from(payments)
+      .where(and(
+        eq(payments.userId, userId),
+        eq(payments.organizationId, organizationId)
+      ));
+    return result;
   }
 
   async getPayment(id: number): Promise<Payment | undefined> {
-    return this.paymentsMap.get(id);
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
   }
 
-  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
-    const id = this.paymentId++;
-    const payment: Payment = { ...insertPayment, id };
-    this.paymentsMap.set(id, payment);
+  async createPayment(paymentData: InsertPayment & { organizationId: number }): Promise<Payment> {
+    const [payment] = await db.insert(payments).values(paymentData).returning();
     return payment;
   }
 
   async updatePayment(id: number, paymentUpdate: Partial<InsertPayment>): Promise<Payment | undefined> {
-    const existingPayment = this.paymentsMap.get(id);
-    if (!existingPayment) return undefined;
-    
-    const updatedPayment = { ...existingPayment, ...paymentUpdate };
-    this.paymentsMap.set(id, updatedPayment);
-    return updatedPayment;
+    const [payment] = await db.update(payments)
+      .set(paymentUpdate)
+      .where(eq(payments.id, id))
+      .returning();
+    return payment;
   }
 
   async deletePayment(id: number): Promise<boolean> {
-    return this.paymentsMap.delete(id);
+    const result = await db.delete(payments).where(eq(payments.id, id));
+    return !!result;
   }
 
-  // Message methods
+  // Message methods - com suporte a multitenancy
   async getMessages(clientId: number): Promise<Message[]> {
-    return Array.from(this.messagesMap.values()).filter(
-      (message) => message.clientId === clientId
-    );
+    const result = await db.select()
+      .from(messages)
+      .where(eq(messages.clientId, clientId));
+    return result;
   }
 
   async getMessage(id: number): Promise<Message | undefined> {
-    return this.messagesMap.get(id);
-  }
-
-  async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const id = this.messageId++;
-    const message: Message = { ...insertMessage, id };
-    this.messagesMap.set(id, message);
+    const [message] = await db.select().from(messages).where(eq(messages.id, id));
     return message;
   }
 
-  // Call methods
+  async createMessage(messageData: InsertMessage & { organizationId: number }): Promise<Message> {
+    const [message] = await db.insert(messages).values(messageData).returning();
+    return message;
+  }
+
+  // Call methods - com suporte a multitenancy
   async getCalls(clientId: number): Promise<Call[]> {
-    return Array.from(this.callsMap.values()).filter(
-      (call) => call.clientId === clientId
-    );
+    const result = await db.select()
+      .from(calls)
+      .where(eq(calls.clientId, clientId));
+    return result;
   }
 
   async getCall(id: number): Promise<Call | undefined> {
-    return this.callsMap.get(id);
+    const [call] = await db.select().from(calls).where(eq(calls.id, id));
+    return call;
   }
 
-  async createCall(insertCall: InsertCall): Promise<Call> {
-    const id = this.callId++;
-    const call: Call = { ...insertCall, id };
-    this.callsMap.set(id, call);
+  async createCall(callData: InsertCall & { organizationId: number }): Promise<Call> {
+    const [call] = await db.insert(calls).values(callData).returning();
     return call;
+  }
+  
+  // Organizations
+  async getOrganization(id: number) {
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return org;
+  }
+  
+  async getOrganizationBySubdomain(subdomain: string) {
+    const [org] = await db.select().from(organizations).where(eq(organizations.subdomain, subdomain));
+    return org;
+  }
+  
+  async createOrganization(data: { 
+    name: string; 
+    subdomain: string;
+    plan?: string;
+    maxUsers?: number;
+    contactEmail?: string;
+    contactPhone?: string;
+  }) {
+    const [org] = await db.insert(organizations).values(data).returning();
+    return org;
+  }
+  
+  async updateOrganization(id: number, data: any) {
+    const [org] = await db.update(organizations)
+      .set(data)
+      .where(eq(organizations.id, id))
+      .returning();
+    return org;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DbStorage();
