@@ -21,6 +21,7 @@ import AsteriskAIPage from "@/pages/asterisk-ai-page";
 import QueuesPage from "@/pages/queues-page";
 import QueueDashboardPage from "@/pages/queue-dashboard-page";
 import QueueRealtimePage from "@/pages/queue-realtime-page";
+import QueueConfigPage from "@/pages/queue-config-page";
 import SoftphonePage from "@/pages/softphone-page";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
       <ProtectedRoute path="/queues" component={QueuesPage} />
       <ProtectedRoute path="/queue-dashboard" component={QueueDashboardPage} />
       <ProtectedRoute path="/queue-realtime" component={QueueRealtimePage} />
+      <ProtectedRoute path="/queue-config" component={QueueConfigPage} />
       <ProtectedRoute path="/softphone" component={SoftphonePage} />
       <Route component={NotFound} />
     </Switch>

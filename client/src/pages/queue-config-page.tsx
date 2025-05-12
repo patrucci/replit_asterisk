@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCheck, FileQuestion, MoveRight, Phone, PhoneCall, PhoneForwarded } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import MainLayout from "@/components/layout/main-layout";
+import { MainLayout } from "@/components/layout/main-layout";
 import AsteriskConnect from "@/components/asterisk/AsteriskConnect";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -147,7 +147,10 @@ write=system,call,agent,command`}
                 <p className="text-center text-muted-foreground mb-4">
                   Conecte-se ao servidor Asterisk primeiro para gerenciar filas.
                 </p>
-                <Button variant="outline" onClick={() => document.querySelector('[data-value="connection"]')?.click()}>
+                <Button variant="outline" onClick={() => {
+                  const element = document.querySelector('[data-value="connection"]') as HTMLElement;
+                  if (element) element.click();
+                }}>
                   Ir para configuração de conexão <MoveRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -164,7 +167,10 @@ write=system,call,agent,command`}
                 <p className="text-center text-muted-foreground mb-4">
                   Conecte-se ao servidor Asterisk primeiro para gerenciar agentes.
                 </p>
-                <Button variant="outline" onClick={() => document.querySelector('[data-value="connection"]')?.click()}>
+                <Button variant="outline" onClick={() => {
+                  const element = document.querySelector('[data-value="connection"]') as HTMLElement;
+                  if (element) element.click();
+                }}>
                   Ir para configuração de conexão <MoveRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
