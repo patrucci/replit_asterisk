@@ -71,14 +71,57 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+      // Extrair dados do usuário e organização
+      const { 
+        username, password, name, role, email,
+        organization
+      } = req.body;
+      
+      // Verificar se já existe um usuário com o mesmo nome e subdomínio
+      const subdomain = req.body.subdomain || 'default';
+      let organizationId = 1; // ID padrão para organização (demo)
+      
+      // Se foi fornecido um subdomínio, verificar se a organização já existe
+      if (subdomain && subdomain !== 'default') {
+        const existingOrg = await storage.getOrganizationBySubdomain(subdomain);
+        
+        if (existingOrg) {
+          // Se a organização já existe, usar seu ID
+          organizationId = existingOrg.id;
+          
+          // Verificar se o usuário já existe nesta organização
+          const existingUser = await storage.getUserByUsername(username, organizationId);
+          if (existingUser) {
+            return res.status(400).json({ message: "Username already exists in this organization" });
+          }
+        } else if (organization) {
+          // Criar uma nova organização
+          const newOrg = await storage.createOrganization({
+            name: organization,
+            subdomain: subdomain,
+            contactEmail: email
+          });
+          
+          organizationId = newOrg.id;
+        }
+      } else {
+        // Verificar se o usuário já existe na organização padrão
+        const existingUser = await storage.getUserByUsername(username, organizationId);
+        if (existingUser) {
+          return res.status(400).json({ message: "Username already exists" });
+        }
       }
 
+      // Criar o usuário com a organização associada
       const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
+        username,
+        password: await hashPassword(password),
+        name,
+        role: role || 'user',
+        email,
+        organizationId,
+        isActive: true,
+        lastLogin: new Date()
       });
 
       req.login(user, (err) => {

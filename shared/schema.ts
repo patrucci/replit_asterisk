@@ -126,60 +126,29 @@ export const queues = pgTable("queues", {
 });
 
 // Insert Schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  name: true,
-  role: true,
-  email: true,
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true
 });
 
-export const insertClientSchema = createInsertSchema(clients).pick({
-  name: true,
-  email: true,
-  phone: true,
-  area: true,
-  notes: true,
-  userId: true,
-  status: true,
+export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true
 });
 
-export const insertAppointmentSchema = createInsertSchema(appointments).pick({
-  title: true,
-  clientId: true,
-  userId: true,
-  startTime: true,
-  endTime: true,
-  type: true,
-  notes: true,
-  status: true,
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+  id: true
 });
 
-export const insertPaymentSchema = createInsertSchema(payments).pick({
-  clientId: true,
-  userId: true,
-  amount: true,
-  description: true,
-  dueDate: true,
-  status: true,
-  paymentDate: true,
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true
 });
 
-export const insertMessageSchema = createInsertSchema(messages).pick({
-  clientId: true,
-  userId: true,
-  content: true,
-  timestamp: true,
-  isFromClient: true,
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true
 });
 
-export const insertCallSchema = createInsertSchema(calls).pick({
-  clientId: true,
-  userId: true,
-  timestamp: true,
-  duration: true,
-  notes: true,
-  type: true,
+export const insertCallSchema = createInsertSchema(calls).omit({
+  id: true
 });
 
 // Export Types

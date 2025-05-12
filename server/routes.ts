@@ -34,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client routes
   app.get("/api/clients", requireAuth, async (req, res) => {
     try {
-      const clients = await storage.getClients(req.user!.id);
+      const clients = await storage.getClients(req.user!.id, req.user!.organizationId);
       res.json(clients);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch clients" });
@@ -61,6 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertClientSchema.parse({
         ...req.body,
         userId: req.user!.id,
+        organizationId: req.user!.organizationId,
       });
       const client = await storage.createClient(validatedData);
       res.status(201).json(client);
@@ -123,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Appointment routes
   app.get("/api/appointments", requireAuth, async (req, res) => {
     try {
-      const appointments = await storage.getAppointments(req.user!.id);
+      const appointments = await storage.getAppointments(req.user!.id, req.user!.organizationId);
       res.json(appointments);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch appointments" });
@@ -135,6 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertAppointmentSchema.parse({
         ...req.body,
         userId: req.user!.id,
+        organizationId: req.user!.organizationId,
       });
       const appointment = await storage.createAppointment(validatedData);
       res.status(201).json(appointment);
@@ -197,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payment routes
   app.get("/api/payments", requireAuth, async (req, res) => {
     try {
-      const payments = await storage.getPayments(req.user!.id);
+      const payments = await storage.getPayments(req.user!.id, req.user!.organizationId);
       res.json(payments);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch payments" });

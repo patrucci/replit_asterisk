@@ -16,7 +16,7 @@ import {
 
 export interface IStorage {
   // Armazenamento de sessão
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   // Métodos relacionados a usuários
   getUser(id: number): Promise<User | undefined>;
