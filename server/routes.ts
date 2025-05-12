@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { setupAsteriskRoutes } from "./asterisk-routes";
+import { setupQueueRoutes } from "./queue-routes";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
