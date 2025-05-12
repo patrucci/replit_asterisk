@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -239,6 +239,119 @@ export default function AsteriskConfigPage() {
       });
     },
   });
+  
+  // Função para carregar os arquivos de áudio disponíveis
+  useEffect(() => {
+    loadAudioFiles();
+  }, []);
+  
+  // Funções para gerenciamento de arquivos de áudio
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    if (!file.type.startsWith('audio/')) {
+      toast({
+        title: "Tipo de arquivo inválido",
+        description: "Por favor, selecione apenas arquivos de áudio (wav, mp3, gsm, etc).",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('audioFile', file);
+    formData.append('name', file.name.split('.')[0]); // Nome sem extensão
+    
+    setUploadingFile(true);
+    
+    try {
+      // Esta API precisará ser implementada no backend
+      const response = await fetch('/api/asterisk/audio', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao enviar o arquivo');
+      }
+      
+      const result = await response.json();
+      
+      toast({
+        title: "Arquivo enviado com sucesso",
+        description: `O arquivo ${file.name} foi enviado e está disponível para uso no IVR.`,
+      });
+      
+      // Atualizar a lista de arquivos
+      setAudioFiles(prev => [...prev, result]);
+      
+    } catch (error) {
+      toast({
+        title: "Erro ao enviar arquivo",
+        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFile(false);
+      
+      // Limpar o input de arquivo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  
+  const handleDeleteAudioFile = async (fileId: string) => {
+    try {
+      // Esta API precisará ser implementada no backend
+      const response = await fetch(`/api/asterisk/audio/${fileId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao excluir o arquivo');
+      }
+      
+      toast({
+        title: "Arquivo removido",
+        description: "O arquivo de áudio foi removido com sucesso.",
+      });
+      
+      // Atualizar a lista de arquivos
+      setAudioFiles(prev => prev.filter(file => file.id !== fileId));
+      
+      // Limpar a seleção se o arquivo selecionado foi o removido
+      if (selectedAudioFile?.id === fileId) {
+        setSelectedAudioFile(null);
+      }
+      
+    } catch (error) {
+      toast({
+        title: "Erro ao remover arquivo",
+        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const loadAudioFiles = async () => {
+    try {
+      // Esta API precisará ser implementada no backend
+      const response = await fetch('/api/asterisk/audio');
+      
+      if (!response.ok) {
+        throw new Error('Falha ao carregar os arquivos de áudio');
+      }
+      
+      const files = await response.json();
+      setAudioFiles(files);
+      
+    } catch (error) {
+      console.error("Erro ao carregar arquivos de áudio:", error);
+      // Podemos optar por não mostrar um toast de erro aqui para não incomodar o usuário
+    }
+  };
 
   // Testar conexão com o Asterisk
   const testConnection = async () => {
