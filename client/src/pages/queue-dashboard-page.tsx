@@ -160,14 +160,29 @@ export default function QueueDashboardPage() {
   });
 
   // Consulta para desempenho dos agentes
-  const { data: agentPerformance, isLoading: isLoadingAgentPerformance } = useQuery({
-    queryKey: ["/api/queue-metrics/agents", selectedPeriod, selectedQueue],
+  const { data: agentStats, isLoading: isLoadingAgentStats } = useQuery({
+    queryKey: ["/api/agents", selectedPeriod, selectedQueue],
     queryFn: async () => {
-      // Em uma implementação real, buscaríamos do backend
-      await new Promise(resolve => setTimeout(resolve, 600));
-      return mockAgentPerformance;
+      const response = await fetch("/api/agents");
+      if (!response.ok) {
+        throw new Error("Erro ao buscar estatísticas dos agentes");
+      }
+      return response.json();
     },
   });
+  
+  // Converter os dados de API para o formato esperado pelo componente
+  const agentPerformance: AgentPerformance[] = agentStats?.map((agent: any) => ({
+    agentId: agent.id,
+    agentName: agent.name,
+    callsAnswered: 0, // Inicializar com valores padrão
+    avgHandleTime: 0, 
+    avgAfterCallWork: 0,
+    customerSatisfaction: 4.0,
+    loginTime: 480,
+    pauseTime: 0,
+    readiness: 100
+  })) || [];
 
   // Consulta para distribuição de chamadas
   const { data: callDistribution, isLoading: isLoadingCallDistribution } = useQuery({
@@ -180,14 +195,28 @@ export default function QueueDashboardPage() {
   });
 
   // Consulta para métricas por fila
-  const { data: queueMetrics, isLoading: isLoadingQueueMetrics } = useQuery({
-    queryKey: ["/api/queue-metrics/queues", selectedPeriod],
+  const { data: queueStats, isLoading: isLoadingQueueStats } = useQuery({
+    queryKey: ["/api/queue-stats", selectedPeriod],
     queryFn: async () => {
-      // Em uma implementação real, buscaríamos do backend
-      await new Promise(resolve => setTimeout(resolve, 750));
-      return mockQueueMetrics;
+      const response = await fetch("/api/queue-stats");
+      if (!response.ok) {
+        throw new Error("Erro ao buscar estatísticas das filas");
+      }
+      return response.json();
     },
   });
+  
+  // Converter os dados de API para o formato esperado pelo componente
+  const queueMetrics: QueueMetric[] = queueStats?.queueStats?.map((queue: any) => ({
+    queueId: queue.queueId,
+    queueName: queue.name,
+    totalCalls: queue.calls || 0,
+    answeredCalls: queue.completed || 0,
+    abandonedCalls: queue.abandoned || 0,
+    avgWaitTime: queue.avgWaitTime || 0,
+    avgHandleTime: queue.avgTalkTime || 0,
+    slaPercentage: queue.serviceLevel || 0,
+  })) || [];
 
   // Consulta para pausas de agentes
   const { data: agentPauses, isLoading: isLoadingAgentPauses } = useQuery({
