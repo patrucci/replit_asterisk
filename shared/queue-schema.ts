@@ -14,6 +14,7 @@ export const agentGroups = pgTable("agent_groups", {
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   userId: integer("user_id").notNull(),
+  organizationId: integer("organization_id").notNull(),
 });
 
 // Tabela de agentes
@@ -28,6 +29,7 @@ export const agents = pgTable("agents", {
   maxConcurrentCalls: integer("max_concurrent_calls").default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   userId: integer("user_id").notNull(),
+  organizationId: integer("organization_id").notNull(),
 });
 
 // Tabela de filas
@@ -42,7 +44,9 @@ export const queues = pgTable("queues", {
   announcement: text("announcement"),
   wrapUpTime: integer("wrap_up_time").default(5),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
   userId: integer("user_id").notNull(),
+  organizationId: integer("organization_id").notNull(),
 });
 
 // Tabela de mapeamento de agente para fila (muitos para muitos)
@@ -146,6 +150,7 @@ export const insertAgentSchema = createInsertSchema(agents).pick({
   skills: true,
   maxConcurrentCalls: true,
   userId: true,
+  organizationId: true,
 });
 
 export const insertQueueSchema = createInsertSchema(queues).pick({
@@ -158,6 +163,7 @@ export const insertQueueSchema = createInsertSchema(queues).pick({
   announcement: true,
   wrapUpTime: true,
   userId: true,
+  organizationId: true,
 });
 
 export const insertQueueAgentSchema = createInsertSchema(queueAgents).pick({

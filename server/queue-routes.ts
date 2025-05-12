@@ -130,11 +130,24 @@ export function setupQueueRoutes(app: Express, requireAuth: any) {
   // Rota para criar uma nova fila
   app.post("/api/queues", requireAuth, async (req: Request, res: Response) => {
     try {
+      console.log("Usuário autenticado:", req.user);
+      console.log("ID da organização:", req.user?.organizationId);
+      
+      // Verificar se o usuário tem organizationId
+      if (!req.user || !req.user.organizationId) {
+        return res.status(400).json({ 
+          message: "Usuário não possui uma organização associada",
+          user: req.user 
+        });
+      }
+      
       const validatedData = insertQueueSchema.parse({
         ...req.body,
-        userId: req.user!.id,
-        organizationId: req.user!.organizationId,
+        userId: req.user.id,
+        organizationId: req.user.organizationId,
       });
+      
+      console.log("Dados validados para criação da fila:", validatedData);
       
       if (SIMULATION_MODE) {
         console.log('[SIMULAÇÃO] Criando fila simulada:', validatedData);
@@ -145,11 +158,21 @@ export function setupQueueRoutes(app: Express, requireAuth: any) {
         });
       }
       
+      // Garantir que organizationId está presente
+      if (!validatedData.organizationId) {
+        validatedData.organizationId = req.user.organizationId;
+        console.log("Adicionando organizationId manualmente:", validatedData);
+      }
+      
       const queue = await storage.createQueue(validatedData);
       res.status(201).json(queue);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos da fila", errors: error.errors });
+        return res.status(400).json({ 
+          message: "Dados inválidos da fila", 
+          errors: error.errors,
+          body: req.body
+        });
       }
       console.error('Erro ao criar fila:', error);
       res.status(500).json({ message: "Falha ao criar fila" });
