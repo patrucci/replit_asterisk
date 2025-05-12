@@ -22,7 +22,6 @@ export default function SoftphonePage() {
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
   const [audioTestActive, setAudioTestActive] = useState(false);
   const [g729Enabled, setG729Enabled] = useState(true);
-  // Removemos o estado defaultConfig pois a configuração agora está centralizada no componente SoftPhone
 
   // Efeito para obter lista de dispositivos de áudio
   useEffect(() => {
@@ -157,14 +156,7 @@ export default function SoftphonePage() {
     // Qualquer limpeza necessária de recursos de áudio
   };
 
-  // Função para salvar configurações
-  const saveDefaultConfig = () => {
-    // Em uma implementação real, salvaria as configurações no localStorage ou no backend
-    toast({
-      title: "Configurações salvas",
-      description: "As configurações padrão foram salvas com sucesso",
-    });
-  };
+  // Removemos a função saveDefaultConfig pois não é mais necessária
 
   return (
     <MainLayout>
@@ -323,67 +315,46 @@ export default function SoftphonePage() {
               <TabsContent value="settings">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Configurações</CardTitle>
-                    <CardDescription>Defina as configurações padrão para o softphone</CardDescription>
+                    <CardTitle>Informações do Softphone</CardTitle>
+                    <CardDescription>Documentação e ajuda sobre o uso do softphone</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="default-extension">Ramal padrão</Label>
-                      <Input
-                        id="default-extension"
-                        placeholder="Ex: 1001"
-                        value={defaultConfig.extension}
-                        onChange={(e) => setDefaultConfig(prev => ({ ...prev, extension: e.target.value }))}
-                      />
+                    <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                      <h3 className="text-sm font-medium text-blue-800 flex items-center">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configurações do Ramal
+                      </h3>
+                      <p className="text-xs text-blue-700 mt-1">
+                        As configurações do softphone podem ser acessadas diretamente 
+                        através do botão de configuração (ícone de engrenagem) 
+                        no cabeçalho do telefone.
+                      </p>
                     </div>
                     
-                    <div className="grid gap-2">
-                      <Label htmlFor="default-display-name">Nome de exibição</Label>
-                      <Input
-                        id="default-display-name"
-                        placeholder="Ex: João Silva"
-                        value={defaultConfig.displayName}
-                        onChange={(e) => setDefaultConfig(prev => ({ ...prev, displayName: e.target.value }))}
-                      />
+                    <div>
+                      <h3 className="text-sm font-medium">Tipos de Codecs</h3>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">
+                        O ProConnect CRM suporta os seguintes codecs de áudio:
+                      </p>
+                      <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
+                        <li>G.711 (PCMA/PCMU) - Alta qualidade, maior largura de banda</li>
+                        <li>G.729 - Compressão eficiente, menor largura de banda</li>
+                        <li>Opus - Codec adaptativo de alta qualidade</li>
+                      </ul>
                     </div>
                     
-                    <div className="grid gap-2">
-                      <Label htmlFor="default-domain">Domínio SIP</Label>
-                      <Input
-                        id="default-domain"
-                        placeholder="Ex: sip.example.com"
-                        value={defaultConfig.domain}
-                        onChange={(e) => setDefaultConfig(prev => ({ ...prev, domain: e.target.value }))}
-                      />
+                    <div>
+                      <h3 className="text-sm font-medium">Requisitos do Sistema</h3>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">
+                        Para o melhor funcionamento do softphone:
+                      </p>
+                      <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
+                        <li>Navegador Chrome, Firefox ou Edge atualizado</li>
+                        <li>Conexão estável à internet</li>
+                        <li>Microfone e alto-falantes funcionais</li>
+                        <li>Acesso HTTPS (necessário para funcionalidades de áudio)</li>
+                      </ul>
                     </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="default-ws-uri">URI do WebSocket</Label>
-                      <Input
-                        id="default-ws-uri"
-                        placeholder="Ex: wss://sip.example.com:8089/ws"
-                        value={defaultConfig.wsUri}
-                        onChange={(e) => setDefaultConfig(prev => ({ ...prev, wsUri: e.target.value }))}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="auto-register"
-                        checked={defaultConfig.autoRegister}
-                        onCheckedChange={(checked) => setDefaultConfig(prev => ({ ...prev, autoRegister: checked }))}
-                      />
-                      <Label htmlFor="auto-register">
-                        Registrar automaticamente ao iniciar
-                      </Label>
-                    </div>
-                    
-                    <Button 
-                      className="w-full mt-2" 
-                      onClick={saveDefaultConfig}
-                    >
-                      Salvar configurações
-                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
