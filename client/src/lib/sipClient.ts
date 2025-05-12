@@ -464,6 +464,7 @@ export class SipClient extends EventEmitter implements ISipClient {
   // Atualizar o estado do registro
   private updateRegisterState(state: RegisterState): void {
     this.registerState = state;
+    console.log(`SIP Register State Changed: ${RegisterState[state]}`);
     this.emit('registerStateChanged', state);
   }
   
