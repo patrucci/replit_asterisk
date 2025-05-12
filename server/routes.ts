@@ -815,6 +815,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // API para gerenciamento de arquivos de áudio para IVR
+  
+  // Listar arquivos de áudio
+  app.get("/api/asterisk/audio", requireAuth, async (req, res) => {
+    try {
+      // Em uma implementação completa, esses arquivos seriam filtrados por organizationId
+      res.json(audioFiles);
+    } catch (error) {
+      console.error("Erro ao listar arquivos de áudio:", error);
+      res.status(500).json({ 
+        error: "Falha ao listar arquivos de áudio",
+        message: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+  
+  // Upload de arquivo de áudio
+  app.post("/api/asterisk/audio", requireAuth, upload.single('audioFile'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhum arquivo foi enviado" });
+      }
+      
+      const file = req.file;
+      const name = req.body.name || path.basename(file.originalname, path.extname(file.originalname));
+      
+      // Criar registro para o arquivo de áudio
+      const audioFile: AudioFile = {
+        id: uuidv4(),
+        name: name,
+        filename: file.filename,
+        size: file.size,
+        uploaded: new Date().toISOString(),
+        language: req.body.language || "pt-BR"
+      };
+      
+      // Adicionar ao array de arquivos
+      audioFiles.push(audioFile);
+      
+      res.status(201).json(audioFile);
+    } catch (error) {
+      console.error("Erro ao fazer upload de arquivo de áudio:", error);
+      res.status(500).json({ 
+        error: "Falha ao processar o upload do arquivo de áudio",
+        message: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+  
+  // Excluir arquivo de áudio
+  app.delete("/api/asterisk/audio/:id", requireAuth, (req, res) => {
+    try {
+      const fileId = req.params.id;
+      const fileIndex = audioFiles.findIndex(file => file.id === fileId);
+      
+      if (fileIndex === -1) {
+        return res.status(404).json({ error: "Arquivo não encontrado" });
+      }
+      
+      const file = audioFiles[fileIndex];
+      
+      // Remover o arquivo físico
+      const filePath = path.join(process.cwd(), 'uploads', 'audio', file.filename);
+      
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      // Remover do array
+      audioFiles.splice(fileIndex, 1);
+      
+      res.status(200).json({ success: true, message: "Arquivo removido com sucesso" });
+    } catch (error) {
+      console.error("Erro ao excluir arquivo de áudio:", error);
+      res.status(500).json({ 
+        error: "Falha ao excluir o arquivo de áudio",
+        message: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   
