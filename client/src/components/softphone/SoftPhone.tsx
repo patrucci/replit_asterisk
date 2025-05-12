@@ -1125,9 +1125,70 @@ export function SoftPhone({
             </div>
           </div>
           
+          <div className="space-y-4 py-2 my-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
+            <h4 className="text-sm font-medium text-yellow-800">Dicas de conexão</h4>
+            <ul className="text-xs text-yellow-700 list-disc pl-4 space-y-1">
+              <li>Verifique se o servidor Asterisk está ativo e acessível</li>
+              <li>Se estiver usando HTTPS, o WebSocket precisa ser WSS (wss://)</li>
+              <li>Certifique-se que a porta do WebSocket (normalmente 8088 ou 8089) está aberta no firewall</li>
+              <li>Tente usar o endereço IP do servidor em vez do nome de domínio</li>
+              <li>Consulte os logs do console do navegador (F12) para mais detalhes sobre erros de conexão</li>
+            </ul>
+          </div>
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
               Cancelar
+            </Button>
+            <Button 
+              variant="secondary"
+              onClick={() => {
+                // Validação básica
+                if (!config.wsUri) {
+                  toast({
+                    title: "URI WebSocket necessário",
+                    description: "Informe o URI do WebSocket para testar a conexão",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                // Testar apenas o WebSocket
+                try {
+                  const ws = new WebSocket(config.wsUri);
+                  
+                  toast({
+                    title: "Testando conexão...",
+                    description: "Tentando conectar ao WebSocket. Verifique o console (F12) para detalhes.",
+                  });
+                  
+                  ws.onopen = () => {
+                    toast({
+                      title: "Conexão WebSocket bem-sucedida",
+                      description: "WebSocket conectado com sucesso!",
+                    });
+                    ws.close();
+                  };
+                  
+                  ws.onerror = (error) => {
+                    console.error("Erro na conexão WebSocket:", error);
+                    toast({
+                      title: "Falha na conexão WebSocket",
+                      description: "Não foi possível conectar ao servidor. Verifique o URI e se o servidor está acessível.",
+                      variant: "destructive",
+                    });
+                  };
+                } catch (error) {
+                  console.error("Erro ao iniciar websocket:", error);
+                  toast({
+                    title: "Erro na conexão",
+                    description: "Formato de URI inválido ou erro ao inicializar a conexão WebSocket",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Testar Conexão
             </Button>
             <Button onClick={() => {
               setConfigDialogOpen(false);
