@@ -651,13 +651,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Tentando conectar ao AMI: ${host}:${port} com usuário ${username}...`);
+
+      // Converter porta para número
+      const portNumber = parseInt(port, 10);
       
-      // Mensagem de diagnóstico para o usuário
-      return res.status(400).json({ 
-        success: false, 
-        message: `Não foi possível conectar ao servidor Asterisk em ${host}:${port}`, 
-        details: "Aparentemente a conexão com o servidor Asterisk não está funcionando corretamente. Por favor, verifique se o servidor Asterisk está acessível na rede e se as credenciais estão corretas. Tente usar a interface web do Asterisk (normalmente na porta 8088) para confirmar que o servidor está ativo."
-      });
+      // Tentar estabelecer uma conexão com o AMI
+      try {
+        // Primeiro testar a conexão usando o método testConnection
+        const testResult = await asteriskAMIManager.testConnection(host, portNumber, username, password);
+        
+        if (!testResult.success) {
+          console.log('Teste de conexão falhou:', testResult.message);
+          return res.status(400).json({
+            success: false,
+            message: `Não foi possível conectar ao servidor Asterisk em ${host}:${portNumber}`,
+            details: testResult.message || "Falha na conexão com o servidor Asterisk."
+          });
+        }
+        
+        // Se o teste passou, tentar conectar
+        await asteriskAMIManager.connect(host, portNumber, username, password);
+        
+        // Salvar as credenciais do Asterisk no banco de dados se necessário
+        // TODO: Implementar salvamento das credenciais
+        
+        return res.status(200).json({
+          success: true,
+          message: "Conectado com sucesso ao servidor Asterisk",
+          host: host,
+          port: portNumber,
+          username: username
+        });
+      } catch (connectionError) {
+        console.error('Erro específico de conexão:', connectionError);
+        return res.status(400).json({ 
+          success: false, 
+          message: `Não foi possível conectar ao servidor Asterisk em ${host}:${portNumber}`, 
+          details: connectionError instanceof Error ? 
+            connectionError.message : 
+            "Aparentemente a conexão com o servidor Asterisk não está funcionando corretamente. Por favor, verifique se o servidor Asterisk está acessível na rede e se as credenciais estão corretas."
+        });
+      }
     } catch (error) {
       console.error('Erro ao conectar com Asterisk:', error);
       return res.status(500).json({ 

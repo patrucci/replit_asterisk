@@ -890,26 +890,78 @@ class AsteriskAMIManager extends EventEmitter {
     try {
       console.log(`Tentando testar conexão com Asterisk AMI: ${host}:${port} (usuário: ${username})`);
       
-      // Tentaremos uma abordagem de baixo nível usando net.Socket para debug
-      // Este é um método mais direto para testar a conectividade TCP
-      
-      // Primeiro, vamos criar um timeout
-      const timeoutPromise = new Promise<{success: boolean, message: string}>(resolve => {
-        setTimeout(() => {
+      // Tentar estabelecer conexão e autenticação usando a biblioteca client
+      return new Promise((resolve) => {
+        // Criar uma instância temporária do cliente apenas para o teste
+        const testClient = new require('asterisk-ami-client')();
+        
+        // Configurar timeout
+        const connectionTimeout = setTimeout(() => {
+          testClient.disconnect();
           resolve({
             success: false,
-            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos`
+            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 10 segundos. Verifique se o servidor está online e acessível.`
           });
-        }, 5000); // 5 segundos
+        }, 10000); // 10 segundos de timeout
+        
+        // Configurar handlers de eventos
+        testClient.on('connect', () => {
+          console.log(`Conexão TCP estabelecida com ${host}:${port}`);
+          // A conexão foi estabelecida, mas ainda precisamos autenticar
+        });
+        
+        testClient.on('login', () => {
+          console.log(`Autenticação bem-sucedida com ${host}:${port}`);
+          clearTimeout(connectionTimeout);
+          testClient.disconnect();
+          resolve({
+            success: true,
+            message: 'Conexão e autenticação bem-sucedidas'
+          });
+        });
+        
+        testClient.on('error', (error: any) => {
+          console.error('Erro na conexão AMI:', error);
+          clearTimeout(connectionTimeout);
+          testClient.disconnect();
+          
+          // Processar mensagens de erro específicas
+          let errorMsg = 'Erro ao conectar ao servidor Asterisk';
+          
+          if (error.message) {
+            if (error.message.includes('Authentication') || error.message.includes('authentication')) {
+              errorMsg = 'Falha na autenticação. Verifique o usuário e senha do AMI.';
+            } else if (error.message.includes('ECONNREFUSED')) {
+              errorMsg = `Conexão recusada em ${host}:${port}. Verifique se o servidor Asterisk está rodando e a porta está correta.`;
+            } else if (error.message.includes('ETIMEDOUT')) {
+              errorMsg = `Timeout ao conectar em ${host}:${port}. Verifique se o servidor é acessível pela rede.`;
+            } else if (error.message.includes('ENOTFOUND')) {
+              errorMsg = `Host não encontrado: ${host}. Verifique se o nome ou IP está correto.`;
+            } else {
+              errorMsg = `Erro na conexão: ${error.message}`;
+            }
+          }
+          
+          resolve({
+            success: false,
+            message: errorMsg
+          });
+        });
+        
+        // Tentar conectar
+        testClient.connect(host, port, username, password, {
+          keepAlive: false,
+          emitEventsByTypes: true,
+          reconnect: false
+        }).catch((err: any) => {
+          console.error('Erro ao iniciar conexão:', err);
+          clearTimeout(connectionTimeout);
+          resolve({
+            success: false,
+            message: `Erro ao iniciar conexão: ${err.message || 'Erro desconhecido'}`
+          });
+        });
       });
-      
-      // Relatamos os resultados mais detalhadamente
-      return {
-        success: false,
-        message: `Não foi possível conectar ao servidor Asterisk em ${host}:${port}. ` +
-                 `Verifique se o servidor está online, se a porta ${port} está aberta e se as credenciais estão corretas. ` +
-                 `Se o servidor estiver atrás de NAT ou firewall, certifique-se de que a porta está encaminhada corretamente.`
-      };
     } catch (error) {
       console.error('Erro geral no teste de conexão Asterisk:', error);
       return { 
