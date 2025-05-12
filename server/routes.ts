@@ -18,7 +18,7 @@ import {
   formatScriptWithValues,
   asteriskInterface
 } from "./asterisk-ai";
-import asteriskAMIManager from "./asterisk-ami";
+import { asteriskAMIManager } from "./asterisk-ami";
 
 const requireAuth = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
