@@ -489,37 +489,58 @@ export default function AsteriskConfigPage() {
   // Iniciar arrastamento de um passo
   const handleDragStart = (e: React.MouseEvent, stepId: string) => {
     e.stopPropagation();
-    setDraggedStep(stepId);
-  };
-
-  // Mover um passo durante arrastamento
-  const handleDrag = (e: React.MouseEvent, step: DialPlanStep) => {
-    if (draggedStep !== step.id || !diagramRef.current) return;
-    
     e.preventDefault();
-    e.stopPropagation();
     
-    const rect = diagramRef.current.getBoundingClientRect();
-    const newX = e.clientX - rect.left;
-    const newY = e.clientY - rect.top;
+    const step = dialPlanSteps.find(s => s.id === stepId);
+    if (!step) return;
     
-    const updatedStep = { ...step, x: newX, y: newY };
-    updateDialPlanStep(updatedStep);
+    // Guardar o offset inicial do mouse em relação ao elemento para calcular a posição corretamente
+    const element = e.currentTarget as HTMLElement;
+    const rect = element.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    
+    setDraggedStep(stepId);
+    
+    // Adicionar atributo data-dragging para estilização CSS
+    element.setAttribute('data-dragging', 'true');
+    
+    // Usar funções de closure para garantir acesso aos valores atuais
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!diagramRef.current) return;
+      
+      moveEvent.preventDefault();
+      const diagramRect = diagramRef.current.getBoundingClientRect();
+      
+      // Calcular a nova posição considerando o offset inicial
+      const newX = moveEvent.clientX - diagramRect.left - offsetX;
+      const newY = moveEvent.clientY - diagramRect.top - offsetY;
+      
+      // Atualizar posição do passo
+      updateDialPlanStep({
+        ...step,
+        x: Math.max(0, newX),
+        y: Math.max(0, newY)
+      });
+    };
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      
+      // Remover atributo data-dragging ao finalizar
+      element.removeAttribute('data-dragging');
+      setDraggedStep(null);
+    };
+    
+    // Adicionar event listeners no document para capturar movimentos mesmo fora do elemento
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
   
-  // Manipulador para o evento mouseup global
-  useEffect(() => {
-    const handleMouseUp = () => {
-      if (draggedStep) {
-        setDraggedStep(null);
-      }
-    };
-    
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [draggedStep]);
+  // Como o movimento do mouse é controlado pelos listeners adicionados em handleDragStart,
+  // este método não é mais necessário mas mantemos para compatibilidade com o JSX
+  const handleDrag = () => {};
 
   // Helper para obter o nome do tipo de passo
   const getStepTypeName = (type: DialPlanStep['type']) => {
@@ -721,7 +742,7 @@ export default function AsteriskConfigPage() {
                             key={step.id}
                             className={`dialplan-step p-3 rounded-md shadow-md absolute cursor-move ${
                               selectedStep?.id === step.id ? 'ring-2 ring-primary' : ''
-                            } ${getStepColorClass(step.type)}`}
+                            } ${draggedStep === step.id ? 'shadow-lg opacity-90' : ''} ${getStepColorClass(step.type)}`}
                             style={{ 
                               left: `${step.x}px`, 
                               top: `${step.y}px`,
@@ -729,8 +750,6 @@ export default function AsteriskConfigPage() {
                             }}
                             onClick={() => setSelectedStep(step)}
                             onMouseDown={(e) => handleDragStart(e, step.id)}
-                            onMouseMove={(e) => handleDrag(e, step)}
-                            onMouseUp={() => setDraggedStep(null)}
                           >
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center">

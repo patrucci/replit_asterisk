@@ -137,4 +137,13 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary));
   }
+  
+  /* Estilo para elementos durante o arrastar */
+  .dialplan-step[data-dragging="true"] {
+    opacity: 0.8;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    cursor: grabbing;
+    transform: scale(1.02);
+  }
 }
