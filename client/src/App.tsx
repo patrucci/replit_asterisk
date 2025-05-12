@@ -18,6 +18,8 @@ import MessagesPage from "@/pages/messages-page";
 import SettingsPage from "@/pages/settings-page";
 import AsteriskConfigPage from "@/pages/asterisk-config-page";
 import AsteriskAIPage from "@/pages/asterisk-ai-page";
+import QueuesPage from "@/pages/queues-page";
+import QueueDashboardPage from "@/pages/queue-dashboard-page";
 
 function Router() {
   return (
@@ -31,6 +33,8 @@ function Router() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/asterisk-config" component={AsteriskConfigPage} />
       <ProtectedRoute path="/asterisk-ai" component={AsteriskAIPage} />
+      <ProtectedRoute path="/queues" component={QueuesPage} />
+      <ProtectedRoute path="/queue-dashboard" component={QueueDashboardPage} />
       <Route component={NotFound} />
     </Switch>
   );
