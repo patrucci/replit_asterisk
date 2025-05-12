@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import AsteriskAmiClient from 'asterisk-ami-client';
-import WebSocket from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 
 // Interface para eventos de chamada
@@ -73,7 +73,7 @@ interface QueueStats {
 class AsteriskAMIManager extends EventEmitter {
   private client: any;
   private connected: boolean = false;
-  private wss: WebSocket.Server | null = null;
+  private wss: WebSocketServer | null = null;
   private clients: Set<WebSocket> = new Set();
   private agentStats: Map<string, AgentStats> = new Map();
   private queueStats: Map<string, QueueStats> = new Map();
@@ -273,7 +273,7 @@ class AsteriskAMIManager extends EventEmitter {
   
   // Configurar WebSocket server para comunicação em tempo real
   setupWebsocket(server: Server, path: string = '/queue-events') {
-    this.wss = new WebSocket.Server({ server, path });
+    this.wss = new WebSocketServer({ server, path });
     
     this.wss.on('connection', (ws: WebSocket) => {
       console.log('Nova conexão WebSocket');
@@ -451,7 +451,7 @@ class AsteriskAMIManager extends EventEmitter {
     const messageString = JSON.stringify(message);
     
     this.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
+      if (client.readyState === 1) { // WebSocket.OPEN é o valor 1
         client.send(messageString);
       }
     });
