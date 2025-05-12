@@ -1,10 +1,23 @@
 import type { Express, Request, Response } from "express";
 import { asteriskAMIManager } from "./asterisk-ami";
 
+// Variável de ambiente para modo de simulação
+const SIMULATION_MODE = process.env.ASTERISK_SIMULATION_MODE === 'true' || false;
+
 export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   // Rota para verificar o status da conexão Asterisk
   app.get("/api/asterisk/status", requireAuth, async (req, res) => {
     try {
+      // Se estiver em modo de simulação, considerar como conectado
+      if (SIMULATION_MODE) {
+        console.log('[SIMULAÇÃO] Retornando status simulado para Asterisk');
+        return res.json({
+          connected: true,
+          configured: true,
+          simulation: true
+        });
+      }
+
       const connected = asteriskAMIManager.isConnected();
       const isConfigured = false; // TODO: Verificar se há configurações salvas no banco de dados
       

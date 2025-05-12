@@ -3,6 +3,9 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./init-db";
 
+// Definir variável de ambiente para simulação Asterisk
+process.env.ASTERISK_SIMULATION_MODE = "true";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
