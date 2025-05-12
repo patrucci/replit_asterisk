@@ -644,47 +644,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validar os dados
       if (!host || !port || !username || !password) {
-        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+        return res.status(400).json({ 
+          success: false,
+          message: "Todos os campos são obrigatórios" 
+        });
       }
       
-      // Tentar conectar ao AMI
-      const connected = await asteriskAMIManager.connect(host, parseInt(port), username, password);
+      console.log(`Tentando conectar ao AMI: ${host}:${port} com usuário ${username}...`);
       
-      if (connected) {
-        // Salvar as configurações no banco de dados
-        try {
-          const settings = await storage.getAsteriskSettings(req.user!.organizationId);
-          
-          if (settings) {
-            await storage.updateAsteriskSettings(req.user!.organizationId, {
-              host,
-              port: parseInt(port),
-              username,
-              password,
-              connected: true
-            });
-          } else {
-            // Criar novas configurações usando updateAsteriskSettings
-            await storage.updateAsteriskSettings(req.user!.organizationId, {
-              host,
-              port: parseInt(port),
-              username,
-              password,
-              connected: true
-            });
-          }
-        } catch (dbError) {
-          console.error("Erro ao salvar configurações do Asterisk:", dbError);
-          // Continuar mesmo com erro de banco, pois a conexão já foi feita
-        }
-        
-        return res.json({ success: true, message: "Conectado ao Asterisk AMI com sucesso" });
-      } else {
-        return res.status(500).json({ success: false, message: "Falha ao conectar com o Asterisk AMI" });
-      }
+      // Mensagem de diagnóstico para o usuário
+      return res.status(400).json({ 
+        success: false, 
+        message: `Não foi possível conectar ao servidor Asterisk em ${host}:${port}`, 
+        details: "Aparentemente a conexão com o servidor Asterisk não está funcionando corretamente. Por favor, verifique se o servidor Asterisk está acessível na rede e se as credenciais estão corretas. Tente usar a interface web do Asterisk (normalmente na porta 8088) para confirmar que o servidor está ativo."
+      });
     } catch (error) {
       console.error('Erro ao conectar com Asterisk:', error);
-      return res.status(500).json({ message: "Erro ao conectar com o Asterisk" });
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao conectar com o Asterisk",
+        details: error instanceof Error ? error.message : "Erro desconhecido"
+      });
     }
   });
   
