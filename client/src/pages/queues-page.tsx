@@ -229,22 +229,59 @@ export default function QueuesPage() {
   });
 
   // Consulta para obter filas
-  const { data: queues = [], isLoading: isLoadingQueues } = useQuery<Queue[]>({
+  const { data: queues = [], isLoading: isLoadingQueues, error: queuesError } = useQuery<Queue[]>({
     queryKey: ["/api/queues"],
+    onError: (error) => {
+      console.error("Erro ao buscar filas:", error);
+      toast({
+        title: "Erro ao carregar filas",
+        description: "Não foi possível carregar as filas.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Consulta para obter agentes
-  const { data: agents = [], isLoading: isLoadingAgents } = useQuery<Agent[]>({
+  const { data: agents = [], isLoading: isLoadingAgents, error: agentsError } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],
+    onError: (error) => {
+      console.error("Erro ao buscar agentes:", error);
+      toast({
+        title: "Erro ao carregar agentes",
+        description: "Não foi possível carregar os agentes.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Consulta para estatísticas
-  const { data: queueStatsData, isLoading: isLoadingStats } = useQuery<any>({
+  const { data: queueStatsData, isLoading: isLoadingStats, error: statsError } = useQuery<{
+    totalQueueCalls: number;
+    completedCalls: number;
+    abandonedCalls: number;
+    avgWaitTime: number;
+    queueStats: Array<QueueStats>;
+  }>({
     queryKey: ["/api/queue-stats"],
+    onError: (error) => {
+      console.error("Erro ao buscar estatísticas:", error);
+      toast({
+        title: "Erro ao carregar estatísticas",
+        description: "Não foi possível carregar as estatísticas.",
+        variant: "destructive",
+      });
+    }
   });
   
   // Extrair o array de estatísticas da resposta
   const queueStats = queueStatsData?.queueStats || [];
+  
+  // Log para debug
+  useEffect(() => {
+    console.log("Filas carregadas:", queues);
+    console.log("Agentes carregados:", agents);
+    console.log("Estatísticas carregadas:", queueStatsData);
+  }, [queues, agents, queueStatsData]);
 
   // Mutação para criar/atualizar fila
   const queueMutation = useMutation({
@@ -259,7 +296,9 @@ export default function QueuesPage() {
         return await res.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Fila criada/atualizada com sucesso:", data);
+      
       toast({
         title: editingQueue ? "Fila atualizada" : "Fila criada",
         description: `A fila foi ${editingQueue ? "atualizada" : "criada"} com sucesso.`,
@@ -280,11 +319,18 @@ export default function QueuesPage() {
       
       // Atualizar a lista de filas
       queryClient.invalidateQueries({ queryKey: ["/api/queues"] });
+      
+      // Forçar uma atualização manual após um breve atraso
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/queues"] });
+      }, 500);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Erro na mutação de fila:", error);
+      
       toast({
         title: "Erro",
-        description: `Não foi possível ${editingQueue ? "atualizar" : "criar"} a fila.`,
+        description: error.message || `Não foi possível ${editingQueue ? "atualizar" : "criar"} a fila.`,
         variant: "destructive",
       });
     }
