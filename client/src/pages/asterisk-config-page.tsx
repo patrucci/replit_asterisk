@@ -1,102 +1,47 @@
-import { useState, useRef, useEffect } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
 import { MainLayout } from "@/components/layout/main-layout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+import { 
+  Card, CardContent, CardDescription, CardHeader, CardTitle 
 } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import AsteriskConnect from "@/components/asterisk/AsteriskConnect";
 import AsteriskDiagnostic from "@/components/asterisk/AsteriskDiagnostic";
+
 import { 
-  PhoneForwarded, 
-  PhoneIncoming, 
-  Phone, 
-  Settings, 
-  Save, 
-  Plus, 
-  Trash2,
-  ArrowRight,
-  ArrowLeft,
-  ArrowUp,
-  ArrowDown,
-  Clock,
-  MessageSquare,
-  Voicemail,
-  CheckCheck,
-  FileQuestion,
-  Server,
-  Upload,
-  File,
-  Music,
-  ListMusic,
-  Folder,
-  Volume2,
-  RefreshCw
+  Plus, Save, X, PhoneOff, Phone, Mic, Volume2, ListFilter, 
+  UsersRound, Radio, Activity, RefreshCw, Upload, Trash2, 
+  Music, File, Loader2
 } from "lucide-react";
-
-// Schema para validação do formulário de configuração do Asterisk
-const asteriskConfigSchema = z.object({
-  serverAddress: z.string().min(1, "Endereço do servidor é obrigatório"),
-  port: z.string().regex(/^\d+$/, "Porta deve ser um número").optional(),
-  username: z.string().min(1, "Nome de usuário é obrigatório"),
-  password: z.string().min(1, "Senha é obrigatória"),
-  context: z.string().optional(),
-  enabled: z.boolean().default(false),
-});
-
-type AsteriskConfigFormValues = z.infer<typeof asteriskConfigSchema>;
-
-// Schema para o plano de discagem
-const dialPlanNextStepSchema = z.object({
-  stepId: z.string(),
-  condition: z.string().optional(),
-  label: z.string().optional()
-});
+import { v4 as uuidv4 } from "uuid";
 
 const dialPlanStepSchema = z.object({
   id: z.string(),
-  type: z.enum(["answer", "playback", "dial", "voicemail", "hangup", "wait", "gotoif", "set"]),
-  parameters: z.record(z.string(), z.string()).optional(),
-  nextSteps: z.array(dialPlanNextStepSchema).optional(),
-  label: z.string().optional(),
-  x: z.number().optional(),
-  y: z.number().optional(),
+  name: z.string().optional(),
+  type: z.enum(['play', 'record', 'menu', 'dial', 'queue', 'hangup']),
+  x: z.number(),
+  y: z.number(),
+  properties: z.record(z.any()).optional(),
+  connections: z.array(z.string()).optional(),
 });
 
 type DialPlanStep = z.infer<typeof dialPlanStepSchema>;
 
-interface AsteriskConnectionStatus {
-  connected: boolean;
-  configured: boolean;
-  host?: string;
-  port?: number;
-  username?: string;
-  message?: string;
+interface AsteriskConfigFormValues {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
 }
 
 interface AudioFile {
@@ -112,62 +57,10 @@ interface AudioFile {
 export default function AsteriskConfigPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("connection");
-  
-  // Carregar status da conexão
-  const { data: status, isLoading: isStatusLoading } = useQuery<AsteriskConnectionStatus>({
-    queryKey: ["/api/asterisk/status"],
-    refetchInterval: 10000, // Atualizar a cada 10 segundos
-  });
-  
-  const [dialPlanSteps, setDialPlanSteps] = useState<DialPlanStep[]>([
-    {
-      id: "start",
-      type: "answer",
-      label: "Atender Chamada",
-      x: 100,
-      y: 50,
-      nextSteps: [{ stepId: "greeting", label: "Continuar" }]
-    },
-    {
-      id: "greeting",
-      type: "playback",
-      parameters: { file: "bem-vindo" },
-      label: "Reproduzir Saudação",
-      x: 100,
-      y: 150,
-      nextSteps: [{ stepId: "menu", label: "Continuar" }]
-    },
-    {
-      id: "menu",
-      type: "playback",
-      parameters: { file: "menu-options" },
-      label: "Menu de Opções",
-      x: 100,
-      y: 250,
-      nextSteps: [
-        { stepId: "dial", condition: "${OPCAO}=1", label: "Opção 1" },
-        { stepId: "voicemail", condition: "${OPCAO}=2", label: "Opção 2" }
-      ]
-    },
-    {
-      id: "dial",
-      type: "dial",
-      parameters: { extension: "100", timeout: "20" },
-      label: "Discar para Ramal",
-      x: 300,
-      y: 350
-    },
-    {
-      id: "voicemail",
-      type: "voicemail",
-      parameters: { mailbox: "100" },
-      label: "Caixa Postal",
-      x: 100,
-      y: 350
-    }
-  ]);
-  
+  const [dialPlanSteps, setDialPlanSteps] = useState<DialPlanStep[]>([]);
   const [selectedStep, setSelectedStep] = useState<DialPlanStep | null>(null);
+  const [isSubmittingDialPlan, setIsSubmittingDialPlan] = useState(false);
+  
   const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connected" | "testing">("disconnected");
   const [draggedStep, setDraggedStep] = useState<string | null>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
@@ -182,566 +75,409 @@ export default function AsteriskConfigPage() {
   // Carregar configuração existente
   const { data: configData, isLoading } = useQuery({
     queryKey: ["/api/asterisk/config"],
-    enabled: false, // Desativado por enquanto, habilitar quando a API estiver disponível
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/asterisk/config");
+        return await res.json();
+      } catch (error) {
+        return null;
+      }
+    }
   });
 
-  // Formulário de configuração
-  const form = useForm<AsteriskConfigFormValues>({
-    resolver: zodResolver(asteriskConfigSchema),
-    defaultValues: {
-      serverAddress: "",
-      port: "5060",
-      username: "",
-      password: "",
-      context: "default",
-      enabled: false,
+  // Verificar status do Asterisk
+  const { data: status } = useQuery({
+    queryKey: ["/api/asterisk/status"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/asterisk/status");
+        return await res.json();
+      } catch (error) {
+        return { connected: false, configured: false };
+      }
     },
+    refetchInterval: 5000
   });
 
-  // Mutação para salvar configuração
-  const configMutation = useMutation({
-    mutationFn: async (data: AsteriskConfigFormValues) => {
-      // Será implementado quando a API estiver disponível
-      const response = await apiRequest("POST", "/api/asterisk/config", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Configuração salva",
-        description: "As configurações do Asterisk foram salvas com sucesso.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/asterisk/config"] });
-    },
-    onError: () => {
-      toast({
-        title: "Erro ao salvar configuração",
-        description: "Não foi possível salvar as configurações. Verifique os dados e tente novamente.",
-        variant: "destructive",
-      });
-    },
+  // Carregar plano de discagem
+  const { data: dialPlanData } = useQuery({
+    queryKey: ["/api/asterisk/dialplan"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/asterisk/dialplan");
+        const data = await res.json();
+        return data.steps;
+      } catch (error) {
+        return [];
+      }
+    }
   });
 
-  // Mutação para salvar plano de discagem
+  // Mutation para salvar o plano de discagem
   const dialPlanMutation = useMutation({
     mutationFn: async (steps: DialPlanStep[]) => {
-      // Será implementado quando a API estiver disponível
-      const response = await apiRequest("POST", "/api/asterisk/dialplan", { steps });
-      return response.json();
+      const res = await apiRequest("POST", "/api/asterisk/dialplan", { steps });
+      return await res.json();
     },
     onSuccess: () => {
       toast({
         title: "Plano de discagem salvo",
         description: "O plano de discagem foi salvo com sucesso.",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/asterisk/dialplan"] });
     },
     onError: () => {
       toast({
         title: "Erro ao salvar plano de discagem",
-        description: "Não foi possível salvar o plano de discagem. Tente novamente.",
+        description: "Ocorreu um erro ao salvar o plano de discagem.",
         variant: "destructive",
       });
-    },
+    }
   });
-  
-  // Função para carregar os arquivos de áudio disponíveis
-  useEffect(() => {
-    loadAudioFiles();
-  }, []);
-  
-  // Funções para gerenciamento de arquivos de áudio
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    const file = e.target.files[0];
-    if (!file.type.startsWith('audio/')) {
-      toast({
-        title: "Tipo de arquivo inválido",
-        description: "Por favor, selecione apenas arquivos de áudio (wav, mp3, gsm, etc).",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const formData = new FormData();
-    formData.append('audioFile', file);
-    formData.append('name', file.name.split('.')[0]); // Nome sem extensão
-    
-    setUploadingFile(true);
-    
-    try {
-      // Esta API precisará ser implementada no backend
-      const response = await fetch('/api/asterisk/audio', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao enviar o arquivo');
-      }
-      
-      const result = await response.json();
-      
-      toast({
-        title: "Arquivo enviado com sucesso",
-        description: `O arquivo ${file.name} foi enviado e está disponível para uso no IVR.`,
-      });
-      
-      // Atualizar a lista de arquivos
-      setAudioFiles(prev => [...prev, result]);
-      
-    } catch (error) {
-      toast({
-        title: "Erro ao enviar arquivo",
-        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
-        variant: "destructive",
-      });
-    } finally {
-      setUploadingFile(false);
-      
-      // Limpar o input de arquivo
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-  
-  const handleDeleteAudioFile = async (fileId: string) => {
-    try {
-      // Esta API precisará ser implementada no backend
-      const response = await fetch(`/api/asterisk/audio/${fileId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao excluir o arquivo');
-      }
-      
-      toast({
-        title: "Arquivo removido",
-        description: "O arquivo de áudio foi removido com sucesso.",
-      });
-      
-      // Atualizar a lista de arquivos
-      setAudioFiles(prev => prev.filter(file => file.id !== fileId));
-      
-      // Limpar a seleção se o arquivo selecionado foi o removido
-      if (selectedAudioFile?.id === fileId) {
-        setSelectedAudioFile(null);
-      }
-      
-    } catch (error) {
-      toast({
-        title: "Erro ao remover arquivo",
-        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido",
-        variant: "destructive",
-      });
-    }
-  };
-  
+
+  // Carregar arquivos de áudio
   const loadAudioFiles = async () => {
+    setIsLoadingAudio(true);
     try {
-      setIsLoadingAudio(true);
-      // Esta API precisará ser implementada no backend
-      const response = await fetch('/api/asterisk/audio');
-      
-      if (!response.ok) {
-        throw new Error('Falha ao carregar os arquivos de áudio');
-      }
-      
-      const files = await response.json();
-      setAudioFiles(files);
-      
+      const res = await apiRequest("GET", "/api/asterisk/audio");
+      const data = await res.json();
+      setAudioFiles(data);
     } catch (error) {
-      console.error("Erro ao carregar arquivos de áudio:", error);
-      // Podemos optar por não mostrar um toast de erro aqui para não incomodar o usuário
+      toast({
+        title: "Erro ao carregar arquivos",
+        description: "Não foi possível carregar os arquivos de áudio.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingAudio(false);
     }
   };
 
-  // Testar conexão com o Asterisk
-  const testConnection = async () => {
-    setConnectionStatus("testing");
+  // Upload de arquivo de áudio
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    setUploadingFile(true);
+    
     try {
-      // Construir os dados de teste a partir do formulário
-      const formData = form.getValues();
-      const testData = {
-        host: formData.serverAddress,
-        port: formData.port,
-        username: formData.username,
-        password: formData.password,
-        testTcpOnly: false // teste completo da conexão AMI
-      };
+      const res = await fetch("/api/asterisk/audio", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
       
-      // Enviar requisição para testar a conexão
-      const response = await apiRequest("POST", "/api/asterisk/test-connection", testData);
-      const result = await response.json();
-      
-      if (result.success) {
-        setConnectionStatus("connected");
-        toast({
-          title: "Conexão estabelecida",
-          description: "A conexão com o servidor Asterisk foi estabelecida com sucesso.",
-        });
-      } else {
-        setConnectionStatus("disconnected");
-        toast({
-          title: "Falha na conexão",
-          description: result.message || "Não foi possível conectar ao servidor Asterisk. Verifique as configurações.",
-          variant: "destructive",
-        });
+      if (!res.ok) {
+        throw new Error("Falha ao enviar arquivo");
       }
-    } catch (error) {
-      setConnectionStatus("disconnected");
+      
+      const uploadedFile = await res.json();
+      setAudioFiles(prev => [...prev, uploadedFile]);
+      
       toast({
-        title: "Falha na conexão",
-        description: "Não foi possível conectar ao servidor Asterisk. Verifique as configurações e certifique-se de que o servidor está acessível.",
+        title: "Arquivo enviado",
+        description: "O arquivo de áudio foi enviado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao enviar arquivo",
+        description: "Não foi possível enviar o arquivo de áudio.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  // Deletar arquivo de áudio
+  const handleDeleteAudioFile = async (fileId: string) => {
+    try {
+      await apiRequest("DELETE", `/api/asterisk/audio/${fileId}`);
+      setAudioFiles(prev => prev.filter(file => file.id !== fileId));
+      toast({
+        title: "Arquivo deletado",
+        description: "O arquivo de áudio foi removido com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao deletar arquivo",
+        description: "Não foi possível remover o arquivo de áudio.",
         variant: "destructive",
       });
     }
   };
 
-  // Adicionar novo passo ao plano de discagem
-  const addDialPlanStep = (type: DialPlanStep["type"]) => {
-    // Calcular posição para o novo passo
-    const lastStep = dialPlanSteps[dialPlanSteps.length - 1];
-    const x = lastStep?.x || 100;
-    const y = (lastStep?.y || 0) + 100;
-    
+  // Carregar dados quando o componente montar
+  useEffect(() => {
+    if (dialPlanData) {
+      setDialPlanSteps(dialPlanData);
+    }
+    loadAudioFiles();
+  }, [dialPlanData]);
+
+  // Salvar plano de discagem
+  const saveDialPlan = () => {
+    setIsSubmittingDialPlan(true);
+    dialPlanMutation.mutate(dialPlanSteps);
+    setIsSubmittingDialPlan(false);
+  };
+
+  // Adicionar novo passo
+  const handleAddStep = (type: DialPlanStep['type']) => {
+    const maxY = Math.max(0, ...dialPlanSteps.map(step => step.y));
     const newStep: DialPlanStep = {
-      id: `step-${Date.now()}`,
+      id: uuidv4(),
       type,
-      label: getDefaultLabel(type),
-      parameters: getDefaultParameters(type),
-      x,
-      y,
-      nextSteps: [],
+      x: 100,
+      y: maxY + 120,
+      properties: {},
+      connections: []
     };
     
-    setDialPlanSteps([...dialPlanSteps, newStep]);
+    setDialPlanSteps(prev => [...prev, newStep]);
     setSelectedStep(newStep);
   };
 
-  // Remover passo do plano de discagem
-  const removeDialPlanStep = (id: string) => {
-    // Remover o passo
-    const updatedSteps = dialPlanSteps.filter(step => step.id !== id);
+  // Atualizar passo
+  const updateDialPlanStep = (updatedStep: DialPlanStep) => {
+    setDialPlanSteps(prev => 
+      prev.map(step => step.id === updatedStep.id ? updatedStep : step)
+    );
     
-    // Remover referências a esse passo em nextSteps de outros passos
-    const cleanedSteps = updatedSteps.map(step => {
-      if (step.nextSteps && step.nextSteps.length > 0) {
-        return {
-          ...step,
-          nextSteps: step.nextSteps.filter(next => next.stepId !== id)
-        };
-      }
-      return step;
-    });
-    
-    setDialPlanSteps(cleanedSteps);
-    
-    // Desselecionar se o passo removido estava selecionado
-    if (selectedStep?.id === id) {
+    if (selectedStep?.id === updatedStep.id) {
+      setSelectedStep(updatedStep);
+    }
+  };
+
+  // Deletar passo
+  const handleDeleteStep = (stepId: string) => {
+    setDialPlanSteps(prev => prev.filter(step => step.id !== stepId));
+    if (selectedStep?.id === stepId) {
       setSelectedStep(null);
     }
   };
 
-  // Atualizar um passo existente
-  const updateDialPlanStep = (updatedStep: DialPlanStep) => {
-    setDialPlanSteps(dialPlanSteps.map(step => 
-      step.id === updatedStep.id ? updatedStep : step
-    ));
-  };
-
-  // Adicionar uma conexão entre dois passos
-  const addConnection = (fromStepId: string, toStepId: string, condition?: string, label?: string) => {
-    const fromStep = dialPlanSteps.find(step => step.id === fromStepId);
+  // Atualizar propriedade do passo selecionado
+  const updateSelectedStepProperty = (property: string, value: any) => {
+    if (!selectedStep) return;
     
-    if (!fromStep) return;
-    
-    const newConnection = {
-      stepId: toStepId,
-      condition,
-      label: label || (condition ? `Se ${condition}` : 'Continuar')
+    const updatedStep = {
+      ...selectedStep,
+      properties: {
+        ...selectedStep.properties,
+        [property]: value
+      }
     };
     
-    const updatedFromStep = {
-      ...fromStep,
-      nextSteps: [...(fromStep.nextSteps || []), newConnection]
-    };
-    
-    updateDialPlanStep(updatedFromStep);
-  };
-  
-  // Remover uma conexão entre dois passos
-  const removeConnection = (fromStepId: string, toStepId: string) => {
-    const fromStep = dialPlanSteps.find(step => step.id === fromStepId);
-    
-    if (!fromStep || !fromStep.nextSteps) return;
-    
-    const updatedFromStep = {
-      ...fromStep,
-      nextSteps: fromStep.nextSteps.filter(next => next.stepId !== toStepId)
-    };
-    
-    updateDialPlanStep(updatedFromStep);
+    updateDialPlanStep(updatedStep);
   };
 
-  // Salvar plano de discagem
-  const saveDialPlan = () => {
-    dialPlanMutation.mutate(dialPlanSteps);
-  };
-
-  // Obter rótulo padrão para um tipo de passo
-  const getDefaultLabel = (type: DialPlanStep["type"]): string => {
-    const labels: Record<DialPlanStep["type"], string> = {
-      answer: "Atender Chamada",
-      playback: "Reproduzir Áudio",
-      dial: "Discar",
-      voicemail: "Caixa Postal",
-      hangup: "Encerrar Chamada",
-      wait: "Aguardar",
-      gotoif: "Condição",
-      set: "Definir Variável"
-    };
-    return labels[type];
-  };
-
-  // Obter parâmetros padrão para um tipo de passo
-  const getDefaultParameters = (type: DialPlanStep["type"]): Record<string, string> | undefined => {
-    switch (type) {
-      case "playback":
-        return { file: "bem-vindo" };
-      case "dial":
-        return { extension: "100", timeout: "20" };
-      case "wait":
-        return { seconds: "5" };
-      case "voicemail":
-        return { mailbox: "100" };
-      case "set":
-        return { variable: "DESTINO", value: "100" };
-      case "gotoif":
-        return { expression: "${COND}=1", destination: "true" };
-      default:
-        return undefined;
-    }
-  };
-
-  // Renderizar os parâmetros específicos para cada tipo de passo
-  const renderStepParameters = () => {
+  // Renderizar propriedades específicas do tipo de passo
+  const renderStepProperties = () => {
     if (!selectedStep) return null;
-
+    
     switch (selectedStep.type) {
-      case "playback":
+      case 'play':
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Arquivo de Áudio</label>
-              <Input 
-                placeholder="Nome do arquivo" 
-                value={selectedStep.parameters?.file || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      file: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
-              />
-              <p className="text-sm text-neutral-500 mt-1">
-                Nome do arquivo de áudio a ser reproduzido
-              </p>
-            </div>
-          </div>
-        );
-      
-      case "dial":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Ramal/Número</label>
-              <Input 
-                placeholder="Ramal ou número" 
-                value={selectedStep.parameters?.extension || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      extension: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Timeout (segundos)</label>
-              <Input 
-                placeholder="Tempo de espera" 
-                value={selectedStep.parameters?.timeout || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      timeout: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
-              />
-            </div>
+          <div>
+            <Label htmlFor="audioFile">Arquivo de Áudio</Label>
+            <Select
+              value={selectedStep.properties?.audioFile || ''}
+              onValueChange={(value) => updateSelectedStepProperty('audioFile', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um arquivo" />
+              </SelectTrigger>
+              <SelectContent>
+                {audioFiles.map(file => (
+                  <SelectItem key={file.id} value={file.id}>
+                    {file.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         );
         
-      case "voicemail":
+      case 'record':
         return (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div>
-              <label className="text-sm font-medium">Caixa Postal</label>
-              <Input 
-                placeholder="Número da caixa postal" 
-                value={selectedStep.parameters?.mailbox || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      mailbox: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
-              />
-            </div>
-          </div>
-        );
-        
-      case "wait":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Tempo de Espera (segundos)</label>
-              <Input 
-                placeholder="Segundos" 
-                value={selectedStep.parameters?.seconds || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      seconds: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
-              />
-            </div>
-          </div>
-        );
-        
-      case "set":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Nome da Variável</label>
-              <Input 
-                placeholder="Nome da variável" 
-                value={selectedStep.parameters?.variable || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      variable: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
+              <Label htmlFor="maxDuration">Duração Máxima (segundos)</Label>
+              <Input
+                id="maxDuration"
+                type="number"
+                value={selectedStep.properties?.maxDuration || 60}
+                onChange={(e) => updateSelectedStepProperty('maxDuration', parseInt(e.target.value))}
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Valor</label>
-              <Input 
-                placeholder="Valor da variável" 
-                value={selectedStep.parameters?.value || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      value: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
-              />
-            </div>
-          </div>
-        );
-        
-      case "gotoif":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Expressão</label>
-              <Input 
-                placeholder="Condição" 
-                value={selectedStep.parameters?.expression || ""} 
-                onChange={(e) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      expression: e.target.value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
-                className="mt-1"
-              />
-              <p className="text-sm text-neutral-500 mt-1">
-                Ex: ${'{DIGITO}'}=1
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Destino se Verdadeiro</label>
-              <Select 
-                value={selectedStep.parameters?.destination || ""}
-                onValueChange={(value) => {
-                  const updated = { 
-                    ...selectedStep, 
-                    parameters: { 
-                      ...selectedStep.parameters, 
-                      destination: value 
-                    } 
-                  };
-                  updateDialPlanStep(updated);
-                }}
+              <Label htmlFor="beep">Tocar Bipe no Início</Label>
+              <Select
+                value={selectedStep.properties?.beep?.toString() || 'true'}
+                onValueChange={(value) => updateSelectedStepProperty('beep', value === 'true')}
               >
-                <SelectTrigger className="w-full mt-1">
-                  <SelectValue placeholder="Selecione o destino" />
+                <SelectTrigger>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {dialPlanSteps.filter(step => step.id !== selectedStep.id).map(step => (
-                    <SelectItem key={step.id} value={step.id}>
-                      {step.label || step.id}
+                  <SelectItem value="true">Sim</SelectItem>
+                  <SelectItem value="false">Não</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+        
+      case 'menu':
+        return (
+          <div className="space-y-2">
+            <div>
+              <Label htmlFor="promptFile">Arquivo de Áudio (Prompt)</Label>
+              <Select
+                value={selectedStep.properties?.promptFile || ''}
+                onValueChange={(value) => updateSelectedStepProperty('promptFile', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um arquivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {audioFiles.map(file => (
+                    <SelectItem key={file.id} value={file.id}>
+                      {file.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="timeout">Tempo de Espera (segundos)</Label>
+              <Input
+                id="timeout"
+                type="number"
+                value={selectedStep.properties?.timeout || 10}
+                onChange={(e) => updateSelectedStepProperty('timeout', parseInt(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="options">Opções</Label>
+              <div className="space-y-2 mt-2">
+                {/* Aqui poderia ter uma interface para definir as opções do menu */}
+                <div className="flex items-center space-x-2">
+                  <Input
+                    placeholder="Digite '1'"
+                    value="1"
+                    readOnly
+                  />
+                  <span className="text-neutral-500">→</span>
+                  <Select
+                    value={selectedStep.properties?.options?.['1'] || ''}
+                    onValueChange={(value) => {
+                      const options = selectedStep.properties?.options || {};
+                      updateSelectedStepProperty('options', {
+                        ...options,
+                        '1': value
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dialPlanSteps
+                        .filter(step => step.id !== selectedStep.id)
+                        .map(step => (
+                          <SelectItem key={step.id} value={step.id}>
+                            {step.name || getStepTypeName(step.type)}
+                          </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const options = { ...selectedStep.properties?.options };
+                      delete options['1'];
+                      updateSelectedStepProperty('options', options);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    // Implementar adição de nova opção
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Opção
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+        
+      case 'dial':
+        return (
+          <div className="space-y-2">
+            <div>
+              <Label htmlFor="extension">Ramal ou Número</Label>
+              <Input
+                id="extension"
+                value={selectedStep.properties?.extension || ''}
+                onChange={(e) => updateSelectedStepProperty('extension', e.target.value)}
+                placeholder="Ex: 100 ou 5511999999999"
+              />
+            </div>
+            <div>
+              <Label htmlFor="timeout">Timeout (segundos)</Label>
+              <Input
+                id="timeout"
+                type="number"
+                value={selectedStep.properties?.timeout || 30}
+                onChange={(e) => updateSelectedStepProperty('timeout', parseInt(e.target.value))}
+              />
+            </div>
+          </div>
+        );
+        
+      case 'queue':
+        return (
+          <div>
+            <Label htmlFor="queueName">Fila</Label>
+            <Select
+              value={selectedStep.properties?.queueName || ''}
+              onValueChange={(value) => updateSelectedStepProperty('queueName', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma fila" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="suporte">Suporte</SelectItem>
+                <SelectItem value="vendas">Vendas</SelectItem>
+                <SelectItem value="financeiro">Financeiro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+        
+      case 'hangup':
+        return (
+          <div>
+            <p className="text-sm text-neutral-500">
+              Este passo encerra a chamada.
+            </p>
           </div>
         );
         
@@ -785,20 +521,81 @@ export default function AsteriskConfigPage() {
     };
   }, [draggedStep]);
 
+  // Helper para obter o nome do tipo de passo
+  const getStepTypeName = (type: DialPlanStep['type']) => {
+    switch (type) {
+      case 'play': return 'Reproduzir Áudio';
+      case 'record': return 'Gravar';
+      case 'menu': return 'Menu';
+      case 'dial': return 'Discar';
+      case 'queue': return 'Fila';
+      case 'hangup': return 'Desligar';
+      default: return type;
+    }
+  };
+
+  // Helper para obter a descrição do passo
+  const getStepDescription = (step: DialPlanStep) => {
+    switch (step.type) {
+      case 'play':
+        const audioFile = audioFiles.find(f => f.id === step.properties?.audioFile);
+        return audioFile ? `Arquivo: ${audioFile.name}` : 'Nenhum arquivo selecionado';
+      case 'record':
+        return `Máx: ${step.properties?.maxDuration || 60} segundos`;
+      case 'menu':
+        return 'Menu de opções';
+      case 'dial':
+        return `Número: ${step.properties?.extension || 'Não definido'}`;
+      case 'queue':
+        return `Fila: ${step.properties?.queueName || 'Não definida'}`;
+      case 'hangup':
+        return 'Encerrar chamada';
+      default:
+        return '';
+    }
+  };
+
+  // Helper para obter o ícone do tipo de passo
+  const getStepIcon = (type: DialPlanStep['type']) => {
+    switch (type) {
+      case 'play': return <Volume2 className="h-4 w-4 text-green-500" />;
+      case 'record': return <Mic className="h-4 w-4 text-red-500" />;
+      case 'menu': return <ListFilter className="h-4 w-4 text-blue-500" />;
+      case 'dial': return <Phone className="h-4 w-4 text-amber-500" />;
+      case 'queue': return <UsersRound className="h-4 w-4 text-purple-500" />;
+      case 'hangup': return <PhoneOff className="h-4 w-4 text-red-500" />;
+      default: return <Activity className="h-4 w-4" />;
+    }
+  };
+
+  // Helper para obter a classe de cor do tipo de passo
+  const getStepColorClass = (type: DialPlanStep['type']) => {
+    switch (type) {
+      case 'play': return 'bg-green-50 border border-green-200';
+      case 'record': return 'bg-red-50 border border-red-200';
+      case 'menu': return 'bg-blue-50 border border-blue-200';
+      case 'dial': return 'bg-amber-50 border border-amber-200';
+      case 'queue': return 'bg-purple-50 border border-purple-200';
+      case 'hangup': return 'bg-red-50 border border-red-200';
+      default: return 'bg-gray-50 border border-gray-200';
+    }
+  };
+
   // Renderização do componente
   return (
     <MainLayout>
-      <div className="content-container overflow-auto">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-neutral-800">Configuração do Asterisk</h2>
-          <p className="text-sm text-neutral-500">Configure a integração com o Asterisk e os planos de discagem.</p>
+      <div className="container mx-auto pb-16">
+        <div className="flex flex-col sm:flex-row items-start justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Configuração do Asterisk</h1>
+            <p className="text-sm text-neutral-500">Configure a integração com o Asterisk e os planos de discagem.</p>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full mb-6 sticky top-0 z-10 bg-background" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+          <TabsList className="grid w-full mb-6 sticky top-0 z-10 bg-background" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
             <TabsTrigger value="connection">Conexão AMI</TabsTrigger>
             <TabsTrigger value="diagnóstico">Diagnóstico</TabsTrigger>
-            <TabsTrigger value="audio">Arquivos de Áudio</TabsTrigger>
             <TabsTrigger value="dialplan">Plano de Discagem</TabsTrigger>
             <TabsTrigger value="queues" disabled={!status?.connected}>Filas</TabsTrigger>
           </TabsList>
@@ -808,202 +605,7 @@ export default function AsteriskConfigPage() {
         </TabsContent>
 
         <TabsContent value="connection" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Conexão com Asterisk AMI</CardTitle>
-              <CardDescription>
-                Configure as credenciais de conexão com a interface AMI do Asterisk.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <AsteriskConnect />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="audio" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Arquivos de Áudio</CardTitle>
-              <CardDescription>
-                Gerencie os arquivos de áudio utilizados no sistema de URA.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Arquivos Disponíveis</h3>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    accept="audio/*"
-                    onChange={handleFileChange}
-                  />
-                  <Button 
-                    variant="outline" 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingFile}
-                    className="flex items-center space-x-1"
-                  >
-                    <Upload className="h-4 w-4 mr-1" />
-                    {uploadingFile ? 'Enviando...' : 'Enviar Arquivo'}
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={loadAudioFiles}
-                    disabled={isLoadingAudio}
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isLoadingAudio ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-              </div>
-
-              {audioFiles.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {audioFiles.map((file) => (
-                    <Card key={file.id} className="overflow-hidden">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex justify-between items-center">
-                          <div className="flex items-center">
-                            <Music className="h-4 w-4 mr-2 text-blue-500" />
-                            <span className="truncate">{file.name}</span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7"
-                            onClick={() => handleDeleteAudioFile(file.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </CardTitle>
-                        <CardDescription className="text-xs pt-1">
-                          {file.duration ? `${file.duration}s` : 'Duração desconhecida'} · {file.filename}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <audio 
-                          controls 
-                          className="w-full h-10"
-                          src={`/api/asterisk/audio/${file.id}`} 
-                        />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 border border-dashed rounded-md">
-                  <File className="h-12 w-12 mx-auto text-neutral-300 mb-4" />
-                  <h3 className="text-lg font-medium text-neutral-600 mb-2">Nenhum arquivo encontrado</h3>
-                  <p className="text-sm text-neutral-500 mb-6">
-                    Envie arquivos de áudio para utilizar no plano de discagem.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingFile}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Enviar Arquivo
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="queues" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuração de Filas</CardTitle>
-              <CardDescription>
-                Gerencie as filas de atendimento do Asterisk. Esta seção só está disponível quando o Asterisk está conectado.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!status?.connected ? (
-                <Alert className="mb-4">
-                  <FileQuestion className="h-4 w-4" />
-                  <AlertTitle>Asterisk não conectado</AlertTitle>
-                  <AlertDescription>
-                    Conecte-se ao Asterisk primeiro para configurar as filas.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-4">
-                  <div className="queue-stats-container">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Suporte</CardTitle>
-                        <CardDescription>Fila principal de suporte</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-sm text-neutral-500">
-                          <div className="flex justify-between mb-2">
-                            <span>Estratégia:</span>
-                            <span className="font-medium">ringall</span>
-                          </div>
-                          <div className="flex justify-between mb-2">
-                            <span>Tempo médio:</span>
-                            <span className="font-medium">30s</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Agentes:</span>
-                            <span className="font-medium">3/5</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="pt-0">
-                        <Button variant="outline" size="sm" className="w-full">Editar</Button>
-                      </CardFooter>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Vendas</CardTitle>
-                        <CardDescription>Fila de vendas e prospecção</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-sm text-neutral-500">
-                          <div className="flex justify-between mb-2">
-                            <span>Estratégia:</span>
-                            <span className="font-medium">leastrecent</span>
-                          </div>
-                          <div className="flex justify-between mb-2">
-                            <span>Tempo médio:</span>
-                            <span className="font-medium">45s</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Agentes:</span>
-                            <span className="font-medium">2/4</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="pt-0">
-                        <Button variant="outline" size="sm" className="w-full">Editar</Button>
-                      </CardFooter>
-                    </Card>
-
-                    <Card className="border-dashed">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center text-neutral-500">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Nova Fila
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="text-center py-8">
-                        <Button variant="outline">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nova Fila
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <AsteriskConnect />
         </TabsContent>
 
         <TabsContent value="dialplan" className="space-y-6">
@@ -1015,223 +617,279 @@ export default function AsteriskConfigPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
-                <div className="lg:col-span-3 p-4">
-                  <div 
-                    ref={diagramRef}
-                    className="dialplan-editor w-full h-[500px] border rounded-md p-4 relative overflow-auto"
-                    style={{ background: "repeating-linear-gradient(0deg, #f5f5f5 0px, #f5f5f5 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, #f5f5f5 0px, #f5f5f5 1px, transparent 1px, transparent 20px)" }}
-                  >
-                    {/* Aqui será renderizado o diagrama do plano de discagem */}
-                    {dialPlanSteps.map(step => (
-                      <div
-                        key={step.id}
-                        className={`dialplan-step ${selectedStep?.id === step.id ? 'selected' : ''}`}
-                        style={{ 
-                          left: `${step.x}px`, 
-                          top: `${step.y}px`,
-                          zIndex: draggedStep === step.id ? 10 : 1
-                        }}
-                        onClick={() => setSelectedStep(step)}
-                        onMouseDown={(e) => handleDragStart(e, step.id)}
-                        onMouseMove={(e) => handleDrag(e, step)}
-                        onMouseUp={() => setDraggedStep(null)}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            {step.type === "answer" && <PhoneIncoming className="h-4 w-4 mr-2 text-green-500" />}
-                            {step.type === "playback" && <Volume2 className="h-4 w-4 mr-2 text-blue-500" />}
-                            {step.type === "dial" && <Phone className="h-4 w-4 mr-2 text-indigo-500" />}
-                            {step.type === "voicemail" && <Voicemail className="h-4 w-4 mr-2 text-purple-500" />}
-                            {step.type === "hangup" && <PhoneForwarded className="h-4 w-4 mr-2 text-red-500" />}
-                            {step.type === "wait" && <Clock className="h-4 w-4 mr-2 text-yellow-500" />}
-                            {step.type === "gotoif" && <ArrowRight className="h-4 w-4 mr-2 text-amber-500" />}
-                            {step.type === "set" && <Settings className="h-4 w-4 mr-2 text-gray-500" />}
-                            <span className="text-sm font-medium truncate">
-                              {step.label || step.id}
-                            </span>
-                          </div>
-                          
-                          {step.id !== "start" && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeDialPlanStep(step.id);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        
-                        <div className="text-xs text-neutral-500">
-                          {step.type === "playback" && `Arquivo: ${step.parameters?.file || "não definido"}`}
-                          {step.type === "dial" && `Ramal: ${step.parameters?.extension || "não definido"}`}
-                          {step.type === "voicemail" && `Caixa: ${step.parameters?.mailbox || "não definida"}`}
-                          {step.type === "wait" && `Segundos: ${step.parameters?.seconds || "não definido"}`}
-                          {step.type === "set" && `${step.parameters?.variable || "VAR"}=${step.parameters?.value || "valor"}`}
-                          {step.type === "gotoif" && `Se ${step.parameters?.expression || "condição"}`}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Adicionar Passo</h3>
-                      <div className="grid grid-cols-2 gap-2">
+              <Tabs defaultValue="editor" className="mb-6">
+                <TabsList className="w-full mb-4">
+                  <TabsTrigger value="editor">Editor Visual</TabsTrigger>
+                  <TabsTrigger value="audio">Arquivos de Áudio</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="audio">
+                  <div className="space-y-4 mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">Arquivos de Áudio</h3>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          style={{ display: 'none' }}
+                          accept="audio/*"
+                          onChange={handleFileChange}
+                        />
                         <Button 
                           variant="outline" 
-                          className="justify-start" 
-                          size="sm"
-                          onClick={() => addDialPlanStep("playback")}
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingFile}
+                          className="flex items-center space-x-1"
                         >
-                          <Volume2 className="h-4 w-4 mr-2 text-blue-500" />
-                          <span className="text-xs">Áudio</span>
+                          <Upload className="h-4 w-4 mr-1" />
+                          {uploadingFile ? 'Enviando...' : 'Enviar Arquivo'}
                         </Button>
                         <Button 
-                          variant="outline" 
-                          className="justify-start" 
-                          size="sm"
-                          onClick={() => addDialPlanStep("dial")}
+                          variant="outline"
+                          onClick={loadAudioFiles}
+                          disabled={isLoadingAudio}
                         >
-                          <Phone className="h-4 w-4 mr-2 text-indigo-500" />
-                          <span className="text-xs">Discar</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="justify-start" 
-                          size="sm"
-                          onClick={() => addDialPlanStep("voicemail")}
-                        >
-                          <Voicemail className="h-4 w-4 mr-2 text-purple-500" />
-                          <span className="text-xs">Caixa Postal</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="justify-start" 
-                          size="sm"
-                          onClick={() => addDialPlanStep("hangup")}
-                        >
-                          <PhoneForwarded className="h-4 w-4 mr-2 text-red-500" />
-                          <span className="text-xs">Encerrar</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="justify-start" 
-                          size="sm"
-                          onClick={() => addDialPlanStep("wait")}
-                        >
-                          <Clock className="h-4 w-4 mr-2 text-yellow-500" />
-                          <span className="text-xs">Aguardar</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="justify-start" 
-                          size="sm"
-                          onClick={() => addDialPlanStep("gotoif")}
-                        >
-                          <ArrowRight className="h-4 w-4 mr-2 text-amber-500" />
-                          <span className="text-xs">Condição</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="justify-start col-span-2" 
-                          size="sm"
-                          onClick={() => addDialPlanStep("set")}
-                        >
-                          <Settings className="h-4 w-4 mr-2 text-gray-500" />
-                          <span className="text-xs">Definir Variável</span>
+                          <RefreshCw className={`h-4 w-4 ${isLoadingAudio ? 'animate-spin' : ''}`} />
                         </Button>
                       </div>
                     </div>
-                    
-                    {selectedStep && (
-                      <div className="space-y-3 border rounded-md p-3">
-                        <h3 className="text-sm font-medium">Propriedades</h3>
-                        <div>
-                          <label className="text-xs text-neutral-500">Rótulo</label>
-                          <Input 
-                            value={selectedStep.label || ""}
-                            onChange={(e) => {
-                              const updated = { ...selectedStep, label: e.target.value };
-                              updateDialPlanStep(updated);
-                            }}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        
-                        <div className="pt-2">
-                          <h4 className="text-xs font-medium mb-2">Parâmetros</h4>
-                          {renderStepParameters()}
-                        </div>
-                        
-                        <div className="pt-2">
-                          <h4 className="text-xs font-medium mb-2">Próximos Passos</h4>
-                          {selectedStep.nextSteps && selectedStep.nextSteps.length > 0 ? (
-                            <div className="space-y-2">
-                              {selectedStep.nextSteps.map((next, index) => (
-                                <div key={index} className="flex items-center justify-between text-xs border rounded p-2">
-                                  <div>
-                                    <span className="font-medium">
-                                      {next.label || "Continuar para "}
-                                    </span>
-                                    <span className="text-neutral-500 ml-1">
-                                      {dialPlanSteps.find(s => s.id === next.stepId)?.label || next.stepId}
-                                    </span>
-                                    {next.condition && (
-                                      <span className="block text-neutral-400 mt-1">
-                                        Se {next.condition}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={() => removeConnection(selectedStep.id, next.stepId)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
+
+                    {audioFiles.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {audioFiles.map((file) => (
+                          <Card key={file.id} className="overflow-hidden">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base flex justify-between items-center">
+                                <div className="flex items-center">
+                                  <Music className="h-4 w-4 mr-2 text-blue-500" />
+                                  <span className="truncate">{file.name}</span>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-xs text-neutral-500 py-2">
-                              Nenhum próximo passo definido
-                            </div>
-                          )}
-                          
-                          <div className="mt-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-full text-xs"
-                              onClick={() => {
-                                // Implemente a lógica para adicionar uma nova conexão
-                                // Isso pode ser um modal ou um dropdown para selecionar o destino
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Adicionar Conexão
-                            </Button>
-                          </div>
-                        </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-7 w-7"
+                                  onClick={() => handleDeleteAudioFile(file.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </CardTitle>
+                              <CardDescription className="text-xs pt-1">
+                                {file.duration ? `${file.duration}s` : 'Duração desconhecida'} · {file.filename}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-3">
+                              <audio 
+                                controls 
+                                className="w-full h-10"
+                                src={`/api/asterisk/audio/${file.id}`} 
+                              />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 border border-dashed rounded-md">
+                        <File className="h-12 w-12 mx-auto text-neutral-300 mb-4" />
+                        <h3 className="text-lg font-medium text-neutral-600 mb-2">Nenhum arquivo encontrado</h3>
+                        <p className="text-sm text-neutral-500 mb-6">
+                          Envie arquivos de áudio para utilizar no plano de discagem.
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingFile}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Enviar Arquivo
+                        </Button>
                       </div>
                     )}
-                    
-                    <div className="pt-4">
-                      <Button className="w-full" onClick={saveDialPlan} disabled={dialPlanMutation.isPending}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Salvar Plano de Discagem
-                      </Button>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="editor">
+                  <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
+                    <div className="lg:col-span-3 p-4">
+                      <div 
+                        ref={diagramRef}
+                        className="dialplan-editor w-full h-[500px] border rounded-md p-4 relative overflow-auto"
+                        style={{ background: "repeating-linear-gradient(0deg, #f5f5f5 0px, #f5f5f5 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, #f5f5f5 0px, #f5f5f5 1px, transparent 1px, transparent 20px)" }}
+                      >
+                        {/* Aqui será renderizado o diagrama do plano de discagem */}
+                        {dialPlanSteps.map(step => (
+                          <div
+                            key={step.id}
+                            className={`dialplan-step p-3 rounded-md shadow-md absolute cursor-move ${
+                              selectedStep?.id === step.id ? 'ring-2 ring-primary' : ''
+                            } ${getStepColorClass(step.type)}`}
+                            style={{ 
+                              left: `${step.x}px`, 
+                              top: `${step.y}px`,
+                              zIndex: draggedStep === step.id ? 10 : 1
+                            }}
+                            onClick={() => setSelectedStep(step)}
+                            onMouseDown={(e) => handleDragStart(e, step.id)}
+                            onMouseMove={(e) => handleDrag(e, step)}
+                            onMouseUp={() => setDraggedStep(null)}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center">
+                                {getStepIcon(step.type)}
+                                <span className="ml-2 font-medium">{step.name || `${getStepTypeName(step.type)}`}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteStep(step.id);
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {getStepDescription(step)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-md font-medium">Adicionar Passos</h3>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={saveDialPlan}
+                            disabled={isSubmittingDialPlan}
+                          >
+                            {isSubmittingDialPlan ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Salvar
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => handleAddStep('play')}
+                          >
+                            <Volume2 className="h-4 w-4 mr-2 text-green-500" />
+                            <span>Play</span>
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => handleAddStep('record')}
+                          >
+                            <Mic className="h-4 w-4 mr-2 text-red-500" />
+                            <span>Gravar</span>
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => handleAddStep('menu')}
+                          >
+                            <ListFilter className="h-4 w-4 mr-2 text-blue-500" />
+                            <span>Menu</span>
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => handleAddStep('dial')}
+                          >
+                            <Phone className="h-4 w-4 mr-2 text-amber-500" />
+                            <span>Discar</span>
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => handleAddStep('queue')}
+                          >
+                            <UsersRound className="h-4 w-4 mr-2 text-purple-500" />
+                            <span>Fila</span>
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => handleAddStep('hangup')}
+                          >
+                            <PhoneOff className="h-4 w-4 mr-2 text-red-500" />
+                            <span>Desligar</span>
+                          </Button>
+                        </div>
+
+                        {selectedStep && (
+                          <>
+                            <Separator />
+                            <h3 className="text-md font-medium">Propriedades</h3>
+                            <div className="space-y-2">
+                              <div>
+                                <Label htmlFor="stepName">Nome</Label>
+                                <Input
+                                  id="stepName"
+                                  value={selectedStep.name || ''}
+                                  onChange={(e) => updateSelectedStepProperty('name', e.target.value)}
+                                  placeholder={getStepTypeName(selectedStep.type)}
+                                />
+                              </div>
+                              
+                              {renderStepProperties()}
+                              
+                              <div className="flex justify-end space-x-2 mt-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedStep(null)}
+                                >
+                                  Fechar
+                                </Button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="queues" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gerenciamento de Filas</CardTitle>
+              <CardDescription>
+                Configure e gerencie as filas de chamadas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Conteúdo para gerenciamento de filas */}
+              <div className="text-center py-12">
+                <h3 className="text-lg font-medium text-neutral-600 mb-2">Funcionalidade em desenvolvimento</h3>
+                <p className="text-sm text-neutral-500">
+                  O gerenciamento de filas estará disponível em breve.
+                </p>
               </div>
             </CardContent>
           </Card>
