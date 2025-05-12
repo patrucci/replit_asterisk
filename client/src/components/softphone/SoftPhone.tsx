@@ -1,0 +1,1049 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import {
+  Phone,
+  PhoneOff,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Plus,
+  X,
+  User,
+  Settings,
+  PhoneCall,
+  PhoneForwarded,
+  PhoneIncoming,
+  PhoneMissed,
+  Pause,
+  RotateCw,
+  Volume,
+  AlertTriangle,
+  Check,
+} from 'lucide-react';
+
+import { SipConfig, sipClient, CallState, RegisterState } from '@/lib/sipClient';
+
+// Interface para as props do componente SoftPhone
+interface SoftPhoneProps {
+  extension?: string;
+  displayName?: string;
+  domain?: string;
+  wsUri?: string;
+  password?: string;
+  autoRegister?: boolean;
+  className?: string;
+  onCallStateChange?: (state: CallState) => void;
+  onRegisterStateChange?: (state: RegisterState) => void;
+}
+
+// Componente principal do SoftPhone
+export function SoftPhone({
+  extension,
+  displayName,
+  domain = 'sip.example.com',
+  wsUri = 'wss://sip.example.com:8089/ws',
+  password = '',
+  autoRegister = false,
+  className = '',
+  onCallStateChange,
+  onRegisterStateChange,
+}: SoftPhoneProps) {
+  const { toast } = useToast();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [callState, setCallState] = useState<CallState>(CallState.NONE);
+  const [registerState, setRegisterState] = useState<RegisterState>(RegisterState.UNREGISTERED);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isHold, setIsHold] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [config, setConfig] = useState<SipConfig>({
+    domain: domain,
+    wsUri: wsUri,
+    authorizationUser: extension || '',
+    password: password,
+    displayName: displayName || '',
+    registerExpires: 600,
+    debug: false,
+  });
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [showKeypad, setShowKeypad] = useState(false);
+  const [callHistory, setCallHistory] = useState<Array<{
+    number: string;
+    displayName?: string;
+    direction: 'outgoing' | 'incoming';
+    duration: number;
+    timestamp: number;
+    status: 'answered' | 'missed' | 'busy';
+  }>>([]);
+  const [incomingCall, setIncomingCall] = useState<{
+    number: string;
+    displayName?: string;
+  } | null>(null);
+  const [activeTab, setActiveTab] = useState('dial');
+  const [micVolume, setMicVolume] = useState(100);
+  const [speakerVolume, setSpeakerVolume] = useState(100);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Efeito para registrar no servidor SIP quando o componente é montado
+  useEffect(() => {
+    // Configurar os manipuladores de eventos
+    setupEventHandlers();
+    
+    // Registrar automaticamente se configurado
+    if (autoRegister && config.authorizationUser && config.password) {
+      registerSip();
+    }
+    
+    // Limpar ao desmontar
+    return () => {
+      sipClient.removeAllListeners();
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+      }
+      // Desregistrar do servidor SIP
+      if (registerState === RegisterState.REGISTERED) {
+        sipClient.unregister();
+      }
+    };
+  }, []);
+
+  // Efeito para manipular a conexão de áudio remota
+  useEffect(() => {
+    if (callState === CallState.ESTABLISHED) {
+      const remoteStream = sipClient.getRemoteStream();
+      if (remoteStream && remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(error => {
+          console.error('Error playing remote audio:', error);
+        });
+        
+        // Iniciar o timer de duração da chamada
+        callTimerRef.current = setInterval(() => {
+          setCallDuration(prev => prev + 1);
+        }, 1000);
+      }
+    } else if (callState === CallState.TERMINATED) {
+      // Parar o timer de duração da chamada
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+      
+      // Resetar a duração da chamada
+      setCallDuration(0);
+      
+      // Limpar o áudio remoto
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null;
+      }
+      
+      // Resetar estados da chamada
+      setIsMuted(false);
+      setIsHold(false);
+    }
+  }, [callState]);
+
+  // Configurar manipuladores de eventos SIP
+  const setupEventHandlers = () => {
+    // Evento de alteração de estado de registro
+    sipClient.addEventHandler('registerStateChanged', (state: RegisterState) => {
+      setRegisterState(state);
+      
+      if (state === RegisterState.REGISTERED) {
+        setIsRegistering(false);
+        toast({
+          title: "Registrado",
+          description: "Softphone conectado com sucesso",
+        });
+      } else if (state === RegisterState.FAILED) {
+        setIsRegistering(false);
+        toast({
+          title: "Falha no registro",
+          description: "Não foi possível conectar ao servidor SIP",
+          variant: "destructive",
+        });
+      }
+      
+      if (onRegisterStateChange) {
+        onRegisterStateChange(state);
+      }
+    });
+    
+    // Evento de alteração de estado da chamada
+    sipClient.addEventHandler('callStateChanged', (state: CallState) => {
+      setCallState(state);
+      
+      if (onCallStateChange) {
+        onCallStateChange(state);
+      }
+    });
+    
+    // Evento de chamada recebida
+    sipClient.addEventHandler('incomingCall', (data: { displayName?: string, number: string }) => {
+      setIncomingCall(data);
+      setCallState(CallState.PROGRESS);
+      
+      // Reproduzir som de chamada
+      playRingtone();
+    });
+    
+    // Evento de chamada encerrada
+    sipClient.addEventHandler('ended', () => {
+      stopRingtone();
+      
+      // Adicionar ao histórico de chamadas
+      if (incomingCall) {
+        addToCallHistory({
+          number: incomingCall.number,
+          displayName: incomingCall.displayName,
+          direction: 'incoming',
+          duration: callDuration,
+          timestamp: Date.now(),
+          status: callDuration > 0 ? 'answered' : 'missed',
+        });
+        
+        setIncomingCall(null);
+      } else if (phoneNumber) {
+        addToCallHistory({
+          number: phoneNumber,
+          direction: 'outgoing',
+          duration: callDuration,
+          timestamp: Date.now(),
+          status: callDuration > 0 ? 'answered' : 'busy',
+        });
+      }
+    });
+    
+    // Evento de falha na chamada
+    sipClient.addEventHandler('failed', () => {
+      stopRingtone();
+      
+      if (incomingCall) {
+        addToCallHistory({
+          number: incomingCall.number,
+          displayName: incomingCall.displayName,
+          direction: 'incoming',
+          duration: 0,
+          timestamp: Date.now(),
+          status: 'missed',
+        });
+        
+        setIncomingCall(null);
+      } else if (phoneNumber) {
+        addToCallHistory({
+          number: phoneNumber,
+          direction: 'outgoing',
+          duration: 0,
+          timestamp: Date.now(),
+          status: 'busy',
+        });
+        
+        toast({
+          title: "Chamada falhou",
+          description: "Não foi possível completar a chamada",
+          variant: "destructive",
+        });
+      }
+    });
+    
+    // Evento de hold/unhold
+    sipClient.addEventHandler('hold', () => {
+      setIsHold(true);
+    });
+    
+    sipClient.addEventHandler('unhold', () => {
+      setIsHold(false);
+    });
+    
+    // Evento de mute
+    sipClient.addEventHandler('mute', (muted: boolean) => {
+      setIsMuted(muted);
+    });
+  };
+
+  // Método para registrar no servidor SIP
+  const registerSip = () => {
+    try {
+      setIsRegistering(true);
+      
+      // Configurar o cliente SIP
+      sipClient.setConfig({
+        domain: config.domain,
+        wsUri: config.wsUri,
+        authorizationUser: config.authorizationUser,
+        password: config.password,
+        displayName: config.displayName,
+        registerExpires: config.registerExpires,
+        debug: config.debug,
+      });
+      
+      // Registrar
+      sipClient.register().catch(error => {
+        console.error('Registration error:', error);
+        setIsRegistering(false);
+        
+        toast({
+          title: "Erro de registro",
+          description: error.message,
+          variant: "destructive",
+        });
+      });
+    } catch (error) {
+      console.error('Register error:', error);
+      setIsRegistering(false);
+      
+      toast({
+        title: "Erro de registro",
+        description: "Não foi possível conectar ao servidor SIP",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Método para desregistrar do servidor SIP
+  const unregisterSip = () => {
+    try {
+      sipClient.unregister();
+    } catch (error) {
+      console.error('Unregister error:', error);
+    }
+  };
+
+  // Método para fazer uma chamada
+  const makeCall = () => {
+    if (!phoneNumber) {
+      toast({
+        title: "Número inválido",
+        description: "Digite um número para discar",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      sipClient.call(phoneNumber);
+      
+      // Reproduzir som de chamada
+      playRingtone();
+    } catch (error) {
+      console.error('Call error:', error);
+      
+      toast({
+        title: "Erro na chamada",
+        description: "Não foi possível iniciar a chamada",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Método para encerrar uma chamada
+  const hangupCall = () => {
+    try {
+      sipClient.hangup();
+      stopRingtone();
+      setIncomingCall(null);
+    } catch (error) {
+      console.error('Hangup error:', error);
+    }
+  };
+
+  // Método para atender uma chamada
+  const answerCall = () => {
+    try {
+      sipClient.answer();
+      stopRingtone();
+    } catch (error) {
+      console.error('Answer error:', error);
+      
+      toast({
+        title: "Erro ao atender",
+        description: "Não foi possível atender a chamada",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Método para rejeitar uma chamada
+  const rejectCall = () => {
+    try {
+      sipClient.reject();
+      stopRingtone();
+      setIncomingCall(null);
+      
+      // Adicionar ao histórico como chamada perdida
+      if (incomingCall) {
+        addToCallHistory({
+          number: incomingCall.number,
+          displayName: incomingCall.displayName,
+          direction: 'incoming',
+          duration: 0,
+          timestamp: Date.now(),
+          status: 'missed',
+        });
+      }
+    } catch (error) {
+      console.error('Reject error:', error);
+    }
+  };
+
+  // Método para colocar/tirar chamada de espera
+  const toggleHold = () => {
+    try {
+      sipClient.hold(!isHold);
+    } catch (error) {
+      console.error('Hold/unhold error:', error);
+      
+      toast({
+        title: "Erro na operação",
+        description: "Não foi possível alterar o estado de espera",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Método para mutar/desmutar o microfone
+  const toggleMute = () => {
+    try {
+      sipClient.mute(!isMuted);
+    } catch (error) {
+      console.error('Mute/unmute error:', error);
+      
+      toast({
+        title: "Erro na operação",
+        description: "Não foi possível alterar o estado do microfone",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Método para enviar dígito DTMF
+  const sendDTMF = (digit: string) => {
+    try {
+      sipClient.sendDTMF(digit);
+      
+      // Adicionar o dígito ao número discado se estiver na fase de discagem
+      if (callState === CallState.NONE) {
+        setPhoneNumber(prev => prev + digit);
+      }
+      
+      // Reproduzir som de tom
+      playDTMFTone(digit);
+    } catch (error) {
+      console.error('DTMF error:', error);
+    }
+  };
+
+  // Método para reproduzir som de tom DTMF
+  const playDTMFTone = (digit: string) => {
+    // Em uma implementação real, reproduziria o som do tom DTMF
+    // Por simplicidade, vamos apenas usar a API de áudio
+    try {
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+      
+      // Configurar a frequência com base no dígito (simplificado)
+      const frequency = digit === '*' ? 941 : digit === '#' ? 1209 : 1000 + parseInt(digit) * 100;
+      oscillator.frequency.value = frequency;
+      
+      gainNode.gain.value = 0.1;
+      
+      oscillator.start();
+      
+      // Tocar o som por 100ms
+      setTimeout(() => {
+        oscillator.stop();
+        context.close();
+      }, 100);
+    } catch (error) {
+      console.error('Error playing DTMF tone:', error);
+    }
+  };
+
+  // Método para reproduzir ringtone
+  const playRingtone = () => {
+    // Em uma implementação real, reproduziria um ringtone
+    // Aqui apenas simulamos isso
+  };
+
+  // Método para parar o ringtone
+  const stopRingtone = () => {
+    // Em uma implementação real, pararia o ringtone
+  };
+
+  // Adicionar chamada ao histórico
+  const addToCallHistory = (call: {
+    number: string;
+    displayName?: string;
+    direction: 'outgoing' | 'incoming';
+    duration: number;
+    timestamp: number;
+    status: 'answered' | 'missed' | 'busy';
+  }) => {
+    setCallHistory(prev => [call, ...prev.slice(0, 19)]); // Manter apenas as últimas 20 chamadas
+  };
+
+  // Formatar duração da chamada
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+  };
+
+  // Formatar data/hora
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString() + ' ' + date.toLocaleDateString();
+  };
+
+  // Renderização do teclado numérico
+  const renderDialpad = () => {
+    const dialpadButtons = [
+      ['1', '2', '3'],
+      ['4', '5', '6'],
+      ['7', '8', '9'],
+      ['*', '0', '#']
+    ];
+    
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {dialpadButtons.map((row, rowIndex) => (
+          <React.Fragment key={rowIndex}>
+            {row.map(button => (
+              <Button
+                key={button}
+                variant="outline"
+                size="lg"
+                className="h-12 font-semibold text-lg"
+                onClick={() => sendDTMF(button)}
+                disabled={callState !== CallState.NONE && callState !== CallState.ESTABLISHED}
+              >
+                {button}
+              </Button>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  // Renderização do histórico de chamadas
+  const renderCallHistory = () => {
+    if (callHistory.length === 0) {
+      return (
+        <div className="text-center py-10 text-neutral-500">
+          <PhoneCall className="mx-auto h-10 w-10 mb-3 opacity-25" />
+          <p>Nenhuma chamada no histórico</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+        {callHistory.map((call, index) => (
+          <div 
+            key={index} 
+            className="flex justify-between items-center p-2 rounded-md hover:bg-neutral-100 cursor-pointer"
+            onClick={() => {
+              setPhoneNumber(call.number);
+              setActiveTab('dial');
+            }}
+          >
+            <div className="flex items-center">
+              {call.direction === 'outgoing' ? (
+                <PhoneForwarded className="h-4 w-4 mr-2" />
+              ) : call.status === 'missed' ? (
+                <PhoneMissed className="h-4 w-4 mr-2 text-red-500" />
+              ) : (
+                <PhoneIncoming className="h-4 w-4 mr-2" />
+              )}
+              <div>
+                <p className="font-medium">{call.displayName || call.number}</p>
+                <p className="text-xs text-neutral-500">{formatTimestamp(call.timestamp)}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm">{formatDuration(call.duration)}</p>
+              <p className="text-xs text-neutral-500">
+                {call.status === 'answered' ? 'Atendida' : 
+                 call.status === 'missed' ? 'Perdida' : 'Ocupado'}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Renderização da interface minimizada
+  const renderMinimized = () => {
+    return (
+      <Card className={`fixed bottom-4 right-4 w-auto shadow-lg ${className}`}>
+        <CardContent className="p-2">
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={registerState === RegisterState.REGISTERED ? "default" : "destructive"}
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setIsMinimized(false)}
+            >
+              <Phone className="h-4 w-4" />
+            </Button>
+            
+            {callState !== CallState.NONE && (
+              <Badge variant={callState === CallState.ESTABLISHED ? "default" : "outline"}>
+                {callState === CallState.ESTABLISHED ? formatDuration(callDuration) : 'Chamando...'}
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Renderização principal
+  if (isMinimized) {
+    return renderMinimized();
+  }
+
+  return (
+    <Card className={`shadow-lg ${className}`}>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg">Softphone</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Badge
+              variant={
+                registerState === RegisterState.REGISTERED
+                  ? "default"
+                  : registerState === RegisterState.REGISTERING
+                  ? "outline"
+                  : "destructive"
+              }
+            >
+              {registerState === RegisterState.REGISTERED
+                ? "Conectado"
+                : registerState === RegisterState.REGISTERING
+                ? "Conectando..."
+                : "Desconectado"}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setIsMinimized(true)}
+            >
+              <Pause className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setConfigDialogOpen(true)}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <CardDescription>
+          {config.displayName ? `${config.displayName} (${config.authorizationUser})` : config.authorizationUser}
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="pt-0">
+        {/* Mostrar chamada em andamento */}
+        {callState !== CallState.NONE && (
+          <div className="mb-4 p-3 bg-secondary rounded-md">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium">
+                  {incomingCall 
+                    ? (incomingCall.displayName || incomingCall.number)
+                    : phoneNumber}
+                </p>
+                <p className="text-sm text-neutral-500">
+                  {callState === CallState.CONNECTING ? "Conectando..." :
+                   callState === CallState.PROGRESS ? (incomingCall ? "Chamada recebida" : "Chamando...") :
+                   callState === CallState.ESTABLISHED ? formatDuration(callDuration) :
+                   callState === CallState.HOLD ? "Em espera" :
+                   "Finalizando..."}
+                </p>
+              </div>
+              
+              {/* Botões de controle da chamada */}
+              <div className="flex space-x-2">
+                {callState === CallState.ESTABLISHED && (
+                  <>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${isMuted ? 'bg-amber-100' : ''}`}
+                            onClick={toggleMute}
+                          >
+                            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isMuted ? 'Ativar microfone' : 'Mudo'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${isHold ? 'bg-amber-100' : ''}`}
+                            onClick={toggleHold}
+                          >
+                            {isHold ? <PhoneForwarded className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isHold ? 'Retomar' : 'Espera'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setShowKeypad(!showKeypad)}
+                          >
+                            {showKeypad ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {showKeypad ? 'Fechar teclado' : 'Teclado numérico'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </>
+                )}
+                
+                {/* Botão de encerrar chamada */}
+                {(callState === CallState.ESTABLISHED || 
+                  callState === CallState.CONNECTING || 
+                  callState === CallState.PROGRESS) && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={hangupCall}
+                  >
+                    <PhoneOff className="h-4 w-4 mr-2" />
+                    Desligar
+                  </Button>
+                )}
+                
+                {/* Botões para chamada recebida */}
+                {incomingCall && callState === CallState.PROGRESS && (
+                  <>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={rejectCall}
+                    >
+                      <PhoneOff className="h-4 w-4 mr-2" />
+                      Rejeitar
+                    </Button>
+                    
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={answerCall}
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      Atender
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Teclado numérico durante a chamada */}
+            {showKeypad && callState === CallState.ESTABLISHED && (
+              <div className="mt-4">
+                {renderDialpad()}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Abas de discagem/histórico */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dial">Discador</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="dial" className="pt-4">
+            {/* Campo de número */}
+            <div className="mb-4">
+              <Input
+                type="text"
+                placeholder="Digite um número..."
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="text-center text-lg font-medium"
+                disabled={callState !== CallState.NONE}
+              />
+            </div>
+            
+            {/* Teclado de discagem */}
+            {renderDialpad()}
+            
+            {/* Botão de chamada */}
+            <div className="mt-4 flex justify-center">
+              <Button
+                size="lg"
+                className="rounded-full h-16 w-16 p-0"
+                disabled={callState !== CallState.NONE || !phoneNumber || registerState !== RegisterState.REGISTERED}
+                onClick={makeCall}
+              >
+                <Phone className="h-6 w-6" />
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="history" className="pt-4">
+            {renderCallHistory()}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+      
+      <CardFooter className="pt-0 flex justify-between items-center">
+        {/* Botão de registro */}
+        {registerState === RegisterState.REGISTERED ? (
+          <Button variant="outline" size="sm" onClick={unregisterSip}>
+            Desconectar
+          </Button>
+        ) : (
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={registerSip}
+            disabled={isRegistering || !config.authorizationUser || !config.password}
+          >
+            {isRegistering ? (
+              <>
+                <RotateCw className="h-4 w-4 mr-2 animate-spin" />
+                Conectando...
+              </>
+            ) : (
+              'Conectar'
+            )}
+          </Button>
+        )}
+        
+        {/* Indicador de status */}
+        <div>
+          <Badge 
+            variant="outline"
+            className={
+              registerState === RegisterState.REGISTERED ? 'bg-green-100 text-green-800' :
+              registerState === RegisterState.REGISTERING ? 'bg-amber-100 text-amber-800' :
+              'bg-red-100 text-red-800'
+            }
+          >
+            {registerState === RegisterState.REGISTERED && <Check className="h-3 w-3 mr-1" />}
+            {registerState === RegisterState.REGISTERING && <RotateCw className="h-3 w-3 mr-1 animate-spin" />}
+            {registerState === RegisterState.FAILED && <AlertTriangle className="h-3 w-3 mr-1" />}
+            {registerState === RegisterState.UNREGISTERED && "Offline"}
+            {registerState === RegisterState.REGISTERED && "Online"}
+            {registerState === RegisterState.REGISTERING && "Conectando"}
+            {registerState === RegisterState.FAILED && "Falha"}
+          </Badge>
+        </div>
+      </CardFooter>
+      
+      {/* Diálogo de configuração */}
+      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurações do Softphone</DialogTitle>
+            <DialogDescription>
+              Configure os parâmetros de conexão SIP
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="extension">Ramal</Label>
+              <Input
+                id="extension"
+                value={config.authorizationUser}
+                onChange={(e) => setConfig({...config, authorizationUser: e.target.value})}
+                placeholder="Ex: 1001"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="display-name">Nome de exibição</Label>
+              <Input
+                id="display-name"
+                value={config.displayName}
+                onChange={(e) => setConfig({...config, displayName: e.target.value})}
+                placeholder="Ex: João Silva"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={config.password}
+                onChange={(e) => setConfig({...config, password: e.target.value})}
+                placeholder="Senha do ramal"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="domain">Domínio SIP</Label>
+              <Input
+                id="domain"
+                value={config.domain}
+                onChange={(e) => setConfig({...config, domain: e.target.value})}
+                placeholder="Ex: sip.example.com"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="ws-uri">URI do WebSocket</Label>
+              <Input
+                id="ws-uri"
+                value={config.wsUri}
+                onChange={(e) => setConfig({...config, wsUri: e.target.value})}
+                placeholder="Ex: wss://sip.example.com:8089/ws"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="expires">Tempo de registro (segundos)</Label>
+              <Input
+                id="expires"
+                type="number"
+                value={config.registerExpires}
+                onChange={(e) => setConfig({...config, registerExpires: parseInt(e.target.value)})}
+                placeholder="Ex: 600"
+              />
+            </div>
+            
+            <Separator />
+            
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="debug-mode">Modo de depuração</Label>
+                <Switch
+                  id="debug-mode"
+                  checked={config.debug}
+                  onCheckedChange={(checked) => setConfig({...config, debug: checked})}
+                />
+              </div>
+              <p className="text-xs text-neutral-500">
+                Ativa logs detalhados no console do navegador
+              </p>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label>Controles de volume</Label>
+              
+              <div className="flex items-center space-x-2">
+                <Mic className="h-4 w-4" />
+                <div className="w-full">
+                  <Label htmlFor="mic-volume" className="sr-only">Volume do microfone</Label>
+                  <input
+                    id="mic-volume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={micVolume}
+                    onChange={(e) => setMicVolume(parseInt(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+                <span className="text-xs w-10 text-right">{micVolume}%</span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Volume className="h-4 w-4" />
+                <div className="w-full">
+                  <Label htmlFor="speaker-volume" className="sr-only">Volume do alto-falante</Label>
+                  <input
+                    id="speaker-volume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={speakerVolume}
+                    onChange={(e) => setSpeakerVolume(parseInt(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+                <span className="text-xs w-10 text-right">{speakerVolume}%</span>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => {
+              setConfigDialogOpen(false);
+              
+              // Se já estiver registrado, desregistre primeiro para aplicar as novas configurações
+              if (registerState === RegisterState.REGISTERED) {
+                unregisterSip();
+                
+                // Registre novamente com as novas configurações após um breve atraso
+                setTimeout(() => {
+                  registerSip();
+                }, 1000);
+              }
+            }}>
+              Salvar configurações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Elemento de áudio para reproduzir o stream da chamada */}
+      <audio ref={remoteAudioRef} autoPlay />
+    </Card>
+  );
+}
