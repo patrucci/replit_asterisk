@@ -956,10 +956,9 @@ class AsteriskAMIManager extends EventEmitter {
       return new Promise((resolve) => {
         try {
           // Criar uma instância temporária do cliente apenas para o teste
-          const AmiClient = require('asterisk-ami-client');
           console.log('Criando cliente AMI...');
           
-          const testClient = new AmiClient();
+          const testClient = new AsteriskAmiClient();
           console.log('Cliente AMI criado com sucesso');
           
           // Configurar timeout
