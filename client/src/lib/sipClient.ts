@@ -1,4 +1,4 @@
-import JsSIP from 'jssip';
+import * as JsSIP from 'jssip';
 import { EventEmitter } from 'events';
 
 // Configurações para o codec G.729
@@ -91,6 +91,7 @@ export class SipClient extends EventEmitter implements ISipClient {
     try {
       // Configuração do JsSIP
       console.log("Criando WebSocket interface...");
+      // @ts-ignore - JsSIP tem problema de tipagem, mas a propriedade existe
       const socket = new JsSIP.WebSocketInterface(this.config.wsUri);
       
       // Obter acesso ao microfone/câmera
@@ -103,6 +104,9 @@ export class SipClient extends EventEmitter implements ISipClient {
         throw new Error(`Failed to get media access: ${error}`);
       }
       
+      // Configurações adicionais para compatibilidade
+      JsSIP.debug.enable('JsSIP:*');
+      
       const uaConfig = {
         uri: `sip:${this.config.authorizationUser}@${this.config.domain}`,
         password: this.config.password,
@@ -113,7 +117,12 @@ export class SipClient extends EventEmitter implements ISipClient {
         authorization_user: this.config.authorizationUser,
         register_expires: this.config.registerExpires || 600,
         session_timers: false,
-        use_preloaded_route: false
+        use_preloaded_route: false,
+        connection_recovery_min_interval: 2,
+        connection_recovery_max_interval: 30,
+        hack_via_tcp: true, // Compatibilidade com alguns servidores SIP
+        hack_ip_in_contact: true, // Compatibilidade com NATs
+        no_answer_timeout: 60 // Tempo maior para esperar resposta
       };
       
       console.log("Criando UA (User Agent)...");

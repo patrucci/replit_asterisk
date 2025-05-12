@@ -1042,6 +1042,9 @@ export function SoftPhone({
                 onChange={(e) => setConfig({...config, domain: e.target.value})}
                 placeholder="Ex: pbx.suaempresa.com, asterisk.local"
               />
+              <div className="text-xs text-muted-foreground mt-1">
+                <p>Se você está enfrentando problemas de conexão, experimente usar o endereço IP do servidor ao invés do nome de domínio.</p>
+              </div>
             </div>
             
             <div className="grid gap-2">
