@@ -948,10 +948,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para obter chamadas em fila simuladas
   app.get("/api/asterisk/queue-calls", requireAuth, async (req, res) => {
     try {
-      console.log("Retornando lista vazia de chamadas em fila");
+      if (!asteriskAMIManager.isConnected()) {
+        console.log("[SIMULAÇÃO] Retornando chamadas em fila simuladas");
+        
+        // Dados simulados de chamadas em fila
+        const simulatedCalls = [];
+        
+        // Gerar entre 0 e 5 chamadas simuladas aleatoriamente
+        const callCount = Math.floor(Math.random() * 6);
+        
+        for (let i = 0; i < callCount; i++) {
+          const callerId = `551198765${Math.floor(Math.random() * 10000)}`;
+          simulatedCalls.push({
+            uniqueId: `call-${Date.now()}-${i}`,
+            callerId,
+            callerIdName: `Cliente ${i + 1}`,
+            queue: `queue${Math.floor(Math.random() * 3) + 1}`,
+            position: i + 1,
+            waitTime: Math.floor(Math.random() * 300),
+            timestamp: Date.now() - Math.floor(Math.random() * 300000)
+          });
+        }
+        
+        return res.json(simulatedCalls);
+      }
       
-      // Retornar array vazio - nenhuma chamada em fila
-      return res.json([]);
+      // Dados reais, se disponíveis
+      // TODO: Implementar obtenção de chamadas reais quando o Asterisk estiver conectado
+      const calls = [];
+      return res.json(calls);
     } catch (error) {
       console.error('Erro ao obter chamadas em fila:', error);
       return res.status(500).json({ message: "Erro ao obter chamadas em fila" });
