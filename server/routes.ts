@@ -11,6 +11,13 @@ import {
   insertCallSchema 
 } from "@shared/schema";
 import { generateMessageSuggestions } from "./openai";
+import { 
+  generateCallScript, 
+  analyzeCallTranscription, 
+  generateResponse, 
+  formatScriptWithValues,
+  asteriskInterface
+} from "./asterisk-ai";
 
 const requireAuth = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
@@ -364,6 +371,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ suggestions });
     } catch (error) {
       res.status(500).json({ message: "Failed to generate message suggestions" });
+    }
+  });
+
+  // Asterisk AI routes
+  
+  // Generate call script
+  app.post("/api/asterisk/generate-script", requireAuth, async (req, res) => {
+    try {
+      const { clientId, purpose, appointmentDate, appointmentType, customInstructions, useCustomInstructions } = req.body;
+      
+      if (!clientId || !purpose) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      const client = await storage.getClient(Number(clientId));
+      
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      if (client.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized to generate script for this client" });
+      }
+      
+      const script = await generateCallScript({
+        client,
+        purpose,
+        appointmentDate,
+        appointmentType,
+        customInstructions,
+        useCustomInstructions
+      });
+      
+      res.json({ script });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate call script" });
+    }
+  });
+  
+  // Make a call with AI
+  app.post("/api/asterisk/make-call", requireAuth, async (req, res) => {
+    try {
+      const { 
+        clientId, 
+        script, 
+        customScript,
+        useCustomScript,
+        scheduleCall,
+        callTime,
+        maxAttempts, 
+        voiceType,
+        purpose
+      } = req.body;
+      
+      if (!clientId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      const client = await storage.getClient(Number(clientId));
+      
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      if (client.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized to call this client" });
+      }
+      
+      // In a real implementation, we would schedule the call or initiate it immediately
+      // For now, we just return a success response with a call ID
+      const callId = `call-${Date.now()}`;
+      
+      if (scheduleCall) {
+        // Simulate scheduling a call for later
+        res.json({ 
+          success: true, 
+          callId,
+          message: "Call scheduled successfully",
+          scheduledTime: callTime
+        });
+      } else {
+        // Simulate initiating a call immediately
+        // This would involve triggering Asterisk to make the call
+        res.json({ 
+          success: true, 
+          callId,
+          message: "Call initiated successfully" 
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to initiate call" });
+    }
+  });
+  
+  // Get call history
+  app.get("/api/asterisk/call-history", requireAuth, async (req, res) => {
+    try {
+      // In a real implementation, we would fetch real call history from a database
+      // For this example, we'll just return a mock response
+      res.json([
+        {
+          id: "call1",
+          clientName: "João Silva",
+          clientPhone: "(11) 99123-4567",
+          callDate: "2025-05-10 14:30",
+          duration: "2:45",
+          purpose: "Agendamento",
+          status: "completed",
+          recording: "call_joao_20250510.mp3",
+          transcription: "Transcrição da conversa com João...",
+          analysis: {
+            sentiment: "positive",
+            nextSteps: ["Confirmar consulta um dia antes", "Preparar documentação"],
+            keyInsights: ["Cliente prefere horários pela manhã", "Mencionou dor nas costas"]
+          }
+        },
+        {
+          id: "call2",
+          clientName: "Maria Oliveira",
+          clientPhone: "(21) 98765-4321",
+          callDate: "2025-05-11 10:15",
+          duration: "3:20",
+          purpose: "Confirmação",
+          status: "completed",
+          recording: "call_maria_20250511.mp3",
+          analysis: {
+            sentiment: "neutral",
+            nextSteps: ["Enviar lembretes adicionais"],
+            keyInsights: ["Cliente confirmou presença com ressalvas", "Pode se atrasar"]
+          }
+        }
+      ]);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch call history" });
+    }
+  });
+  
+  // Get call detail
+  app.get("/api/asterisk/calls/:callId", requireAuth, async (req, res) => {
+    try {
+      const { callId } = req.params;
+      
+      // In a real implementation, we would fetch the call details from a database
+      // For this example, we'll just return a mock response based on the call ID
+      if (callId === "call1") {
+        res.json({
+          id: "call1",
+          clientName: "João Silva",
+          clientPhone: "(11) 99123-4567",
+          callDate: "2025-05-10 14:30",
+          duration: "2:45",
+          purpose: "Agendamento",
+          status: "completed",
+          recording: "call_joao_20250510.mp3",
+          transcription: "Transcrição da conversa com João...",
+          analysis: {
+            sentiment: "positive",
+            nextSteps: ["Confirmar consulta um dia antes", "Preparar documentação"],
+            keyInsights: ["Cliente prefere horários pela manhã", "Mencionou dor nas costas"]
+          }
+        });
+      } else {
+        res.status(404).json({ message: "Call not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch call details" });
+    }
+  });
+  
+  // Save Asterisk AI settings
+  app.post("/api/asterisk/settings", requireAuth, async (req, res) => {
+    try {
+      const { 
+        enabled, 
+        responseTimeout, 
+        confidenceThreshold, 
+        callAnalysis, 
+        transcriptionEnabled,
+        defaultVoice,
+        speechRate,
+        maxCallDuration,
+        apiModel
+      } = req.body;
+      
+      // In a real implementation, we would save these settings to a database
+      // For this example, we'll just return a success response
+      res.json({ 
+        success: true, 
+        message: "Settings saved successfully",
+        settings: {
+          enabled,
+          responseTimeout,
+          confidenceThreshold,
+          callAnalysis,
+          transcriptionEnabled,
+          defaultVoice,
+          speechRate,
+          maxCallDuration,
+          apiModel
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to save settings" });
     }
   });
 

@@ -14,6 +14,7 @@ import {
   X,
   Menu,
   Phone,
+  Sparkles,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -39,7 +40,8 @@ export function Sidebar({ className }: SidebarProps) {
     { path: "/schedule", label: "Agenda", icon: <Calendar className="h-5 w-5 mr-3" /> },
     { path: "/payments", label: "Pagamentos", icon: <CreditCard className="h-5 w-5 mr-3" /> },
     { path: "/messages", label: "Mensagens", icon: <MessageSquare className="h-5 w-5 mr-3" /> },
-    { path: "/asterisk-config", label: "Asterisk", icon: <Phone className="h-5 w-5 mr-3" /> },
+    { path: "/asterisk-config", label: "Asterisk Config", icon: <Phone className="h-5 w-5 mr-3" /> },
+    { path: "/asterisk-ai", label: "Asterisk IA", icon: <Sparkles className="h-5 w-5 mr-3" /> },
     { path: "/settings", label: "Configurações", icon: <Settings className="h-5 w-5 mr-3" /> },
   ];
 
