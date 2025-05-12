@@ -116,22 +116,22 @@ export default function AsteriskConfigPage() {
   // Mutation para salvar o plano de discagem
   const dialPlanMutation = useMutation({
     mutationFn: async (steps: DialPlanStep[]) => {
-      const res = await apiRequest("POST", "/api/asterisk/dialplan", { steps });
-      return await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/asterisk/dialplan", { steps });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Erro na resposta do servidor: ${res.status} - ${errorText}`);
+        }
+        
+        return await res.json();
+      } catch (error) {
+        console.error("Erro na mutação:", error);
+        throw error; // Re-lançar o erro para ser capturado no saveDialPlan
+      }
     },
     onSuccess: () => {
-      toast({
-        title: "Plano de discagem salvo",
-        description: "O plano de discagem foi salvo com sucesso.",
-      });
       queryClient.invalidateQueries({ queryKey: ["/api/asterisk/dialplan"] });
-    },
-    onError: () => {
-      toast({
-        title: "Erro ao salvar plano de discagem",
-        description: "Ocorreu um erro ao salvar o plano de discagem.",
-        variant: "destructive",
-      });
     }
   });
 
@@ -222,10 +222,24 @@ export default function AsteriskConfigPage() {
   }, [dialPlanData]);
 
   // Salvar plano de discagem
-  const saveDialPlan = () => {
-    setIsSubmittingDialPlan(true);
-    dialPlanMutation.mutate(dialPlanSteps);
-    setIsSubmittingDialPlan(false);
+  const saveDialPlan = async () => {
+    try {
+      setIsSubmittingDialPlan(true);
+      await dialPlanMutation.mutateAsync(dialPlanSteps);
+      toast({
+        title: "Plano de discagem salvo",
+        description: "O plano de discagem foi salvo com sucesso."
+      });
+    } catch (error) {
+      console.error("Erro ao salvar plano de discagem:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar o plano de discagem.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmittingDialPlan(false);
+    }
   };
 
   // Adicionar novo passo
