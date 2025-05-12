@@ -99,8 +99,27 @@ export function SoftPhone({
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Efeito para registrar no servidor SIP quando o componente é montado
+  // Efeito para carregar configurações salvas e registrar no servidor SIP
   useEffect(() => {
+    // Tentar carregar configurações salvas do localStorage
+    try {
+      const savedConfig = localStorage.getItem('softphone_config');
+      if (savedConfig) {
+        const parsedConfig = JSON.parse(savedConfig);
+        setConfig(parsedConfig);
+        
+        // Atualizar as props com esses valores também
+        if (parsedConfig.domain) domain = parsedConfig.domain;
+        if (parsedConfig.wsUri) wsUri = parsedConfig.wsUri;
+        if (parsedConfig.authorizationUser) extension = parsedConfig.authorizationUser;
+        if (parsedConfig.displayName) displayName = parsedConfig.displayName;
+        
+        console.log('Configurações do SoftPhone carregadas:', parsedConfig);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações do softphone:', error);
+    }
+
     // Configurar os manipuladores de eventos
     setupEventHandlers();
     
@@ -1026,14 +1045,31 @@ export function SoftPhone({
             <Button onClick={() => {
               setConfigDialogOpen(false);
               
-              // Se já estiver registrado, desregistre primeiro para aplicar as novas configurações
-              if (registerState === RegisterState.REGISTERED) {
-                unregisterSip();
+              // Salvar configurações no localStorage para persistência
+              try {
+                localStorage.setItem('softphone_config', JSON.stringify(config));
                 
-                // Registre novamente com as novas configurações após um breve atraso
-                setTimeout(() => {
-                  registerSip();
-                }, 1000);
+                toast({
+                  title: "Configurações salvas",
+                  description: "As configurações do softphone foram salvas com sucesso"
+                });
+                
+                // Se já estiver registrado, desregistre primeiro para aplicar as novas configurações
+                if (registerState === RegisterState.REGISTERED) {
+                  unregisterSip();
+                  
+                  // Registre novamente com as novas configurações após um breve atraso
+                  setTimeout(() => {
+                    registerSip();
+                  }, 1000);
+                }
+              } catch (error) {
+                console.error('Error saving softphone config:', error);
+                toast({
+                  title: "Erro ao salvar",
+                  description: "Não foi possível salvar as configurações",
+                  variant: "destructive"
+                });
               }
             }}>
               Salvar configurações
