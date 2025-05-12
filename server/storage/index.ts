@@ -90,6 +90,13 @@ export interface IStorage {
   createQueue(data: any): Promise<any>;
   updateQueue(id: number, data: any): Promise<any>;
   deleteQueue(id: number): Promise<boolean>;
+  
+  // Métodos relacionados a agentes
+  getAgents(organizationId: number): Promise<any[]>;
+  getAgent(id: number): Promise<any | undefined>;
+  createAgent(data: any): Promise<any>;
+  updateAgent(id: number, data: any): Promise<any>;
+  deleteAgent(id: number): Promise<boolean>;
 }
 
 // Implementação do armazenamento usando banco de dados
@@ -498,6 +505,55 @@ export class DatabaseStorage implements IStorage {
 
   async deleteQueue(id: number): Promise<boolean> {
     await db.delete(schema.queues).where(eq(schema.queues.id, id));
+    return true;
+  }
+  
+  // ##################################################################
+  // # Métodos relacionados a agentes
+  // ##################################################################
+  
+  async getAgents(organizationId: number) {
+    const results = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.organizationId, organizationId));
+    
+    return results;
+  }
+
+  async getAgent(id: number) {
+    const [agent] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, id));
+    
+    return agent;
+  }
+
+  async createAgent(data: any) {
+    const [agent] = await db
+      .insert(agents)
+      .values(data)
+      .returning();
+    
+    return agent;
+  }
+
+  async updateAgent(id: number, data: any) {
+    const [agent] = await db
+      .update(agents)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(agents.id, id))
+      .returning();
+    
+    return agent;
+  }
+
+  async deleteAgent(id: number): Promise<boolean> {
+    await db.delete(agents).where(eq(agents.id, id));
     return true;
   }
 }
