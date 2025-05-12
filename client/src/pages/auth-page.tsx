@@ -4,13 +4,14 @@ import { z } from "zod";
 import { useState, useEffect } from "react";
 import { Redirect } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { BriefcaseIcon, CalendarIcon, MessageSquareIcon, CreditCardIcon } from "lucide-react";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, type InsertUser } from "@shared/schema";
 
 // Login schema
 const loginSchema = z.object({
@@ -36,6 +37,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { user, loginMutation, registerMutation } = useAuth();
+  const { toast } = useToast();
   
   // Login form
   const loginForm = useForm<LoginFormValues>({
@@ -68,12 +70,13 @@ export default function AuthPage() {
       console.log("Form data:", data);
       const { confirmPassword, ...userData } = data;
       
-      // Inclui campo obrigatório organizationId se ausente
-      if (!('organizationId' in userData)) {
-        userData.organizationId = 1; // Valor padrão para organização demo
-      }
+      // Criamos um novo objeto com os campos necessários e o organizationId
+      const registerData = {
+        ...userData,
+        organizationId: 1 // Valor padrão para organização demo
+      } as InsertUser;
       
-      registerMutation.mutate(userData);
+      registerMutation.mutate(registerData);
     } catch (error) {
       console.error("Erro ao registrar:", error);
       toast({
