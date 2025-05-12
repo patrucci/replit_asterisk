@@ -16,6 +16,8 @@ import {
   Phone,
   Sparkles,
   BarChart,
+  Activity,
+  Headset,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -41,10 +43,12 @@ export function Sidebar({ className }: SidebarProps) {
     { path: "/schedule", label: "Agenda", icon: <Calendar className="h-5 w-5 mr-3" /> },
     { path: "/payments", label: "Pagamentos", icon: <CreditCard className="h-5 w-5 mr-3" /> },
     { path: "/messages", label: "Mensagens", icon: <MessageSquare className="h-5 w-5 mr-3" /> },
+    { path: "/softphone", label: "Softphone", icon: <Headset className="h-5 w-5 mr-3" /> },
     { path: "/asterisk-config", label: "Asterisk Config", icon: <Phone className="h-5 w-5 mr-3" /> },
     { path: "/asterisk-ai", label: "Asterisk IA", icon: <Sparkles className="h-5 w-5 mr-3" /> },
     { path: "/queues", label: "Filas", icon: <Phone className="h-5 w-5 mr-3" /> },
     { path: "/queue-dashboard", label: "Dashboard de Filas", icon: <BarChart className="h-5 w-5 mr-3" /> },
+    { path: "/queue-realtime", label: "Monitor em Tempo Real", icon: <Activity className="h-5 w-5 mr-3" /> },
     { path: "/settings", label: "Configurações", icon: <Settings className="h-5 w-5 mr-3" /> },
   ];
 
