@@ -1607,6 +1607,39 @@ Verifique as configurações do Asterisk no arquivo 'manager.conf':
         
         const resultado = await lookup(host);
         diagnosticInfo += `* Resolução DNS: ${host} => ${resultado.address}\n`;
+        diagnosticInfo += `* Ping para o servidor: `;
+        
+        // Tentar fazer ping no servidor (usando um socket TCP na porta 80 para verificar se o servidor está online)
+        const pingResult = await new Promise<boolean>((resolve) => {
+          const pingSocket = new net.Socket();
+          let pingTimeoutId: NodeJS.Timeout;
+          
+          pingSocket.on('connect', () => {
+            clearTimeout(pingTimeoutId);
+            pingSocket.destroy();
+            resolve(true);
+          });
+          
+          pingSocket.on('error', () => {
+            clearTimeout(pingTimeoutId);
+            pingSocket.destroy();
+            resolve(false);
+          });
+          
+          pingTimeoutId = setTimeout(() => {
+            pingSocket.destroy();
+            resolve(false);
+          }, 3000);
+          
+          pingSocket.connect(80, resultado.address);
+        });
+        
+        if (pingResult) {
+          diagnosticInfo += `SUCESSO - O servidor ${resultado.address} está online e respondendo na porta 80\n`;
+        } else {
+          diagnosticInfo += `FALHA - O servidor ${resultado.address} não responde na porta 80 (isso não significa que outras portas estejam indisponíveis)\n`;
+        }
+        
       } catch (dnsErr) {
         diagnosticInfo += `* Resolução DNS: Falhou - ${dnsErr instanceof Error ? dnsErr.message : String(dnsErr)}\n`;
       }

@@ -20,6 +20,7 @@ export default function AsteriskDiagnostic() {
     success?: boolean;
     message?: string;
     details?: string;
+    diagnosticInfo?: string;
     type?: "tcp" | "ami";
   } | null>(null);
 
@@ -55,22 +56,24 @@ export default function AsteriskDiagnostic() {
         testTcpOnly: true,
       });
 
+      const responseData = await res.json();
+      
       if (!res.ok) {
-        const errorData = await res.json();
         setTestResult({
           success: false,
-          message: errorData.message || "Falha no teste TCP",
-          details: errorData.details,
+          message: responseData.message || "Falha no teste TCP",
+          details: responseData.details || "Não foi possível estabelecer conexão com o servidor",
+          diagnosticInfo: responseData.diagnosticInfo || "",
           type: "tcp",
         });
         return;
       }
 
-      const data = await res.json();
       setTestResult({
         success: true,
-        message: data.message || "Teste TCP bem-sucedido",
+        message: responseData.message || "Teste TCP bem-sucedido",
         details: "A porta TCP está acessível e respondendo",
+        diagnosticInfo: responseData.diagnosticInfo || "",
         type: "tcp",
       });
     } catch (error) {
@@ -109,22 +112,24 @@ export default function AsteriskDiagnostic() {
         testTcpOnly: false,
       });
 
+      const responseData = await res.json();
+      
       if (!res.ok) {
-        const errorData = await res.json();
         setTestResult({
           success: false,
-          message: errorData.message || "Falha no teste AMI",
-          details: errorData.details,
+          message: responseData.message || "Falha no teste AMI",
+          details: responseData.details || "Não foi possível autenticar no servidor Asterisk",
+          diagnosticInfo: responseData.diagnosticInfo || "",
           type: "ami",
         });
         return;
       }
 
-      const data = await res.json();
       setTestResult({
         success: true,
-        message: data.message || "Teste AMI bem-sucedido",
+        message: responseData.message || "Teste AMI bem-sucedido",
         details: "A conexão AMI foi estabelecida com sucesso",
+        diagnosticInfo: responseData.diagnosticInfo || "",
         type: "ami",
       });
     } catch (error) {
@@ -231,7 +236,20 @@ export default function AsteriskDiagnostic() {
               Tipo de teste: {testResult.type === "tcp" ? "Conectividade TCP" : "Autenticação AMI"}
             </div>
             
-            {!testResult.success && (
+            {!testResult.success && testResult.diagnosticInfo && (
+              <div className="mt-3">
+                <details className="cursor-pointer">
+                  <summary className="font-medium text-sm">
+                    Exibir diagnóstico detalhado
+                  </summary>
+                  <div className="mt-2 p-3 bg-slate-100 dark:bg-slate-900 rounded text-xs font-mono whitespace-pre-wrap">
+                    {testResult.diagnosticInfo}
+                  </div>
+                </details>
+              </div>
+            )}
+            
+            {!testResult.success && !testResult.diagnosticInfo && (
               <div className="mt-3 text-sm">
                 <strong>Recomendações:</strong>
                 <ul className="list-disc pl-5 space-y-1 mt-1">
