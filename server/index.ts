@@ -2,6 +2,10 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./init-db";
+import { db } from "./db";
+import { asteriskSettings } from "@shared/schema";
+import { asteriskAMIManager } from "./asterisk-ami";
+import { eq } from "drizzle-orm";
 
 const app = express();
 app.use(express.json());
@@ -43,6 +47,41 @@ app.use((req, res, next) => {
     await initializeDatabase();
     
     const server = await registerRoutes(app);
+    
+    // Tentar carregar as configurações do Asterisk e conectar automaticamente
+    try {
+      console.log("Verificando configurações do Asterisk no banco de dados...");
+      // Buscar todas as configurações de Asterisk
+      const configs = await db.select().from(asteriskSettings).where(eq(asteriskSettings.enabled, true));
+      
+      if (configs.length > 0) {
+        // Para cada configuração, tentar conectar
+        for (const config of configs) {
+          console.log(`Tentando conectar ao Asterisk usando configuração para organização ${config.organizationId}...`);
+          try {
+            const connected = await asteriskAMIManager.connect(
+              config.host,
+              config.port,
+              config.username,
+              config.password
+            );
+            
+            if (connected) {
+              console.log(`Conexão estabelecida com sucesso para o servidor Asterisk ${config.host}:${config.port}`);
+              break; // Se conectou com sucesso, sair do loop
+            } else {
+              console.log(`Falha ao conectar ao servidor Asterisk ${config.host}:${config.port}`);
+            }
+          } catch (connError) {
+            console.error(`Erro ao tentar conectar ao Asterisk: ${connError instanceof Error ? connError.message : String(connError)}`);
+          }
+        }
+      } else {
+        console.log("Nenhuma configuração do Asterisk encontrada no banco de dados.");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações do Asterisk:", error);
+    }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
