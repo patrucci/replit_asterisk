@@ -579,5 +579,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Configurar WebSocket para Asterisk AMI
+  try {
+    // Inicializar conexão com Asterisk AMI
+    asteriskAMIManager.setupWebsocket(httpServer, '/queue-events');
+    
+    // Para ambiente de desenvolvimento, você pode se conectar a um servidor Asterisk
+    // Descomente e configure as linhas abaixo quando tiver um servidor Asterisk disponível
+    /*
+    asteriskAMIManager.connect(
+      process.env.ASTERISK_HOST || 'localhost',
+      parseInt(process.env.ASTERISK_PORT || '5038', 10),
+      process.env.ASTERISK_USERNAME || 'admin',
+      process.env.ASTERISK_PASSWORD || 'password'
+    ).then(connected => {
+      if (connected) {
+        console.log('Conexão com Asterisk AMI estabelecida com sucesso');
+      } else {
+        console.error('Não foi possível conectar ao Asterisk AMI');
+      }
+    });
+    */
+    
+    console.log('WebSocket para Asterisk AMI configurado em /queue-events');
+  } catch (error) {
+    console.error('Erro ao configurar WebSocket para Asterisk AMI:', error);
+  }
+  
   return httpServer;
 }
