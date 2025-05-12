@@ -187,14 +187,18 @@ export default function QueueRealtimePage() {
   // Conectar ao WebSocket
   const connectWebSocket = (url: string) => {
     try {
+      console.log('Tentando conectar ao WebSocket:', url);
+      
       if (websocket.current) {
+        console.log('Fechando conexão WebSocket anterior');
         websocket.current.close();
       }
       
       const ws = new WebSocket(url);
+      console.log('Objeto WebSocket criado, aguardando conexão...');
       
       ws.onopen = () => {
-        console.log('Conexão WebSocket estabelecida');
+        console.log('Conexão WebSocket estabelecida com sucesso!');
         setState(prev => ({ ...prev, connected: true }));
         
         // Registrar na história de conexões
@@ -202,6 +206,7 @@ export default function QueueRealtimePage() {
         setConnectionHistory(prev => [...prev, historyEntry].slice(-10));
         
         // Solicitar estatísticas iniciais
+        console.log('Solicitando estatísticas iniciais...');
         requestStats();
         
         toast({
@@ -211,23 +216,29 @@ export default function QueueRealtimePage() {
       };
       
       ws.onmessage = (event) => {
+        console.log('Mensagem WebSocket recebida:', event.data);
         try {
           const data = JSON.parse(event.data);
+          console.log('Dados processados:', data);
           
           switch (data.type) {
             case 'stats':
+              console.log('Atualizando estatísticas com dados:', data.data);
               updateStats(data.data);
               break;
             
             case 'event':
+              console.log('Processando evento:', data.data);
               handleEvent(data.data);
               break;
             
             case 'state':
+              console.log('Atualizando estado de conexão:', data.data.connected);
               setState(prev => ({ ...prev, connected: data.data.connected }));
               break;
             
             case 'error':
+              console.error('Erro recebido do servidor:', data.data.message);
               toast({
                 title: 'Erro',
                 description: data.data.message,
@@ -236,20 +247,21 @@ export default function QueueRealtimePage() {
               break;
             
             case 'agent':
+              console.log('Detalhes do agente recebidos:', data.data);
               setSelectedAgentDetails(data.data);
               setShowAgentDialog(true);
               break;
               
             default:
-              console.log('Mensagem desconhecida:', data);
+              console.log('Tipo de mensagem desconhecido:', data);
           }
         } catch (error) {
-          console.error('Erro ao processar mensagem:', error);
+          console.error('Erro ao processar mensagem WebSocket:', error);
         }
       };
       
-      ws.onclose = () => {
-        console.log('Conexão WebSocket fechada');
+      ws.onclose = (event) => {
+        console.log('Conexão WebSocket fechada:', event.code, event.reason);
         setState(prev => ({ ...prev, connected: false }));
         
         // Registrar na história de conexões
@@ -257,13 +269,15 @@ export default function QueueRealtimePage() {
         setConnectionHistory(prev => [...prev, historyEntry].slice(-10));
         
         // Tentar reconectar após 5 segundos
+        console.log('Tentando reconectar em 5 segundos...');
         setTimeout(() => {
+          console.log('Reconectando ao WebSocket...');
           connectWebSocket(url);
         }, 5000);
         
         toast({
           title: 'Desconectado',
-          description: 'Conexão perdida. Tentando reconectar...',
+          description: `Conexão perdida (Código: ${event.code}). Tentando reconectar...`,
           variant: 'destructive',
         });
       };
@@ -273,7 +287,7 @@ export default function QueueRealtimePage() {
         
         toast({
           title: 'Erro de conexão',
-          description: 'Não foi possível conectar ao servidor',
+          description: 'Não foi possível conectar ao servidor WebSocket',
           variant: 'destructive',
         });
       };

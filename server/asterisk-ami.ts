@@ -490,7 +490,15 @@ class AsteriskAMIManager extends EventEmitter {
   
   // Enviar estatísticas para um cliente específico
   private sendStatsToClient(ws: WebSocket) {
-    ws.send(JSON.stringify({
+    console.log('Enviando estatísticas para cliente WebSocket');
+    
+    // Se estamos em modo de simulação e não temos dados, gerá-los
+    if (this.simulationMode && this.queueStats.size === 0) {
+      console.log('Inicializando dados simulados para cliente');
+      this.initializeSimulatedData();
+    }
+    
+    const statsData = {
       type: 'stats',
       data: {
         agents: Array.from(this.agentStats.values()),
@@ -498,7 +506,16 @@ class AsteriskAMIManager extends EventEmitter {
         activeCalls: Array.from(this.activeCalls.values()),
         callsInQueue: this.getCallsInQueue()
       }
-    }));
+    };
+    
+    console.log('Estatísticas sendo enviadas:', JSON.stringify(statsData));
+    
+    try {
+      ws.send(JSON.stringify(statsData));
+      console.log('Estatísticas enviadas com sucesso');
+    } catch (error) {
+      console.error('Erro ao enviar estatísticas:', error);
+    }
   }
   
   // Obter chamadas em fila
