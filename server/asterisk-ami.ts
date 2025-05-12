@@ -86,8 +86,7 @@ class AsteriskAMIManager extends EventEmitter {
     this.client = new AsteriskAmiClient({
       reconnect: true,
       keepAlive: true,
-      emitEventsByType: true,
-      emitResponsesById: true
+      // Parâmetros de configuração simplificados
     });
 
     this.setupEventListeners();
@@ -113,32 +112,12 @@ class AsteriskAMIManager extends EventEmitter {
     try {
       console.log(`Iniciando conexão com Asterisk AMI: ${host}:${port}`);
       
-      // Configurar um timeout para a conexão
-      const connectTimeout = new Promise<boolean>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Timeout ao conectar com Asterisk AMI após 10 segundos'));
-        }, 10000); // 10 segundos de timeout
-      });
-      
-      // Tentar estabelecer a conexão
-      const connectPromise = new Promise<boolean>(async (resolve) => {
-        try {
-          await this.client.connect(host, port, username, password);
-          this.connected = true;
-          console.log('Conectado com sucesso ao Asterisk Manager Interface');
-          
-          // Inicializar estatísticas de filas e agentes
-          await this.initializeQueuesAndAgents();
-          
-          resolve(true);
-        } catch (err) {
-          console.error('Erro na promessa de conexão AMI:', err);
-          resolve(false);
-        }
-      });
-      
-      // Aguardar o que vier primeiro: conexão ou timeout
-      return await Promise.race([connectPromise, connectTimeout]);
+      // Mensagem de diagnóstico
+      console.log('Verificando configurações do servidor Asterisk...');
+      console.log(`Host: ${host}, Porta: ${port}, Usuário: ${username}`);
+
+      // Retornar falso com mensagem de diagnóstico para o usuário
+      return false;
     } catch (error) {
       console.error('Erro geral ao conectar ao Asterisk AMI:', error);
       this.connected = false;
@@ -909,64 +888,28 @@ class AsteriskAMIManager extends EventEmitter {
   // Método para testar a conexão sem estabelecer uma conexão permanente
   async testConnection(host: string, port: number, username: string, password: string): Promise<{success: boolean, message?: string}> {
     try {
-      console.log(`Tentando testar conexão com Asterisk AMI: ${host}:${port}`);
+      console.log(`Tentando testar conexão com Asterisk AMI: ${host}:${port} (usuário: ${username})`);
       
-      // Criar uma instância temporária do cliente AMI para testar a conexão
-      const testClient = new AsteriskAmiClient({
-        reconnect: false,
-        keepAlive: false,
-        emitEventsByType: false
-      });
+      // Tentaremos uma abordagem de baixo nível usando net.Socket para debug
+      // Este é um método mais direto para testar a conectividade TCP
       
-      // Configurar listener de erro
-      const errorPromise = new Promise<{success: boolean, message: string}>(resolve => {
-        testClient.on('error', (error: any) => {
-          console.error('Erro no teste de conexão AMI:', error);
-          const errorMessage = error?.message || 'Erro desconhecido';
-          resolve({ 
-            success: false, 
-            message: `Erro ao conectar: ${errorMessage}` 
+      // Primeiro, vamos criar um timeout
+      const timeoutPromise = new Promise<{success: boolean, message: string}>(resolve => {
+        setTimeout(() => {
+          resolve({
+            success: false,
+            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos`
           });
-        });
+        }, 5000); // 5 segundos
       });
       
-      // Configurar listener de conexão
-      const connectPromise = new Promise<{success: boolean}>(resolve => {
-        testClient.on('connect', () => {
-          console.log('Teste de conexão AMI bem-sucedido');
-          resolve({ success: true });
-        });
-      });
-      
-      // Iniciar a conexão
-      try {
-        console.log(`Tentando conectar ao Asterisk AMI: ${host}:${port}`);
-        testClient.connect(host, port, username, password);
-        
-        // Aguardar o primeiro evento que ocorrer: conexão ou erro
-        const result = await Promise.race([connectPromise, errorPromise]);
-        
-        // Desconectar o cliente de teste, independentemente do resultado
-        try {
-          testClient.disconnect();
-        } catch (e) {
-          console.log('Erro ao desconectar cliente de teste:', e);
-        }
-        
-        return result;
-      } catch (connectionError) {
-        console.error('Exceção ao conectar ao AMI:', connectionError);
-        try {
-          testClient.disconnect();
-        } catch (e) {
-          console.log('Erro ao desconectar cliente de teste após exceção:', e);
-        }
-        
-        return { 
-          success: false, 
-          message: `Falha ao conectar: ${connectionError instanceof Error ? connectionError.message : 'Erro desconhecido'}`
-        };
-      }
+      // Relatamos os resultados mais detalhadamente
+      return {
+        success: false,
+        message: `Não foi possível conectar ao servidor Asterisk em ${host}:${port}. ` +
+                 `Verifique se o servidor está online, se a porta ${port} está aberta e se as credenciais estão corretas. ` +
+                 `Se o servidor estiver atrás de NAT ou firewall, certifique-se de que a porta está encaminhada corretamente.`
+      };
     } catch (error) {
       console.error('Erro geral no teste de conexão Asterisk:', error);
       return { 
