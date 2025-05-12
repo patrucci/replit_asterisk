@@ -425,17 +425,59 @@ export function SoftPhone({
       return;
     }
     
+    // Verificar se está registrado
+    if (registerState !== RegisterState.REGISTERED) {
+      toast({
+        title: "Não registrado",
+        description: "É necessário estar conectado ao servidor SIP para fazer chamadas",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
-      sipClient.call(phoneNumber);
+      console.log(`Iniciando chamada para: ${phoneNumber}`);
+      
+      // Formatar o número se necessário (limpeza de caracteres especiais)
+      const cleanNumber = phoneNumber.replace(/[^\d*#+]/g, '');
+      
+      // Se o número limpo está vazio, avisar o usuário
+      if (cleanNumber === '') {
+        toast({
+          title: "Número inválido",
+          description: "Digite um número válido para discar",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log(`Número formatado: ${cleanNumber}`);
+      
+      // Fazer a chamada
+      sipClient.call(cleanNumber);
       
       // Reproduzir som de chamada
       playRingtone();
-    } catch (error) {
-      console.error('Call error:', error);
+      
+      toast({
+        title: "Chamando...",
+        description: `Ligando para ${cleanNumber}`,
+      });
+    } catch (error: any) {
+      console.error('Erro na chamada:', error);
+      
+      // Determinar mensagem de erro específica
+      let errorMessage = "Não foi possível iniciar a chamada";
+      
+      if (error.message && error.message.includes("not registered")) {
+        errorMessage = "O ramal não está registrado. Verifique as configurações e reconecte.";
+      } else if (error.message && error.message.includes("media")) {
+        errorMessage = "Erro ao acessar o microfone. Verifique as permissões do navegador.";
+      }
       
       toast({
         title: "Erro na chamada",
-        description: "Não foi possível iniciar a chamada",
+        description: errorMessage,
         variant: "destructive",
       });
     }
