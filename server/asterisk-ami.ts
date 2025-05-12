@@ -82,6 +82,12 @@ class AsteriskAMIManager extends EventEmitter {
   private activeCalls: Map<string, CallEvent> = new Map();
   private callHistory: CallEvent[] = [];
   private queueCalls: Map<string, CallEvent[]> = new Map();
+  private connectionSettings: {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+  } | null = null;
 
   constructor() {
     super();
@@ -117,6 +123,14 @@ class AsteriskAMIManager extends EventEmitter {
       // Mensagem de diagnóstico
       console.log('Verificando configurações do servidor Asterisk...');
       console.log(`Host: ${host}, Porta: ${port}, Usuário: ${username}`);
+
+      // Armazenar as configurações para reconexão automática
+      this.connectionSettings = {
+        host,
+        port,
+        username,
+        password
+      };
 
       // Testar a conexão primeiro
       const testResult = await this.testConnection(host, port, username, password);
@@ -1528,6 +1542,18 @@ class AsteriskAMIManager extends EventEmitter {
     }
     
     this.connected = false;
+  }
+  
+  // Tentar reconectar usando as últimas configurações salvas
+  async reconnect(): Promise<boolean> {
+    if (this.connectionSettings) {
+      console.log('Tentando reconectar usando as configurações salvas...');
+      const { host, port, username, password } = this.connectionSettings;
+      return await this.connect(host, port, username, password);
+    } else {
+      console.log('Não há configurações salvas para reconexão');
+      return false;
+    }
   }
 }
 
