@@ -536,9 +536,9 @@ export default function AsteriskConfigPage() {
         return (
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Ramal</label>
+              <label className="text-sm font-medium">Ramal/Número</label>
               <Input 
-                placeholder="Número do ramal" 
+                placeholder="Ramal ou número" 
                 value={selectedStep.parameters?.extension || ""} 
                 onChange={(e) => {
                   const updated = { 
@@ -554,9 +554,9 @@ export default function AsteriskConfigPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Tempo limite (segundos)</label>
+              <label className="text-sm font-medium">Timeout (segundos)</label>
               <Input 
-                placeholder="20" 
+                placeholder="Tempo de espera" 
                 value={selectedStep.parameters?.timeout || ""} 
                 onChange={(e) => {
                   const updated = { 
@@ -573,56 +573,60 @@ export default function AsteriskConfigPage() {
             </div>
           </div>
         );
-      
-      case "wait":
-        return (
-          <div>
-            <label className="text-sm font-medium">Segundos</label>
-            <Input 
-              placeholder="5" 
-              value={selectedStep.parameters?.seconds || ""} 
-              onChange={(e) => {
-                const updated = { 
-                  ...selectedStep, 
-                  parameters: { 
-                    ...selectedStep.parameters, 
-                    seconds: e.target.value 
-                  } 
-                };
-                updateDialPlanStep(updated);
-              }}
-              className="mt-1"
-            />
-          </div>
-        );
         
       case "voicemail":
         return (
-          <div>
-            <label className="text-sm font-medium">Caixa Postal</label>
-            <Input 
-              placeholder="Número da caixa postal" 
-              value={selectedStep.parameters?.mailbox || ""} 
-              onChange={(e) => {
-                const updated = { 
-                  ...selectedStep, 
-                  parameters: { 
-                    ...selectedStep.parameters, 
-                    mailbox: e.target.value 
-                  } 
-                };
-                updateDialPlanStep(updated);
-              }}
-              className="mt-1"
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Caixa Postal</label>
+              <Input 
+                placeholder="Número da caixa postal" 
+                value={selectedStep.parameters?.mailbox || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      mailbox: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+            </div>
           </div>
         );
-      
+        
+      case "wait":
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Tempo de Espera (segundos)</label>
+              <Input 
+                placeholder="Segundos" 
+                value={selectedStep.parameters?.seconds || ""} 
+                onChange={(e) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      seconds: e.target.value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        );
+        
       case "set":
         return (
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Variável</label>
+              <label className="text-sm font-medium">Nome da Variável</label>
               <Input 
                 placeholder="Nome da variável" 
                 value={selectedStep.parameters?.variable || ""} 
@@ -642,7 +646,7 @@ export default function AsteriskConfigPage() {
             <div>
               <label className="text-sm font-medium">Valor</label>
               <Input 
-                placeholder="Valor" 
+                placeholder="Valor da variável" 
                 value={selectedStep.parameters?.value || ""} 
                 onChange={(e) => {
                   const updated = { 
@@ -659,14 +663,14 @@ export default function AsteriskConfigPage() {
             </div>
           </div>
         );
-      
+        
       case "gotoif":
         return (
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Expressão</label>
               <Input 
-                placeholder="${COND}=1" 
+                placeholder="Condição" 
                 value={selectedStep.parameters?.expression || ""} 
                 onChange={(e) => {
                   const updated = { 
@@ -681,362 +685,176 @@ export default function AsteriskConfigPage() {
                 className="mt-1"
               />
               <p className="text-sm text-neutral-500 mt-1">
-                Condição para avaliação (ex: ${"{COND}=1"})
+                Ex: ${'{DIGITO}'}=1
               </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Destino se Verdadeiro</label>
+              <Select 
+                value={selectedStep.parameters?.destination || ""}
+                onValueChange={(value) => {
+                  const updated = { 
+                    ...selectedStep, 
+                    parameters: { 
+                      ...selectedStep.parameters, 
+                      destination: value 
+                    } 
+                  };
+                  updateDialPlanStep(updated);
+                }}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue placeholder="Selecione o destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dialPlanSteps.filter(step => step.id !== selectedStep.id).map(step => (
+                    <SelectItem key={step.id} value={step.id}>
+                      {step.label || step.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         );
-      
+        
       default:
-        return (
-          <div className="text-sm text-neutral-500">
-            Este passo não requer parâmetros adicionais.
-          </div>
-        );
+        return null;
     }
   };
 
-  // Obter ícone para um tipo de passo
-  const getStepIcon = (type: DialPlanStep["type"]) => {
-    switch (type) {
-      case "answer":
-        return <PhoneIncoming className="h-5 w-5" />;
-      case "playback":
-        return <MessageSquare className="h-5 w-5" />;
-      case "dial":
-        return <Phone className="h-5 w-5" />;
-      case "voicemail":
-        return <Voicemail className="h-5 w-5" />;
-      case "hangup":
-        return <PhoneForwarded className="h-5 w-5" />;
-      case "wait":
-        return <Clock className="h-5 w-5" />;
-      default:
-        return <Settings className="h-5 w-5" />;
-    }
+  // Iniciar arrastamento de um passo
+  const handleDragStart = (stepId: string) => {
+    setDraggedStep(stepId);
   };
 
-  // Ajustar posição de um passo
-  const adjustStepPosition = (stepId: string, direction: 'up' | 'down' | 'left' | 'right') => {
-    const step = dialPlanSteps.find(s => s.id === stepId);
-    if (!step) return;
+  // Mover um passo durante arrastamento
+  const handleDrag = (e: React.MouseEvent, step: DialPlanStep) => {
+    if (draggedStep !== step.id || !diagramRef.current) return;
     
-    const moveAmount = 100;
-    let newX = step.x || 100;
-    let newY = step.y || 100;
-    
-    switch (direction) {
-      case 'up':
-        newY = Math.max(50, newY - moveAmount);
-        break;
-      case 'down':
-        newY = newY + moveAmount;
-        break;
-      case 'left':
-        newX = Math.max(50, newX - moveAmount);
-        break;
-      case 'right':
-        newX = newX + moveAmount;
-        break;
-    }
+    const rect = diagramRef.current.getBoundingClientRect();
+    const newX = e.clientX - rect.left;
+    const newY = e.clientY - rect.top;
     
     const updatedStep = { ...step, x: newX, y: newY };
     updateDialPlanStep(updatedStep);
   };
-  
+
   // Renderização do componente
   return (
     <MainLayout>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-neutral-800">Configuração do Asterisk</h2>
-        <p className="text-sm text-neutral-500">Configure a integração com o Asterisk e os planos de discagem.</p>
-      </div>
+      <div className="content-container overflow-auto">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-neutral-800">Configuração do Asterisk</h2>
+          <p className="text-sm text-neutral-500">Configure a integração com o Asterisk e os planos de discagem.</p>
+        </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-          <TabsTrigger value="connection">Conexão AMI</TabsTrigger>
-          <TabsTrigger value="dialplan">Plano de Discagem</TabsTrigger>
-          <TabsTrigger value="queues" disabled={!status?.connected}>Filas</TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full mb-6 sticky top-0 z-10 bg-background" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            <TabsTrigger value="connection">Conexão AMI</TabsTrigger>
+            <TabsTrigger value="dialplan">Plano de Discagem</TabsTrigger>
+            <TabsTrigger value="queues" disabled={!status?.connected}>Filas</TabsTrigger>
+          </TabsList>
 
         <TabsContent value="connection" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Conexão com Asterisk AMI</CardTitle>
               <CardDescription>
-                Configure a conexão com o Asterisk Manager Interface para gerenciar filas e planos de discagem
+                Configure as credenciais de conexão com a interface AMI do Asterisk.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <AsteriskConnect />
-              
-              {status?.connected && (
-                <Alert className="mt-4">
-                  <CheckCheck className="h-4 w-4" />
-                  <AlertTitle>Conexão estabelecida!</AlertTitle>
-                  <AlertDescription>
-                    O sistema está conectado ao servidor Asterisk. Agora você pode configurar filas, agentes e planos de discagem.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <Card className="p-4">
-                  <CardHeader className="p-0 pb-2">
-                    <CardTitle className="text-lg flex items-center">
-                      <Server className="h-5 w-5 mr-2 text-primary" />
-                      Conexão com Asterisk
-                    </CardTitle>
-                  </CardHeader>
-                  <p className="text-sm text-muted-foreground">
-                    Configure a conexão com o servidor Asterisk para acessar todas as funcionalidades de telefonia.
-                  </p>
-                </Card>
-                
-                <Card className="p-4">
-                  <CardHeader className="p-0 pb-2">
-                    <CardTitle className="text-lg flex items-center">
-                      <PhoneForwarded className="h-5 w-5 mr-2 text-primary" />
-                      Funções Disponíveis
-                    </CardTitle>
-                  </CardHeader>
-                  <p className="text-sm text-muted-foreground">
-                    Com o servidor conectado, você pode gerenciar filas, agentes, e planos de discagem personalizados.
-                  </p>
-                </Card>
-                
-                <Card className="p-4">
-                  <CardHeader className="p-0 pb-2">
-                    <CardTitle className="text-lg flex items-center">
-                      <MessageSquare className="h-5 w-5 mr-2 text-primary" />
-                      Suporte AMI
-                    </CardTitle>
-                  </CardHeader>
-                  <p className="text-sm text-muted-foreground">
-                    A integração utiliza Asterisk Manager Interface (AMI) para comunicação bidirecional em tempo real.
-                  </p>
-                </Card>
-              </div>
-              
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-2">Perguntas Frequentes</h3>
-                <Separator className="mb-4" />
-                
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-base font-medium flex items-center">
-                      <FileQuestion className="h-4 w-4 mr-2 text-muted-foreground" />
-                      O que é o Asterisk AMI?
-                    </h4>
-                    <p className="text-sm text-muted-foreground ml-6 mt-1">
-                      Asterisk Manager Interface (AMI) é uma interface de controle que permite gerenciar remotamente um servidor Asterisk,
-                      monitorar eventos e executar ações como pausar agentes ou monitorar filas.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-base font-medium flex items-center">
-                      <FileQuestion className="h-4 w-4 mr-2 text-muted-foreground" />
-                      Preciso ter um servidor Asterisk?
-                    </h4>
-                    <p className="text-sm text-muted-foreground ml-6 mt-1">
-                      Sim, você precisa ter acesso a um servidor Asterisk com o AMI habilitado. Configure as permissões
-                      no arquivo manager.conf do Asterisk para permitir acesso ao ProConnect CRM.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-base font-medium flex items-center">
-                      <FileQuestion className="h-4 w-4 mr-2 text-muted-foreground" />
-                      Como configurar o AMI no Asterisk?
-                    </h4>
-                    <p className="text-sm text-muted-foreground ml-6 mt-1">
-                      Edite o arquivo <code>manager.conf</code> no seu servidor Asterisk e adicione um usuário com permissões
-                      adequadas. Exemplo:
-                    </p>
-                    <pre className="bg-secondary p-2 rounded-md text-xs mt-2 ml-6">
-{`[proconnect]
-secret=senhaamicomplexaseconfirme
-read=system,call,agent
-write=system,call,agent,command`}
-                    </pre>
-                  </div>
-                </div>
-              </div>
             </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="server" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuração do Servidor Asterisk</CardTitle>
-              <CardDescription>
-                Configure os parâmetros de conexão com o servidor Asterisk.
-              </CardDescription>
-            </CardHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => configMutation.mutate(data))}>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="serverAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Endereço do Servidor</FormLabel>
-                          <FormControl>
-                            <Input placeholder="192.168.1.100" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="port"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Porta</FormLabel>
-                          <FormControl>
-                            <Input placeholder="5060" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome de Usuário</FormLabel>
-                          <FormControl>
-                            <Input placeholder="admin" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Senha</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="context"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contexto</FormLabel>
-                        <FormControl>
-                          <Input placeholder="default" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Contexto padrão para planos de discagem
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="enabled"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Ativar integração</FormLabel>
-                          <FormDescription>
-                            Ative ou desative a integração com o Asterisk.
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button 
-                    type="button"
-                    onClick={testConnection}
-                    variant="outline"
-                    disabled={configMutation.isPending || connectionStatus === "testing"}
-                  >
-                    {connectionStatus === "testing" ? "Testando..." : "Testar Conexão"}
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={configMutation.isPending}
-                  >
-                    {configMutation.isPending ? "Salvando..." : "Salvar Configuração"}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Form>
           </Card>
         </TabsContent>
 
         <TabsContent value="queues" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Gerenciamento de Filas</CardTitle>
+              <CardTitle>Configuração de Filas</CardTitle>
               <CardDescription>
-                Configure e monitore filas de atendimento do Asterisk
+                Gerencie as filas de atendimento do Asterisk. Esta seção só está disponível quando o Asterisk está conectado.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               {!status?.connected ? (
-                <div className="flex flex-col items-center justify-center p-8">
-                  <p className="text-center text-muted-foreground mb-4">
-                    Conecte-se ao servidor Asterisk primeiro para gerenciar filas.
-                  </p>
-                  <Button variant="outline" onClick={() => setActiveTab("connection")}>
-                    Ir para configuração de conexão <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
+                <Alert className="mb-4">
+                  <FileQuestion className="h-4 w-4" />
+                  <AlertTitle>Asterisk não conectado</AlertTitle>
+                  <AlertDescription>
+                    Conecte-se ao Asterisk primeiro para configurar as filas.
+                  </AlertDescription>
+                </Alert>
               ) : (
-                <div>
-                  <p className="text-lg mb-4">Configuração e monitoramento de filas será implementado em breve.</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    <Card className="p-4">
-                      <CardHeader className="p-0 pb-2">
-                        <CardTitle className="text-lg flex items-center">
-                          <Phone className="h-5 w-5 mr-2 text-primary" />
-                          Filas de Atendimento
-                        </CardTitle>
+                <div className="space-y-4">
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Suporte</CardTitle>
+                        <CardDescription>Fila principal de suporte</CardDescription>
                       </CardHeader>
-                      <p className="text-sm text-muted-foreground">
-                        Configure estratégias de distribuição, timeouts, anúncios e outras configurações para suas filas.
-                      </p>
+                      <CardContent>
+                        <div className="text-sm text-neutral-500">
+                          <div className="flex justify-between mb-2">
+                            <span>Estratégia:</span>
+                            <span className="font-medium">ringall</span>
+                          </div>
+                          <div className="flex justify-between mb-2">
+                            <span>Tempo médio:</span>
+                            <span className="font-medium">30s</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Agentes:</span>
+                            <span className="font-medium">3/5</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="pt-0">
+                        <Button variant="outline" size="sm" className="w-full">Editar</Button>
+                      </CardFooter>
                     </Card>
-                    
-                    <Card className="p-4">
-                      <CardHeader className="p-0 pb-2">
-                        <CardTitle className="text-lg flex items-center">
-                          <PhoneForwarded className="h-5 w-5 mr-2 text-primary" />
-                          Gestão de Agentes
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Vendas</CardTitle>
+                        <CardDescription>Fila de vendas e prospecção</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-sm text-neutral-500">
+                          <div className="flex justify-between mb-2">
+                            <span>Estratégia:</span>
+                            <span className="font-medium">leastrecent</span>
+                          </div>
+                          <div className="flex justify-between mb-2">
+                            <span>Tempo médio:</span>
+                            <span className="font-medium">45s</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Agentes:</span>
+                            <span className="font-medium">2/4</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="pt-0">
+                        <Button variant="outline" size="sm" className="w-full">Editar</Button>
+                      </CardFooter>
+                    </Card>
+
+                    <Card className="border-dashed">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center text-neutral-500">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar Nova Fila
                         </CardTitle>
                       </CardHeader>
-                      <p className="text-sm text-muted-foreground">
-                        Adicione, remova e configure agentes para suas filas de atendimento.
-                      </p>
+                      <CardContent className="text-center py-8">
+                        <Button variant="outline">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nova Fila
+                        </Button>
+                      </CardContent>
                     </Card>
                   </div>
                 </div>
@@ -1044,341 +862,191 @@ write=system,call,agent,command`}
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="dialplan" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="col-span-1 space-y-6">
-              {/* Seção para gerenciamento de arquivos de áudio */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <ListMusic className="mr-2 h-5 w-5" />
-                    Arquivos de Áudio para IVR
-                  </CardTitle>
-                  <CardDescription>
-                    Gerencie os arquivos de áudio utilizados nos seus planos de discagem
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4">
-                    <label 
-                      htmlFor="audio-upload" 
-                      className="block cursor-pointer rounded-md border-2 border-dashed border-neutral-300 p-6 text-center hover:border-primary transition-colors"
-                    >
-                      <Upload className="h-8 w-8 text-neutral-500 mx-auto mb-2" />
-                      <p className="text-sm text-neutral-500">
-                        Clique para enviar um arquivo de áudio
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-1">
-                        Formatos suportados: WAV, MP3, GSM
-                      </p>
-                      <input 
-                        type="file" 
-                        id="audio-upload" 
-                        className="hidden" 
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept="audio/*"
-                      />
-                    </label>
-                  </div>
-                  
-                  {/* Lista de arquivos */}
-                  <div className="overflow-y-auto max-h-64 space-y-2">
-                    {audioFiles.length === 0 ? (
-                      <div className="text-center py-6 text-neutral-500">
-                        <Music className="mx-auto h-8 w-8 text-neutral-300 mb-2" />
-                        <p className="text-sm">Nenhum arquivo de áudio encontrado</p>
-                        <p className="text-xs text-neutral-400 mt-1">
-                          Envie arquivos para utilizar no seu IVR
-                        </p>
-                      </div>
-                    ) : (
-                      audioFiles.map(file => (
-                        <div 
-                          key={file.id} 
-                          className={`flex items-center justify-between p-2 rounded-md ${
-                            selectedAudioFile?.id === file.id 
-                              ? 'bg-primary/10 border border-primary/20' 
-                              : 'hover:bg-neutral-100'
-                          }`}
-                          onClick={() => setSelectedAudioFile(file)}
-                        >
-                          <div className="flex items-center">
-                            <Volume2 className="h-4 w-4 text-neutral-500 mr-2" />
-                            <div>
-                              <p className="text-sm font-medium">{file.name}</p>
-                              <p className="text-xs text-neutral-500">
-                                {file.duration ? `${file.duration}s` : ''} 
-                                {file.size ? ` · ${Math.round(file.size / 1024)} KB` : ''}
-                              </p>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteAudioFile(file.id);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  
-                  {/* Botões de ação */}
-                  <div className="mt-4 flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.click();
-                        }
-                      }}
-                      disabled={uploadingFile}
-                    >
-                      {uploadingFile ? (
-                        <>Enviando...</>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-1" /> Enviar arquivo
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={loadAudioFiles}
-                    >
-                      <ListMusic className="h-4 w-4 mr-1" /> Atualizar lista
-                    </Button>
-                  </div>
-                  
-                  {/* Seleção de arquivo para o passo atual */}
-                  {selectedStep?.type === 'playback' && (
-                    <div className="mt-6 border-t pt-4">
-                      <h4 className="text-sm font-medium mb-2">
-                        Selecione um arquivo para o passo &quot;{selectedStep.label}&quot;
-                      </h4>
-                      <div className="grid grid-cols-1 gap-2 mt-2">
-                        {audioFiles.map(file => (
-                          <Button
-                            key={file.id}
-                            variant="outline"
-                            className={`justify-start text-left h-auto py-2 ${
-                              selectedStep.parameters?.file === file.filename
-                                ? 'border-primary'
-                                : ''
-                            }`}
-                            onClick={() => {
-                              const updatedStep = {
-                                ...selectedStep,
-                                parameters: {
-                                  ...selectedStep.parameters,
-                                  file: file.filename
-                                }
-                              };
-                              updateDialPlanStep(updatedStep);
-                            }}
-                          >
-                            <Volume2 className="h-4 w-4 mr-2 flex-shrink-0" />
-                            <div className="truncate">
-                              <span className="block text-sm">{file.name}</span>
-                              <span className="block text-xs text-neutral-500">
-                                {file.duration ? `${file.duration}s` : ''}
-                              </span>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Passos Disponíveis</CardTitle>
-                  <CardDescription>
-                    Arraste e solte os componentes para criar seu plano de discagem.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Button 
-                      onClick={() => addDialPlanStep("answer")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <PhoneIncoming className="h-4 w-4 mr-2" />
-                      Atender Chamada
-                    </Button>
-                    <Button 
-                      onClick={() => addDialPlanStep("playback")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Reproduzir Áudio
-                    </Button>
-                    <Button 
-                      onClick={() => addDialPlanStep("dial")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <Phone className="h-4 w-4 mr-2" />
-                      Discar
-                    </Button>
-                    <Button 
-                      onClick={() => addDialPlanStep("voicemail")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <Voicemail className="h-4 w-4 mr-2" />
-                      Caixa Postal
-                    </Button>
-                    <Button 
-                      onClick={() => addDialPlanStep("wait")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Aguardar
-                    </Button>
-                    <Button 
-                      onClick={() => addDialPlanStep("hangup")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <PhoneForwarded className="h-4 w-4 mr-2" />
-                      Encerrar Chamada
-                    </Button>
-                    <Button 
-                      onClick={() => addDialPlanStep("gotoif")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <ArrowRight className="h-4 w-4 mr-2" />
-                      Condição
-                    </Button>
-                    <Button 
-                      onClick={() => addDialPlanStep("set")} 
-                      variant="outline" 
-                      className="w-full justify-start"
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Definir Variável
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Propriedades do passo selecionado */}
-              {selectedStep && (
-                <Card className="mt-6">
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-base">Propriedades</CardTitle>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => removeDialPlanStep(selectedStep.id)}
+        <TabsContent value="dialplan" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Editor de Plano de Discagem</CardTitle>
+              <CardDescription>
+                Crie e edite os planos de discagem de forma visual. Arraste e conecte os blocos para criar fluxos personalizados.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
+                <div className="lg:col-span-3 border rounded-md p-4" style={{ minHeight: "500px" }}>
+                  <div 
+                    ref={diagramRef}
+                    className="w-full h-full relative" 
+                    style={{ minHeight: "500px" }}
+                  >
+                    {/* Aqui será renderizado o diagrama do plano de discagem */}
+                    {dialPlanSteps.map(step => (
+                      <div
+                        key={step.id}
+                        className="absolute bg-white border rounded-md shadow-sm p-3 cursor-move"
+                        style={{ 
+                          left: `${step.x}px`, 
+                          top: `${step.y}px`,
+                          zIndex: draggedStep === step.id ? 10 : 1,
+                          width: "180px"
+                        }}
+                        onClick={() => setSelectedStep(step)}
+                        onMouseDown={() => handleDragStart(step.id)}
+                        onMouseMove={(e) => handleDrag(e, step)}
+                        onMouseUp={() => setDraggedStep(null)}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            {step.type === "answer" && <PhoneIncoming className="h-4 w-4 mr-2 text-green-500" />}
+                            {step.type === "playback" && <Volume2 className="h-4 w-4 mr-2 text-blue-500" />}
+                            {step.type === "dial" && <Phone className="h-4 w-4 mr-2 text-indigo-500" />}
+                            {step.type === "voicemail" && <Voicemail className="h-4 w-4 mr-2 text-purple-500" />}
+                            {step.type === "hangup" && <PhoneForwarded className="h-4 w-4 mr-2 text-red-500" />}
+                            {step.type === "wait" && <Clock className="h-4 w-4 mr-2 text-yellow-500" />}
+                            {step.type === "gotoif" && <ArrowRight className="h-4 w-4 mr-2 text-amber-500" />}
+                            {step.type === "set" && <Settings className="h-4 w-4 mr-2 text-gray-500" />}
+                            <span className="text-sm font-medium truncate">
+                              {step.label || step.id}
+                            </span>
+                          </div>
+                          
+                          {step.id !== "start" && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeDialPlanStep(step.id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <div className="text-xs text-neutral-500">
+                          {step.type === "playback" && `Arquivo: ${step.parameters?.file || "não definido"}`}
+                          {step.type === "dial" && `Ramal: ${step.parameters?.extension || "não definido"}`}
+                          {step.type === "voicemail" && `Caixa: ${step.parameters?.mailbox || "não definida"}`}
+                          {step.type === "wait" && `Segundos: ${step.parameters?.seconds || "não definido"}`}
+                          {step.type === "set" && `${step.parameters?.variable || "VAR"}=${step.parameters?.value || "valor"}`}
+                          {step.type === "gotoif" && `Se ${step.parameters?.expression || "condição"}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium">Rótulo</label>
-                      <Input 
-                        placeholder="Rótulo do passo" 
-                        value={selectedStep.label || ""} 
-                        onChange={(e) => {
-                          const updated = { ...selectedStep, label: e.target.value };
-                          updateDialPlanStep(updated);
-                        }} 
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <Separator />
-                    
-                    {renderStepParameters()}
-                    
-                    {/* Seção de Conexões */}
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="text-sm font-medium">Conexões</label>
+                      <h3 className="text-sm font-medium mb-2">Adicionar Passo</h3>
+                      <div className="grid grid-cols-2 gap-2">
                         <Button 
                           variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            const dlgStep = dialPlanSteps.find(step => 
-                              step.id !== selectedStep.id && 
-                              (!selectedStep.nextSteps || !selectedStep.nextSteps.some(next => next.stepId === step.id))
-                            );
-                            if (dlgStep) {
-                              addConnection(selectedStep.id, dlgStep.id);
-                            }
-                          }}
+                          className="justify-start" 
+                          size="sm"
+                          onClick={() => addDialPlanStep("playback")}
                         >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Adicionar
+                          <Volume2 className="h-4 w-4 mr-2 text-blue-500" />
+                          <span className="text-xs">Áudio</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="justify-start" 
+                          size="sm"
+                          onClick={() => addDialPlanStep("dial")}
+                        >
+                          <Phone className="h-4 w-4 mr-2 text-indigo-500" />
+                          <span className="text-xs">Discar</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="justify-start" 
+                          size="sm"
+                          onClick={() => addDialPlanStep("voicemail")}
+                        >
+                          <Voicemail className="h-4 w-4 mr-2 text-purple-500" />
+                          <span className="text-xs">Caixa Postal</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="justify-start" 
+                          size="sm"
+                          onClick={() => addDialPlanStep("hangup")}
+                        >
+                          <PhoneForwarded className="h-4 w-4 mr-2 text-red-500" />
+                          <span className="text-xs">Encerrar</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="justify-start" 
+                          size="sm"
+                          onClick={() => addDialPlanStep("wait")}
+                        >
+                          <Clock className="h-4 w-4 mr-2 text-yellow-500" />
+                          <span className="text-xs">Aguardar</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="justify-start" 
+                          size="sm"
+                          onClick={() => addDialPlanStep("gotoif")}
+                        >
+                          <ArrowRight className="h-4 w-4 mr-2 text-amber-500" />
+                          <span className="text-xs">Condição</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="justify-start col-span-2" 
+                          size="sm"
+                          onClick={() => addDialPlanStep("set")}
+                        >
+                          <Settings className="h-4 w-4 mr-2 text-gray-500" />
+                          <span className="text-xs">Definir Variável</span>
                         </Button>
                       </div>
-                      
-                      {selectedStep.nextSteps && selectedStep.nextSteps.length > 0 ? (
-                        <div className="space-y-2">
-                          {selectedStep.nextSteps.map((next, index) => {
-                            const targetStep = dialPlanSteps.find(s => s.id === next.stepId);
-                            if (!targetStep) return null;
-                            
-                            return (
-                              <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-neutral-50">
-                                <div className="flex items-center gap-2">
-                                  <ArrowRight className="h-4 w-4 text-primary" />
+                    </div>
+                    
+                    {selectedStep && (
+                      <div className="space-y-3 border rounded-md p-3">
+                        <h3 className="text-sm font-medium">Propriedades</h3>
+                        <div>
+                          <label className="text-xs text-neutral-500">Rótulo</label>
+                          <Input 
+                            value={selectedStep.label || ""}
+                            onChange={(e) => {
+                              const updated = { ...selectedStep, label: e.target.value };
+                              updateDialPlanStep(updated);
+                            }}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        
+                        <div className="pt-2">
+                          <h4 className="text-xs font-medium mb-2">Parâmetros</h4>
+                          {renderStepParameters()}
+                        </div>
+                        
+                        <div className="pt-2">
+                          <h4 className="text-xs font-medium mb-2">Próximos Passos</h4>
+                          {selectedStep.nextSteps && selectedStep.nextSteps.length > 0 ? (
+                            <div className="space-y-2">
+                              {selectedStep.nextSteps.map((next, index) => (
+                                <div key={index} className="flex items-center justify-between text-xs border rounded p-2">
                                   <div>
-                                    <div className="text-sm font-medium">
-                                      {targetStep.label || getDefaultLabel(targetStep.type)}
-                                    </div>
+                                    <span className="font-medium">
+                                      {next.label || "Continuar para "}
+                                    </span>
+                                    <span className="text-neutral-500 ml-1">
+                                      {dialPlanSteps.find(s => s.id === next.stepId)?.label || next.stepId}
+                                    </span>
                                     {next.condition && (
-                                      <div className="text-xs text-neutral-500">
+                                      <span className="block text-neutral-400 mt-1">
                                         Se {next.condition}
-                                      </div>
+                                      </span>
                                     )}
                                   </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={() => {
-                                      // Editar condição (implementar)
-                                      const condition = prompt("Condição (ex: ${OPCAO}=1):", next.condition || "");
-                                      if (condition !== null) {
-                                        const updatedStep = {
-                                          ...selectedStep,
-                                          nextSteps: (selectedStep.nextSteps || []).map((n, i) => 
-                                            i === index 
-                                              ? { ...n, condition, label: condition ? `Se ${condition}` : 'Continuar' }
-                                              : n
-                                          )
-                                        };
-                                        updateDialPlanStep(updatedStep);
-                                      }
-                                    }}
-                                  >
-                                    <Settings className="h-3 w-3" />
-                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -1388,210 +1056,46 @@ write=system,call,agent,command`}
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-neutral-500 italic">
-                          Sem conexões. Este é um passo terminal.
-                        </div>
-                      )}
-                      
-                      {/* Formulário para adicionar nova conexão */}
-                      {dialPlanSteps.filter(step => 
-                        step.id !== selectedStep.id && 
-                        (!selectedStep.nextSteps || !selectedStep.nextSteps.some(next => next.stepId === step.id))
-                      ).length > 0 && (
-                        <div className="mt-3 pt-3 border-t">
-                          <div className="text-xs font-medium mb-2">Conectar a...</div>
-                          <div className="grid grid-cols-1 gap-2">
-                            {dialPlanSteps
-                              .filter(step => 
-                                step.id !== selectedStep.id && 
-                                (!selectedStep.nextSteps || !selectedStep.nextSteps.some(next => next.stepId === step.id))
-                              )
-                              .map(step => (
-                                <Button
-                                  key={step.id}
-                                  variant="outline"
-                                  size="sm"
-                                  className="justify-between text-xs h-7"
-                                  onClick={() => {
-                                    // Perguntar por condição
-                                    const condition = prompt("Condição (deixe em branco se não houver):");
-                                    addConnection(selectedStep.id, step.id, condition || undefined);
-                                  }}
-                                >
-                                  <span>{step.label || getDefaultLabel(step.type)}</span>
-                                  <ArrowRight className="h-3 w-3 ml-1" />
-                                </Button>
-                              ))
-                            }
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Área de desenho do plano de discagem */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Plano de Discagem</CardTitle>
-                    <Button onClick={saveDialPlan}>
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar Plano
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div 
-                    ref={diagramRef} 
-                    className="min-h-[500px] border rounded-md p-4 relative bg-neutral-50"
-                  >
-                    <div className="grid grid-cols-3 gap-8">
-                      {dialPlanSteps.map((step) => (
-                        <div 
-                          key={step.id}
-                          style={{
-                            gridColumn: Math.ceil((step.x || 100) / 200),
-                            gridRow: Math.ceil((step.y || 100) / 120)
-                          }}
-                          className={`
-                            flex flex-col gap-2 p-3 bg-white border rounded-md shadow-sm
-                            ${selectedStep?.id === step.id ? 'ring-2 ring-primary' : ''}
-                            cursor-pointer transition-all hover:shadow-md relative
-                          `}
-                          onClick={() => setSelectedStep(step)}
-                        >
-                          {/* Controles de posicionamento */}
-                          {selectedStep?.id === step.id && (
-                            <div className="absolute left-1/2 transform -translate-x-1/2 -top-8 flex gap-1 bg-white border rounded-md shadow-sm p-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  adjustStepPosition(step.id, 'left');
-                                }}
-                              >
-                                <ArrowLeft className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  adjustStepPosition(step.id, 'up');
-                                }}
-                              >
-                                <ArrowUp className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  adjustStepPosition(step.id, 'down');
-                                }}
-                              >
-                                <ArrowDown className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  adjustStepPosition(step.id, 'right');
-                                }}
-                              >
-                                <ArrowRight className="h-3 w-3" />
-                              </Button>
+                              ))}
                             </div>
-                          )}
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="flex-shrink-0 h-8 w-8 bg-primary/10 text-primary rounded-full flex items-center justify-center">
-                              {getStepIcon(step.type)}
-                            </div>
-                            <div className="flex-grow">
-                              <div className="font-medium">{step.label || getDefaultLabel(step.type)}</div>
-                            </div>
-                          </div>
-                          
-                          <div className="text-xs text-neutral-500 border-t pt-2">
-                            {step.type === "dial" && step.parameters?.extension && (
-                              <div>Ramal: {step.parameters.extension}</div>
-                            )}
-                            {step.type === "playback" && step.parameters?.file && (
-                              <div>Arquivo: {step.parameters.file}</div>
-                            )}
-                            {step.type === "wait" && step.parameters?.seconds && (
-                              <div>{step.parameters.seconds} segundos</div>
-                            )}
-                            {step.type === "gotoif" && step.parameters?.expression && (
-                              <div>Condição: {step.parameters.expression}</div>
-                            )}
-                          </div>
-                          
-                          {/* Mostrar conexões de saída */}
-                          {step.nextSteps && step.nextSteps.length > 0 && (
-                            <div className="mt-1 pt-1 border-t">
-                              <div className="text-xs font-medium mb-1">Conexões:</div>
-                              <div className="space-y-1">
-                                {step.nextSteps.map((next, idx) => {
-                                  const targetStep = dialPlanSteps.find(s => s.id === next.stepId);
-                                  return targetStep ? (
-                                    <div key={idx} className="text-xs flex items-center">
-                                      <ArrowRight className="h-3 w-3 mr-1" />
-                                      <span>{next.label || 'Continuar'}</span>
-                                      <span className="mx-1 text-neutral-400">→</span>
-                                      <span className="font-medium">{targetStep.label || getDefaultLabel(targetStep.type)}</span>
-                                    </div>
-                                  ) : null;
-                                })}
-                              </div>
+                          ) : (
+                            <div className="text-xs text-neutral-500 py-2">
+                              Nenhum próximo passo definido
                             </div>
                           )}
                           
-                          {/* Indicador visual de conexões */}
-                          {step.nextSteps && step.nextSteps.map((next, idx) => {
-                            const targetStep = dialPlanSteps.find(s => s.id === next.stepId);
-                            if (!targetStep) return null;
-                            
-                            // Determinar a direção da conexão
-                            const direction = (targetStep.x || 0) > (step.x || 0) ? 'right' : 
-                                            (targetStep.x || 0) < (step.x || 0) ? 'left' : 'down';
-                                            
-                            return (
-                              <div 
-                                key={`${step.id}-${next.stepId}`}
-                                className={`absolute bg-neutral-300 ${
-                                  direction === 'right' ? 'h-1 right-0 top-1/2 w-10 mr-[-40px]' :
-                                  direction === 'left' ? 'h-1 left-0 top-1/2 w-10 ml-[-40px]' :
-                                  'w-1 bottom-0 left-1/2 h-10 mb-[-40px]'
-                                }`}
-                              />
-                            );
-                          })}
+                          <div className="mt-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full text-xs"
+                              onClick={() => {
+                                // Implemente a lógica para adicionar uma nova conexão
+                                // Isso pode ser um modal ou um dropdown para selecionar o destino
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Adicionar Conexão
+                            </Button>
+                          </div>
                         </div>
-                      ))}
+                      </div>
+                    )}
+                    
+                    <div className="pt-4">
+                      <Button className="w-full" onClick={saveDialPlan} disabled={dialPlanMutation.isPending}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Salvar Plano de Discagem
+                      </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </MainLayout>
   );
 }

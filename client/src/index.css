@@ -52,7 +52,49 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply h-full;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    min-height: 100vh;
+  }
+
+  /* Melhorar scroll para todas as páginas */
+  .card-content {
+    max-height: calc(100vh - 220px);  /* Ajuste conforme necessário */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Garantir que o conteúdo não seja cortado em telas pequenas */
+  .content-container {
+    min-height: calc(100vh - 80px);
+    width: 100%;
+    overflow-y: auto;
+    padding-bottom: 1rem;
+  }
+
+  /* Adicionar scrollbars mais visíveis */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary));
   }
 }

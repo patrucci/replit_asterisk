@@ -52,8 +52,10 @@ function App() {
       <AuthProvider>
         <ThemeProvider defaultTheme="light" storageKey="proconnect-theme">
           <TooltipProvider>
-            <Toaster />
-            <Router />
+            <div className="app-container min-h-screen w-full overflow-auto">
+              <Toaster />
+              <Router />
+            </div>
           </TooltipProvider>
         </ThemeProvider>
       </AuthProvider>
