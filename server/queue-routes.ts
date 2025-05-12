@@ -459,8 +459,11 @@ export function setupQueueRoutes(app: Express, requireAuth: any) {
         ]);
       }
       
-      // Em uma implementação real, buscaríamos agentes do banco de dados
-      return res.status(501).json({ message: "Funcionalidade ainda não implementada" });
+      // Implementação real: buscar agentes do banco de dados
+      console.log('Buscando agentes do banco de dados para organização:', req.user!.organizationId);
+      const agentsList = await storage.getAgents(req.user!.organizationId);
+      console.log(`Encontrados ${agentsList.length} agentes no banco de dados`);
+      return res.json(agentsList);
     } catch (error) {
       console.error('Erro ao buscar agentes:', error);
       res.status(500).json({ message: "Falha ao buscar agentes" });
@@ -515,11 +518,24 @@ export function setupQueueRoutes(app: Express, requireAuth: any) {
   // Rota para criar um novo agente
   app.post("/api/agents", requireAuth, async (req: Request, res: Response) => {
     try {
+      console.log("Usuário autenticado:", req.user);
+      console.log("ID da organização:", req.user?.organizationId);
+      
+      // Verificar se o usuário tem organizationId
+      if (!req.user || !req.user.organizationId) {
+        return res.status(400).json({ 
+          message: "Usuário não possui uma organização associada",
+          user: req.user 
+        });
+      }
+      
       const validatedData = insertAgentSchema.parse({
         ...req.body,
-        userId: req.user!.id,
-        organizationId: req.user!.organizationId,
+        userId: req.user.id,
+        organizationId: req.user.organizationId,
       });
+      
+      console.log("Dados validados para criação do agente:", validatedData);
       
       if (SIMULATION_MODE) {
         console.log('[SIMULAÇÃO] Criando agente simulado:', validatedData);
@@ -530,11 +546,24 @@ export function setupQueueRoutes(app: Express, requireAuth: any) {
         });
       }
       
-      // Em uma implementação real, criaríamos o agente no banco de dados
-      return res.status(501).json({ message: "Funcionalidade ainda não implementada" });
+      try {
+        // Implementação real: criar agente no banco de dados
+        console.log('Criando agente no banco de dados:', validatedData);
+        // Criar uma consulta direta ao banco sem usar o método abstrato
+        const [newAgent] = await db.insert(agents).values(validatedData).returning();
+        console.log('Agente criado com sucesso:', newAgent);
+        return res.status(201).json(newAgent);
+      } catch (dbError) {
+        console.error('Erro ao inserir agente no banco de dados:', dbError);
+        return res.status(500).json({ message: "Erro ao inserir no banco de dados" });
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos do agente", errors: error.errors });
+        return res.status(400).json({ 
+          message: "Dados inválidos do agente", 
+          errors: error.errors,
+          body: req.body
+        });
       }
       console.error('Erro ao criar agente:', error);
       res.status(500).json({ message: "Falha ao criar agente" });

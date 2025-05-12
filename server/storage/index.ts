@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from 'ws';
 import connectPg from "connect-pg-simple";
 import * as schema from "@shared/schema";
+import * as queueSchema from "@shared/queue-schema";
 import { 
   eq, 
   and 
@@ -515,8 +516,8 @@ export class DatabaseStorage implements IStorage {
   async getAgents(organizationId: number) {
     const results = await db
       .select()
-      .from(agents)
-      .where(eq(agents.organizationId, organizationId));
+      .from(queueSchema.agents)
+      .where(eq(queueSchema.agents.organizationId, organizationId));
     
     return results;
   }
@@ -524,15 +525,15 @@ export class DatabaseStorage implements IStorage {
   async getAgent(id: number) {
     const [agent] = await db
       .select()
-      .from(agents)
-      .where(eq(agents.id, id));
+      .from(queueSchema.agents)
+      .where(eq(queueSchema.agents.id, id));
     
     return agent;
   }
 
   async createAgent(data: any) {
     const [agent] = await db
-      .insert(agents)
+      .insert(queueSchema.agents)
       .values(data)
       .returning();
     
@@ -541,19 +542,19 @@ export class DatabaseStorage implements IStorage {
 
   async updateAgent(id: number, data: any) {
     const [agent] = await db
-      .update(agents)
+      .update(queueSchema.agents)
       .set({
         ...data,
         updatedAt: new Date()
       })
-      .where(eq(agents.id, id))
+      .where(eq(queueSchema.agents.id, id))
       .returning();
     
     return agent;
   }
 
   async deleteAgent(id: number): Promise<boolean> {
-    await db.delete(agents).where(eq(agents.id, id));
+    await db.delete(queueSchema.agents).where(eq(queueSchema.agents.id, id));
     return true;
   }
 }
