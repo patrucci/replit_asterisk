@@ -2,6 +2,8 @@ import { EventEmitter } from 'events';
 import AsteriskAmiClient from 'asterisk-ami-client';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
+import * as net from 'net';
+import * as util from 'util';
 
 // Interface para eventos de chamada
 interface CallEvent {
@@ -116,8 +118,59 @@ class AsteriskAMIManager extends EventEmitter {
       console.log('Verificando configurações do servidor Asterisk...');
       console.log(`Host: ${host}, Porta: ${port}, Usuário: ${username}`);
 
-      // Retornar falso com mensagem de diagnóstico para o usuário
-      return false;
+      // Testar a conexão primeiro
+      const testResult = await this.testConnection(host, port, username, password);
+      if (!testResult.success) {
+        console.error('Teste de conexão falhou:', testResult.message);
+        return false;
+      }
+      
+      console.log('Teste de conexão bem-sucedido, estabelecendo conexão permanente...');
+      
+      // Se o cliente já existir, desconectar antes de criar um novo
+      if (this.client) {
+        console.log('Fechando conexão anterior...');
+        try {
+          this.client.disconnect();
+        } catch (e) {
+          console.error('Erro ao desconectar cliente anterior:', e);
+        }
+      }
+      
+      // Criar nova instância do cliente AMI
+      try {
+        this.client = new AsteriskAmiClient();
+        
+        // Configurar handlers para a nova instância
+        this.client.on('connect', () => {
+          console.log(`Conexão TCP permanente estabelecida com ${host}:${port}`);
+        });
+        
+        this.client.on('login', () => {
+          console.log(`Autenticação permanente bem-sucedida com ${host}:${port}`);
+          this.connected = true;
+        });
+        
+        this.client.on('disconnect', () => {
+          console.log(`Desconectado do AMI ${host}:${port}`);
+          this.connected = false;
+        });
+        
+        this.setupEventListeners();
+        
+        // Conectar ao servidor Asterisk
+        await this.client.connect(host, port, username, password, {
+          keepAlive: true,
+          emitEventsByTypes: true,
+          reconnect: true
+        });
+        
+        return true;
+      } catch (e) {
+        console.error('Erro ao criar nova instância AMI:', e);
+        this.connected = false;
+        return false;
+      }
     } catch (error) {
       console.error('Erro geral ao conectar ao Asterisk AMI:', error);
       this.connected = false;
@@ -890,85 +943,192 @@ class AsteriskAMIManager extends EventEmitter {
     try {
       console.log(`Tentando testar conexão com Asterisk AMI: ${host}:${port} (usuário: ${username})`);
       
-      // Tentar estabelecer conexão e autenticação usando a biblioteca client
+      // Primeiro, vamos fazer um teste TCP básico para verificar se o servidor está acessível
+      const tcpTestResult = await this.testTCPConnection(host, port);
+      if (!tcpTestResult.success) {
+        console.log('Teste TCP falhou:', tcpTestResult.message);
+        return tcpTestResult;
+      }
+      
+      console.log('Teste TCP bem-sucedido, tentando autenticação AMI...');
+      
+      // Se o teste TCP for bem-sucedido, vamos tentar a autenticação AMI
       return new Promise((resolve) => {
-        // Criar uma instância temporária do cliente apenas para o teste
-        const testClient = new require('asterisk-ami-client')();
-        
-        // Configurar timeout
-        const connectionTimeout = setTimeout(() => {
-          testClient.disconnect();
-          resolve({
-            success: false,
-            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 10 segundos. Verifique se o servidor está online e acessível.`
-          });
-        }, 10000); // 10 segundos de timeout
-        
-        // Configurar handlers de eventos
-        testClient.on('connect', () => {
-          console.log(`Conexão TCP estabelecida com ${host}:${port}`);
-          // A conexão foi estabelecida, mas ainda precisamos autenticar
-        });
-        
-        testClient.on('login', () => {
-          console.log(`Autenticação bem-sucedida com ${host}:${port}`);
-          clearTimeout(connectionTimeout);
-          testClient.disconnect();
-          resolve({
-            success: true,
-            message: 'Conexão e autenticação bem-sucedidas'
-          });
-        });
-        
-        testClient.on('error', (error: any) => {
-          console.error('Erro na conexão AMI:', error);
-          clearTimeout(connectionTimeout);
-          testClient.disconnect();
+        try {
+          // Criar uma instância temporária do cliente apenas para o teste
+          const AmiClient = require('asterisk-ami-client');
+          console.log('Criando cliente AMI...');
           
-          // Processar mensagens de erro específicas
-          let errorMsg = 'Erro ao conectar ao servidor Asterisk';
+          const testClient = new AmiClient();
+          console.log('Cliente AMI criado com sucesso');
           
-          if (error.message) {
-            if (error.message.includes('Authentication') || error.message.includes('authentication')) {
-              errorMsg = 'Falha na autenticação. Verifique o usuário e senha do AMI.';
-            } else if (error.message.includes('ECONNREFUSED')) {
-              errorMsg = `Conexão recusada em ${host}:${port}. Verifique se o servidor Asterisk está rodando e a porta está correta.`;
-            } else if (error.message.includes('ETIMEDOUT')) {
-              errorMsg = `Timeout ao conectar em ${host}:${port}. Verifique se o servidor é acessível pela rede.`;
-            } else if (error.message.includes('ENOTFOUND')) {
-              errorMsg = `Host não encontrado: ${host}. Verifique se o nome ou IP está correto.`;
-            } else {
-              errorMsg = `Erro na conexão: ${error.message}`;
+          // Configurar timeout
+          const connectionTimeout = setTimeout(() => {
+            console.log('Timeout atingido durante tentativa de autenticação AMI');
+            try {
+              testClient.disconnect();
+            } catch (e) {
+              console.error('Erro ao desconectar cliente após timeout:', e);
             }
-          }
+            resolve({
+              success: false,
+              message: `Timeout ao tentar autenticar no servidor ${host}:${port} após 10 segundos.`
+            });
+          }, 10000); // 10 segundos de timeout
           
+          // Configurar handlers de eventos
+          testClient.on('connect', () => {
+            console.log(`Conexão TCP estabelecida com ${host}:${port} via cliente AMI`);
+            // A conexão foi estabelecida, mas ainda precisamos autenticar
+          });
+          
+          testClient.on('login', () => {
+            console.log(`Autenticação AMI bem-sucedida com ${host}:${port}`);
+            clearTimeout(connectionTimeout);
+            try {
+              testClient.disconnect();
+            } catch (e) {
+              console.error('Erro ao desconectar cliente após login bem-sucedido:', e);
+            }
+            resolve({
+              success: true,
+              message: 'Conexão e autenticação bem-sucedidas'
+            });
+          });
+          
+          testClient.on('error', (error: any) => {
+            console.error('Erro na conexão AMI:', util.inspect(error, { depth: null }));
+            clearTimeout(connectionTimeout);
+            try {
+              testClient.disconnect();
+            } catch (e) {
+              console.error('Erro ao desconectar cliente após erro:', e);
+            }
+            
+            // Processar mensagens de erro específicas
+            let errorMsg = 'Erro ao conectar ao servidor Asterisk';
+            
+            if (error && typeof error === 'object') {
+              const errorStr = String(error);
+              console.log('Mensagem de erro completa:', errorStr);
+              
+              if (errorStr.includes('Authentication') || errorStr.includes('authentication')) {
+                errorMsg = 'Falha na autenticação. Verifique o usuário e senha do AMI.';
+              } else if (errorStr.includes('ECONNREFUSED')) {
+                errorMsg = `Conexão recusada em ${host}:${port}. Verifique se o servidor Asterisk está rodando e a porta está correta.`;
+              } else if (errorStr.includes('ETIMEDOUT')) {
+                errorMsg = `Timeout ao conectar em ${host}:${port}. Verifique se o servidor é acessível pela rede.`;
+              } else if (errorStr.includes('ENOTFOUND')) {
+                errorMsg = `Host não encontrado: ${host}. Verifique se o nome ou IP está correto.`;
+              } else {
+                errorMsg = `Erro na conexão: ${errorStr}`;
+              }
+            }
+            
+            resolve({
+              success: false,
+              message: errorMsg
+            });
+          });
+          
+          // Adicionar mais tratamento de erro
+          console.log(`Tentando conectar ao AMI em ${host}:${port}...`);
+          
+          // Tentar conectar
+          testClient.connect(host, port, username, password, {
+            keepAlive: false,
+            emitEventsByTypes: true,
+            reconnect: false
+          }).catch((err: any) => {
+            console.error('Erro ao iniciar conexão:', err);
+            clearTimeout(connectionTimeout);
+            resolve({
+              success: false,
+              message: `Erro ao iniciar conexão: ${err ? (err.message || String(err)) : 'Erro desconhecido'}`
+            });
+          });
+        } catch (err) {
+          console.error('Erro ao criar instância do cliente AMI:', err);
           resolve({
             success: false,
-            message: errorMsg
+            message: `Erro ao criar cliente AMI: ${err instanceof Error ? err.message : String(err)}`
           });
-        });
-        
-        // Tentar conectar
-        testClient.connect(host, port, username, password, {
-          keepAlive: false,
-          emitEventsByTypes: true,
-          reconnect: false
-        }).catch((err: any) => {
-          console.error('Erro ao iniciar conexão:', err);
-          clearTimeout(connectionTimeout);
-          resolve({
-            success: false,
-            message: `Erro ao iniciar conexão: ${err.message || 'Erro desconhecido'}`
-          });
-        });
+        }
       });
     } catch (error) {
       console.error('Erro geral no teste de conexão Asterisk:', error);
       return { 
         success: false, 
-        message: `Erro no teste de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}` 
+        message: `Erro no teste de conexão: ${error instanceof Error ? error.message : String(error)}` 
       };
     }
+  }
+  
+  // Método adicional para testar apenas a conectividade TCP
+  private testTCPConnection(host: string, port: number): Promise<{success: boolean, message?: string}> {
+    return new Promise((resolve) => {
+      console.log(`Iniciando teste TCP básico para ${host}:${port}...`);
+      
+      const socket = new net.Socket();
+      let timeoutId: NodeJS.Timeout;
+      
+      // Configurar timeout
+      timeoutId = setTimeout(() => {
+        socket.destroy();
+        console.log(`TCP timeout atingido para ${host}:${port}`);
+        resolve({
+          success: false,
+          message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos. Verifique se o servidor está online e acessível.`
+        });
+      }, 5000); // 5 segundos de timeout
+      
+      // Configurar eventos
+      socket.on('connect', () => {
+        clearTimeout(timeoutId);
+        console.log(`Conexão TCP bem-sucedida para ${host}:${port}`);
+        socket.end();
+        resolve({
+          success: true,
+          message: 'Conexão TCP bem-sucedida'
+        });
+      });
+      
+      socket.on('error', (err: any) => {
+        clearTimeout(timeoutId);
+        console.error(`Erro TCP para ${host}:${port}:`, err);
+        
+        let errorMsg = `Erro ao conectar via TCP: `;
+        if (err.code === 'ECONNREFUSED') {
+          errorMsg += `Conexão recusada em ${host}:${port}. Verifique se o servidor está rodando e a porta está correta.`;
+        } else if (err.code === 'ETIMEDOUT') {
+          errorMsg += `Timeout ao conectar em ${host}:${port}. Verifique se o servidor é acessível pela rede.`;
+        } else if (err.code === 'ENOTFOUND') {
+          errorMsg += `Host não encontrado: ${host}. Verifique se o nome ou IP está correto.`;
+        } else {
+          errorMsg += `${err.message || String(err)}`;
+        }
+        
+        socket.destroy();
+        resolve({
+          success: false,
+          message: errorMsg
+        });
+      });
+      
+      // Tentar conectar
+      try {
+        console.log(`Conectando socket TCP para ${host}:${port}...`);
+        socket.connect(port, host);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        console.error(`Exceção ao conectar socket para ${host}:${port}:`, err);
+        socket.destroy();
+        resolve({
+          success: false,
+          message: `Exceção ao conectar: ${err instanceof Error ? err.message : String(err)}`
+        });
+      }
+    });
   }
   
   close() {
