@@ -12,6 +12,14 @@ import {
 const SIMULATION_MODE = true; // Defina como false para usar dados reais
 
 export function setupQueueRoutes(app: Express, requireAuth: any) {
+  // Rota pública para verificar o status de conexão da API de filas
+  app.get("/api/queue-status.json", (req: Request, res: Response) => {
+    res.json({
+      mode: SIMULATION_MODE ? "simulation" : "production",
+      status: "online",
+      timestamp: new Date().toISOString()
+    });
+  });
   // Rota para listar filas
   app.get("/api/queues", requireAuth, async (req: Request, res: Response) => {
     try {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/main-layout";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -229,33 +229,19 @@ export default function QueuesPage() {
   });
 
   // Consulta para obter filas
-  const { data: queues = [], isLoading: isLoadingQueues, error: queuesError } = useQuery<Queue[]>({
+  const { data: queues = [], isLoading: isLoadingQueues } = useQuery<Queue[]>({
     queryKey: ["/api/queues"],
-    onError: (error) => {
-      console.error("Erro ao buscar filas:", error);
-      toast({
-        title: "Erro ao carregar filas",
-        description: "Não foi possível carregar as filas.",
-        variant: "destructive",
-      });
-    }
+    retry: 1,
   });
 
   // Consulta para obter agentes
-  const { data: agents = [], isLoading: isLoadingAgents, error: agentsError } = useQuery<Agent[]>({
+  const { data: agents = [], isLoading: isLoadingAgents } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],
-    onError: (error) => {
-      console.error("Erro ao buscar agentes:", error);
-      toast({
-        title: "Erro ao carregar agentes",
-        description: "Não foi possível carregar os agentes.",
-        variant: "destructive",
-      });
-    }
+    retry: 1,
   });
 
   // Consulta para estatísticas
-  const { data: queueStatsData, isLoading: isLoadingStats, error: statsError } = useQuery<{
+  const { data: queueStatsData, isLoading: isLoadingStats } = useQuery<{
     totalQueueCalls: number;
     completedCalls: number;
     abandonedCalls: number;
@@ -263,14 +249,7 @@ export default function QueuesPage() {
     queueStats: Array<QueueStats>;
   }>({
     queryKey: ["/api/queue-stats"],
-    onError: (error) => {
-      console.error("Erro ao buscar estatísticas:", error);
-      toast({
-        title: "Erro ao carregar estatísticas",
-        description: "Não foi possível carregar as estatísticas.",
-        variant: "destructive",
-      });
-    }
+    retry: 1,
   });
   
   // Extrair o array de estatísticas da resposta
