@@ -230,6 +230,29 @@ export default function AsteriskDiagnostic() {
             <div className="text-xs mt-2 opacity-70">
               Tipo de teste: {testResult.type === "tcp" ? "Conectividade TCP" : "Autenticação AMI"}
             </div>
+            
+            {!testResult.success && (
+              <div className="mt-3 text-sm">
+                <strong>Recomendações:</strong>
+                <ul className="list-disc pl-5 space-y-1 mt-1">
+                  {testResult.type === "tcp" && (
+                    <>
+                      <li>Verifique se o endereço do servidor está correto</li>
+                      <li>Confirme se a porta AMI (geralmente 5038) está aberta no firewall</li>
+                      <li>Verifique se o serviço Asterisk está rodando no servidor</li>
+                      <li>Tente usar o endereço IP em vez do nome de domínio</li>
+                    </>
+                  )}
+                  {testResult.type === "ami" && (
+                    <>
+                      <li>Confirme se as credenciais de usuário e senha AMI estão corretas</li>
+                      <li>Verifique se o usuário AMI tem permissão para se conectar do seu endereço IP</li>
+                      <li>Confirme se o arquivo manager.conf do Asterisk está configurado corretamente</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
