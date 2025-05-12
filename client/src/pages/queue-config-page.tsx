@@ -156,7 +156,20 @@ write=system,call,agent,command`}
               </div>
             ) : (
               <div>
-                <p className="text-lg">Configuração de filas em implementação...</p>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold mb-2">Configuração de filas em implementação...</h3>
+                  <p className="mb-4">Esta página de configuração técnica ainda está em desenvolvimento.</p>
+                  <Alert className="bg-blue-50">
+                    <AlertTitle>Dica: Use a página de Filas!</AlertTitle>
+                    <AlertDescription>
+                      Para gerenciar suas filas de atendimento (criar, editar, excluir), acesse a página 
+                      <Button variant="link" className="px-1 text-primary" onClick={() => window.location.href="/queues"}>
+                        Filas
+                      </Button> 
+                      no menu lateral.
+                    </AlertDescription>
+                  </Alert>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -176,7 +189,20 @@ write=system,call,agent,command`}
               </div>
             ) : (
               <div>
-                <p className="text-lg">Configuração de agentes em implementação...</p>
+                <div className="p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold mb-2">Configuração de agentes em implementação...</h3>
+                  <p className="mb-4">Esta página de configuração técnica ainda está em desenvolvimento.</p>
+                  <Alert className="bg-blue-50">
+                    <AlertTitle>Dica: Use a página de Filas!</AlertTitle>
+                    <AlertDescription>
+                      Para gerenciar seus agentes, acesse a página 
+                      <Button variant="link" className="px-1 text-primary" onClick={() => window.location.href="/queues"}>
+                        Filas
+                      </Button> 
+                      no menu lateral e utilize a aba "Agentes".
+                    </AlertDescription>
+                  </Alert>
+                </div>
               </div>
             )}
           </TabsContent>
