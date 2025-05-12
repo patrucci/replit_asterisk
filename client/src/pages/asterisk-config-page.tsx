@@ -48,7 +48,13 @@ import {
   Voicemail,
   CheckCheck,
   FileQuestion,
-  Server
+  Server,
+  Upload,
+  File,
+  Music,
+  ListMusic,
+  Folder,
+  Volume2
 } from "lucide-react";
 
 // Schema para validação do formulário de configuração do Asterisk
@@ -89,6 +95,16 @@ interface AsteriskConnectionStatus {
   port?: number;
   username?: string;
   message?: string;
+}
+
+interface AudioFile {
+  id: string;
+  name: string;
+  filename: string;
+  duration?: number;
+  size?: number;
+  uploaded?: string;
+  language?: string;
 }
 
 export default function AsteriskConfigPage() {
@@ -153,6 +169,12 @@ export default function AsteriskConfigPage() {
   const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connected" | "testing">("disconnected");
   const [draggedStep, setDraggedStep] = useState<string | null>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
+  
+  // Estados para gerenciamento de arquivos de áudio
+  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedAudioFile, setSelectedAudioFile] = useState<AudioFile | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carregar configuração existente
   const { data: configData, isLoading } = useQuery({
@@ -913,7 +935,162 @@ write=system,call,agent,command`}
         
         <TabsContent value="dialplan" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
+            <div className="col-span-1 space-y-6">
+              {/* Seção para gerenciamento de arquivos de áudio */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <ListMusic className="mr-2 h-5 w-5" />
+                    Arquivos de Áudio para IVR
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie os arquivos de áudio utilizados nos seus planos de discagem
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4">
+                    <label 
+                      htmlFor="audio-upload" 
+                      className="block cursor-pointer rounded-md border-2 border-dashed border-neutral-300 p-6 text-center hover:border-primary transition-colors"
+                    >
+                      <Upload className="h-8 w-8 text-neutral-500 mx-auto mb-2" />
+                      <p className="text-sm text-neutral-500">
+                        Clique para enviar um arquivo de áudio
+                      </p>
+                      <p className="text-xs text-neutral-400 mt-1">
+                        Formatos suportados: WAV, MP3, GSM
+                      </p>
+                      <input 
+                        type="file" 
+                        id="audio-upload" 
+                        className="hidden" 
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="audio/*"
+                      />
+                    </label>
+                  </div>
+                  
+                  {/* Lista de arquivos */}
+                  <div className="overflow-y-auto max-h-64 space-y-2">
+                    {audioFiles.length === 0 ? (
+                      <div className="text-center py-6 text-neutral-500">
+                        <Music className="mx-auto h-8 w-8 text-neutral-300 mb-2" />
+                        <p className="text-sm">Nenhum arquivo de áudio encontrado</p>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          Envie arquivos para utilizar no seu IVR
+                        </p>
+                      </div>
+                    ) : (
+                      audioFiles.map(file => (
+                        <div 
+                          key={file.id} 
+                          className={`flex items-center justify-between p-2 rounded-md ${
+                            selectedAudioFile?.id === file.id 
+                              ? 'bg-primary/10 border border-primary/20' 
+                              : 'hover:bg-neutral-100'
+                          }`}
+                          onClick={() => setSelectedAudioFile(file)}
+                        >
+                          <div className="flex items-center">
+                            <Volume2 className="h-4 w-4 text-neutral-500 mr-2" />
+                            <div>
+                              <p className="text-sm font-medium">{file.name}</p>
+                              <p className="text-xs text-neutral-500">
+                                {file.duration ? `${file.duration}s` : ''} 
+                                {file.size ? ` · ${Math.round(file.size / 1024)} KB` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteAudioFile(file.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {/* Botões de ação */}
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.click();
+                        }
+                      }}
+                      disabled={uploadingFile}
+                    >
+                      {uploadingFile ? (
+                        <>Enviando...</>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-1" /> Enviar arquivo
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={loadAudioFiles}
+                    >
+                      <ListMusic className="h-4 w-4 mr-1" /> Atualizar lista
+                    </Button>
+                  </div>
+                  
+                  {/* Seleção de arquivo para o passo atual */}
+                  {selectedStep?.type === 'playback' && (
+                    <div className="mt-6 border-t pt-4">
+                      <h4 className="text-sm font-medium mb-2">
+                        Selecione um arquivo para o passo &quot;{selectedStep.label}&quot;
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2 mt-2">
+                        {audioFiles.map(file => (
+                          <Button
+                            key={file.id}
+                            variant="outline"
+                            className={`justify-start text-left h-auto py-2 ${
+                              selectedStep.parameters?.file === file.filename
+                                ? 'border-primary'
+                                : ''
+                            }`}
+                            onClick={() => {
+                              const updatedStep = {
+                                ...selectedStep,
+                                parameters: {
+                                  ...selectedStep.parameters,
+                                  file: file.filename
+                                }
+                              };
+                              updateDialPlanStep(updatedStep);
+                            }}
+                          >
+                            <Volume2 className="h-4 w-4 mr-2 flex-shrink-0" />
+                            <div className="truncate">
+                              <span className="block text-sm">{file.name}</span>
+                              <span className="block text-xs text-neutral-500">
+                                {file.duration ? `${file.duration}s` : ''}
+                              </span>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="lg:col-span-2 space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Passos Disponíveis</CardTitle>
