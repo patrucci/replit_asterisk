@@ -731,44 +731,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validar os dados
       if (!host || !port || !username || !password) {
-        return res.status(400).json({ message: "Todos os campos são obrigatórios" });
+        return res.status(400).json({ 
+          success: false,
+          message: "Todos os campos são obrigatórios" 
+        });
       }
       
-      // Criar um cliente AMI temporário apenas para teste
-      // Usando a implementação existente do asteriskAMIManager
-      const client = asteriskAMIManager;
+      // Usar o método específico de teste de conexão
+      const success = await asteriskAMIManager.testConnection(host, port, username, password);
       
-      try {
-        // Tentativa de conexão com timeout de 5 segundos
-        // Definir um timeout para a tentativa de conexão
-        const timeoutPromise = new Promise<boolean>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error("Timeout ao conectar ao Asterisk"));
-          }, 5000);
-        });
-        
-        // Tentar conectar
-        const connectPromise = client.connect(host, parseInt(port), username, password);
-        
-        // Race entre conexão bem-sucedida e timeout
-        await Promise.race([connectPromise, timeoutPromise]);
-        
+      if (success) {
         return res.json({ 
           success: true, 
           message: "Teste de conexão com o Asterisk AMI bem-sucedido" 
         });
-      } catch (error) {
-        const connError = error as Error;
+      } else {
         return res.status(400).json({ 
           success: false, 
-          message: `Falha ao testar conexão: ${connError.message || 'Erro desconhecido'}` 
+          message: "Não foi possível estabelecer conexão com o Asterisk AMI" 
         });
       }
     } catch (error) {
       console.error('Erro ao testar conexão com Asterisk:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
       return res.status(500).json({ 
-        success: false,
-        message: "Erro ao testar conexão com o Asterisk" 
+        success: false, 
+        message: `Erro ao testar conexão com Asterisk: ${errorMessage}` 
       });
     }
   });

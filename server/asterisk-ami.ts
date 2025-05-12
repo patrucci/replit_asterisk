@@ -888,18 +888,42 @@ class AsteriskAMIManager extends EventEmitter {
   // Método para testar a conexão sem estabelecer uma conexão permanente
   async testConnection(host: string, port: number, username: string, password: string): Promise<boolean> {
     try {
-      // Criar um cliente AMI temporário apenas para teste
-      const client = new AsteriskAmi();
-      
-      // Tentativa de conexão com timeout de 5 segundos
-      await Promise.race([
-        client.connect(host, parseInt(port.toString()), username, password),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout de conexão")), 5000))
+      // Não podemos instanciar um novo cliente AMI a partir de ESM
+      // Então usamos nossa própria instância, mas não mantemos a conexão
+      // Criamos uma promessa que resolverá ou rejeitará dentro de um limite de tempo
+      const result = await Promise.race([
+        // Tentativa de conexão
+        new Promise<boolean>(async (resolve) => {
+          try {
+            // Tentamos apenas verificar a conexão, sem manter conectado
+            const response = await fetch(`http://${host}:${port}/asterisk/rawman`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: `action=login&username=${username}&secret=${password}`
+            });
+            
+            if (response.ok) {
+              const data = await response.text();
+              if (data.includes('Response: Success')) {
+                resolve(true);
+                return;
+              }
+            }
+            resolve(false);
+          } catch (err) {
+            console.error('Erro na conexão de teste:', err);
+            resolve(false);
+          }
+        }),
+        // Timeout após 5 segundos
+        new Promise<boolean>((resolve) => {
+          setTimeout(() => resolve(false), 5000)
+        })
       ]);
       
-      // Se chegou aqui, a conexão foi bem-sucedida
-      client.disconnect();
-      return true;
+      return result;
     } catch (error) {
       console.error('Erro ao testar conexão Asterisk:', error);
       return false;
