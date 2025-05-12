@@ -53,8 +53,8 @@ interface SoftPhoneProps {
 export function SoftPhone({
   extension,
   displayName,
-  domain = 'sip.example.com',
-  wsUri = 'wss://sip.example.com:8089/ws',
+  domain = 'seu-servidor-sip.com',
+  wsUri = 'wss://seu-servidor-sip.com:8089/ws',
   password = '',
   autoRegister = false,
   className = '',
@@ -106,15 +106,20 @@ export function SoftPhone({
       const savedConfig = localStorage.getItem('softphone_config');
       if (savedConfig) {
         const parsedConfig = JSON.parse(savedConfig);
-        setConfig(parsedConfig);
         
-        // Atualizar as props com esses valores também
-        if (parsedConfig.domain) domain = parsedConfig.domain;
-        if (parsedConfig.wsUri) wsUri = parsedConfig.wsUri;
-        if (parsedConfig.authorizationUser) extension = parsedConfig.authorizationUser;
-        if (parsedConfig.displayName) displayName = parsedConfig.displayName;
+        // Criar configuração combinando props e valores salvos
+        const mergedConfig = {
+          domain: parsedConfig.domain || domain,
+          wsUri: parsedConfig.wsUri || wsUri,
+          authorizationUser: parsedConfig.authorizationUser || extension || '',
+          password: parsedConfig.password || password,
+          displayName: parsedConfig.displayName || displayName || '',
+          registerExpires: parsedConfig.registerExpires || 600,
+          debug: parsedConfig.debug || false
+        };
         
-        console.log('Configurações do SoftPhone carregadas:', parsedConfig);
+        setConfig(mergedConfig);
+        console.log('Configurações do SoftPhone carregadas:', mergedConfig);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações do softphone:', error);
@@ -298,7 +303,27 @@ export function SoftPhone({
   // Método para registrar no servidor SIP
   const registerSip = () => {
     try {
+      // Validar campos obrigatórios
+      if (!config.domain || !config.wsUri || !config.authorizationUser) {
+        toast({
+          title: "Configuração incompleta",
+          description: "Preencha todos os campos obrigatórios (Domínio SIP, URI WebSocket e Ramal)",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Se não tiver senha, perguntar se deseja continuar
+      if (!config.password) {
+        if (!confirm("Você não inseriu uma senha. Deseja continuar com a tentativa de registro sem senha?")) {
+          return;
+        }
+      }
+      
       setIsRegistering(true);
+      
+      // Salvar configurações antes de registrar para garantir persistência
+      localStorage.setItem('softphone_config', JSON.stringify(config));
       
       // Configurar o cliente SIP
       sipClient.setConfig({
@@ -316,9 +341,17 @@ export function SoftPhone({
         console.error('Registration error:', error);
         setIsRegistering(false);
         
+        // Mensagens de erro mais específicas
+        let errorMsg = error.message;
+        if (error.message.includes('WebSocket')) {
+          errorMsg = "Erro de conexão WebSocket. Verifique se o URI do WebSocket está correto e acessível.";
+        } else if (error.message.includes('authentication')) {
+          errorMsg = "Falha de autenticação. Verifique seu ramal e senha.";
+        }
+        
         toast({
           title: "Erro de registro",
-          description: error.message,
+          description: errorMsg,
           variant: "destructive",
         });
       });
@@ -914,18 +947,31 @@ export function SoftPhone({
           <DialogHeader>
             <DialogTitle>Configurações do Softphone</DialogTitle>
             <DialogDescription>
-              Configure os parâmetros de conexão SIP
+              Configure os parâmetros de conexão SIP. As configurações serão salvas no navegador e carregadas automaticamente na próxima vez.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            <div className="rounded-md bg-yellow-50 p-3 mb-3">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">Atenção</h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>Os campos de Ramal, Domínio SIP e URI do WebSocket são obrigatórios para o funcionamento do softphone.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="extension">Ramal</Label>
               <Input
                 id="extension"
                 value={config.authorizationUser}
                 onChange={(e) => setConfig({...config, authorizationUser: e.target.value})}
-                placeholder="Ex: 1001"
+                placeholder="Ex: 1001, 2001, ext123"
               />
             </div>
             
@@ -956,7 +1002,7 @@ export function SoftPhone({
                 id="domain"
                 value={config.domain}
                 onChange={(e) => setConfig({...config, domain: e.target.value})}
-                placeholder="Ex: sip.example.com"
+                placeholder="Ex: pbx.suaempresa.com, asterisk.local"
               />
             </div>
             
@@ -966,7 +1012,7 @@ export function SoftPhone({
                 id="ws-uri"
                 value={config.wsUri}
                 onChange={(e) => setConfig({...config, wsUri: e.target.value})}
-                placeholder="Ex: wss://sip.example.com:8089/ws"
+                placeholder="Ex: wss://pbx.suaempresa.com:8089/ws"
               />
             </div>
             

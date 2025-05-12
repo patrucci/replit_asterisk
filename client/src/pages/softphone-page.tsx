@@ -23,8 +23,8 @@ export default function SoftphonePage() {
   const [audioTestActive, setAudioTestActive] = useState(false);
   const [g729Enabled, setG729Enabled] = useState(true);
   const [defaultConfig, setDefaultConfig] = useState({
-    domain: "sip.example.com",
-    wsUri: "wss://sip.example.com:8089/ws",
+    domain: "seu-servidor-sip.com",
+    wsUri: "wss://seu-servidor-sip.com:8089/ws",
     extension: "",
     displayName: "",
     autoRegister: false
