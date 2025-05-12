@@ -293,15 +293,14 @@ export default function QueuesPage() {
   // Mutação para criar/atualizar agente
   const agentMutation = useMutation({
     mutationFn: async (agent: Partial<Agent>) => {
-      // Simulação de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       if (editingAgent) {
         // Atualização
-        return { ...editingAgent, ...agent };
+        const res = await apiRequest("PUT", `/api/agents/${editingAgent.id}`, agent);
+        return await res.json();
       } else {
         // Criação
-        return { ...agent, id: Date.now() };
+        const res = await apiRequest("POST", "/api/agents", agent);
+        return await res.json();
       }
     },
     onSuccess: () => {
@@ -335,9 +334,8 @@ export default function QueuesPage() {
   // Mutação para atualizar status do agente
   const updateAgentStatusMutation = useMutation({
     mutationFn: async ({ agentId, status }: { agentId: number, status: string }) => {
-      // Simulação de API
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { id: agentId, status };
+      const res = await apiRequest("PATCH", `/api/agents/${agentId}/status`, { status });
+      return await res.json();
     },
     onSuccess: (data) => {
       toast({
@@ -381,8 +379,7 @@ export default function QueuesPage() {
   // Função para remover um agente
   const handleDeleteAgent = async (agentId: number) => {
     try {
-      // Simulação de API
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await apiRequest("DELETE", `/api/agents/${agentId}`);
       
       toast({
         title: "Agente removido",

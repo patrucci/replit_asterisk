@@ -429,4 +429,150 @@ export function setupQueueRoutes(app: Express, requireAuth: any) {
       res.status(500).json({ message: "Falha ao buscar agentes" });
     }
   });
+  
+  // Rota para buscar um agente específico
+  app.get("/api/agents/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const agentId = Number(req.params.id);
+      
+      if (SIMULATION_MODE) {
+        console.log(`[SIMULAÇÃO] Retornando agente simulado ${agentId}`);
+        
+        // Simulação de agente com base no ID
+        const mockNames = ["João Silva", "Maria Oliveira", "Pedro Santos", "Ana Costa", "Carlos Ferreira"];
+        const mockExtensions = ["1001", "1002", "1003", "1004", "1005"];
+        const mockStatus = ["available", "busy", "paused", "unavailable", "offline"];
+        const mockEmails = [
+          "joao.silva@example.com", 
+          "maria.oliveira@example.com", 
+          "pedro.santos@example.com", 
+          "ana.costa@example.com", 
+          "carlos.ferreira@example.com"
+        ];
+        
+        const index = (agentId - 1) % 5;
+        
+        return res.json({
+          id: agentId,
+          name: mockNames[index],
+          extension: mockExtensions[index],
+          email: mockEmails[index],
+          status: mockStatus[index],
+          groupId: (index % 3) + 1,
+          skills: ["suporte", "técnico", "atendimento"],
+          maxConcurrentCalls: 2,
+          createdAt: new Date().toISOString(),
+          userId: req.user!.id,
+          organizationId: req.user!.organizationId
+        });
+      }
+      
+      // Em uma implementação real, buscaríamos o agente do banco de dados
+      return res.status(501).json({ message: "Funcionalidade ainda não implementada" });
+    } catch (error) {
+      console.error('Erro ao buscar agente:', error);
+      res.status(500).json({ message: "Falha ao buscar agente" });
+    }
+  });
+  
+  // Rota para criar um novo agente
+  app.post("/api/agents", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertAgentSchema.parse({
+        ...req.body,
+        userId: req.user!.id,
+        organizationId: req.user!.organizationId,
+      });
+      
+      if (SIMULATION_MODE) {
+        console.log('[SIMULAÇÃO] Criando agente simulado:', validatedData);
+        return res.status(201).json({
+          ...validatedData,
+          id: Date.now(),
+          createdAt: new Date().toISOString()
+        });
+      }
+      
+      // Em uma implementação real, criaríamos o agente no banco de dados
+      return res.status(501).json({ message: "Funcionalidade ainda não implementada" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos do agente", errors: error.errors });
+      }
+      console.error('Erro ao criar agente:', error);
+      res.status(500).json({ message: "Falha ao criar agente" });
+    }
+  });
+  
+  // Rota para atualizar um agente
+  app.put("/api/agents/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const agentId = Number(req.params.id);
+      
+      if (SIMULATION_MODE) {
+        console.log(`[SIMULAÇÃO] Atualizando agente simulado ${agentId}:`, req.body);
+        return res.json({
+          ...req.body,
+          id: agentId,
+          userId: req.user!.id,
+          organizationId: req.user!.organizationId,
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
+      // Em uma implementação real, atualizaríamos o agente no banco de dados
+      return res.status(501).json({ message: "Funcionalidade ainda não implementada" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos do agente", errors: error.errors });
+      }
+      console.error('Erro ao atualizar agente:', error);
+      res.status(500).json({ message: "Falha ao atualizar agente" });
+    }
+  });
+  
+  // Rota para atualizar o status de um agente
+  app.patch("/api/agents/:id/status", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const agentId = Number(req.params.id);
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status não fornecido" });
+      }
+      
+      if (SIMULATION_MODE) {
+        console.log(`[SIMULAÇÃO] Atualizando status do agente simulado ${agentId} para ${status}`);
+        return res.json({
+          id: agentId,
+          status,
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
+      // Em uma implementação real, atualizaríamos o status do agente no banco de dados
+      return res.status(501).json({ message: "Funcionalidade ainda não implementada" });
+    } catch (error) {
+      console.error('Erro ao atualizar status do agente:', error);
+      res.status(500).json({ message: "Falha ao atualizar status do agente" });
+    }
+  });
+  
+  // Rota para excluir um agente
+  app.delete("/api/agents/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const agentId = Number(req.params.id);
+      
+      if (SIMULATION_MODE) {
+        console.log(`[SIMULAÇÃO] Excluindo agente simulado ${agentId}`);
+        return res.status(204).send();
+      }
+      
+      // Em uma implementação real, excluiríamos o agente do banco de dados
+      return res.status(501).json({ message: "Funcionalidade ainda não implementada" });
+    } catch (error) {
+      console.error('Erro ao excluir agente:', error);
+      res.status(500).json({ message: "Falha ao excluir agente" });
+    }
+  });
 }
