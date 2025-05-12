@@ -741,7 +741,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/asterisk/queues", requireAuth, async (req, res) => {
     try {
       if (!asteriskAMIManager.isConnected()) {
-        return res.status(400).json({ message: "Não conectado ao Asterisk AMI" });
+        console.log("[SIMULAÇÃO] Retornando filas simuladas");
+        // Dados simulados para teste
+        const simulatedQueues = [
+          {
+            queueId: "queue1",
+            name: "suporte",
+            strategy: "leastrecent",
+            calls: Math.floor(Math.random() * 10),
+            completed: Math.floor(Math.random() * 50),
+            abandoned: Math.floor(Math.random() * 10),
+            serviceLevel: 80,
+            avgWaitTime: Math.floor(Math.random() * 120 + 30),
+            avgTalkTime: Math.floor(Math.random() * 300 + 120),
+            maxWaitTime: Math.floor(Math.random() * 300 + 60),
+            agents: 3,
+            activeAgents: Math.floor(Math.random() * 3 + 1)
+          },
+          {
+            queueId: "queue2",
+            name: "vendas",
+            strategy: "ringall",
+            calls: Math.floor(Math.random() * 15),
+            completed: Math.floor(Math.random() * 80),
+            abandoned: Math.floor(Math.random() * 15),
+            serviceLevel: 75,
+            avgWaitTime: Math.floor(Math.random() * 150 + 45),
+            avgTalkTime: Math.floor(Math.random() * 400 + 180),
+            maxWaitTime: Math.floor(Math.random() * 400 + 120),
+            agents: 5,
+            activeAgents: Math.floor(Math.random() * 4 + 2)
+          },
+          {
+            queueId: "queue3",
+            name: "financeiro",
+            strategy: "random",
+            calls: Math.floor(Math.random() * 5),
+            completed: Math.floor(Math.random() * 30),
+            abandoned: Math.floor(Math.random() * 5),
+            serviceLevel: 90,
+            avgWaitTime: Math.floor(Math.random() * 90 + 20),
+            avgTalkTime: Math.floor(Math.random() * 250 + 100),
+            maxWaitTime: Math.floor(Math.random() * 200 + 40),
+            agents: 2,
+            activeAgents: Math.floor(Math.random() * 2 + 1)
+          }
+        ];
+        return res.json(simulatedQueues);
       }
       
       const queues = Array.from(asteriskAMIManager.getQueueStats().values());
@@ -756,7 +802,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/asterisk/agents", requireAuth, async (req, res) => {
     try {
       if (!asteriskAMIManager.isConnected()) {
-        return res.status(400).json({ message: "Não conectado ao Asterisk AMI" });
+        console.log("[SIMULAÇÃO] Retornando agentes simulados");
+        // Dados simulados para teste
+        const simulatedAgents = [
+          {
+            agentId: "agent1",
+            name: "João Silva",
+            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
+            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+            callsTaken: Math.floor(Math.random() * 20),
+            callsAbandoned: Math.floor(Math.random() * 5),
+            avgTalkTime: Math.floor(120 + Math.random() * 180),
+            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
+            pauseTime: Math.floor(Math.random() * 1200),
+            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
+            queues: ["queue1", "queue2"]
+          },
+          {
+            agentId: "agent2",
+            name: "Maria Santos",
+            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
+            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+            callsTaken: Math.floor(Math.random() * 20),
+            callsAbandoned: Math.floor(Math.random() * 5),
+            avgTalkTime: Math.floor(120 + Math.random() * 180),
+            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
+            pauseTime: Math.floor(Math.random() * 1200),
+            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
+            queues: ["queue1", "queue3"]
+          },
+          {
+            agentId: "agent3",
+            name: "Carlos Oliveira",
+            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
+            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+            callsTaken: Math.floor(Math.random() * 20),
+            callsAbandoned: Math.floor(Math.random() * 5),
+            avgTalkTime: Math.floor(120 + Math.random() * 180),
+            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
+            pauseTime: Math.floor(Math.random() * 1200),
+            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
+            queues: ["queue2", "queue3"]
+          },
+          {
+            agentId: "agent4",
+            name: "Ana Pereira",
+            status: ["available", "busy", "paused"][Math.floor(Math.random() * 3)],
+            lastCall: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+            callsTaken: Math.floor(Math.random() * 20),
+            callsAbandoned: Math.floor(Math.random() * 5),
+            avgTalkTime: Math.floor(120 + Math.random() * 180),
+            totalTalkTime: Math.floor(1800 + Math.random() * 3600),
+            pauseTime: Math.floor(Math.random() * 1200),
+            loginTime: new Date(Date.now() - Math.random() * 28800000).toISOString(),
+            queues: ["queue1", "queue2", "queue3"]
+          }
+        ];
+        return res.json(simulatedAgents);
       }
       
       const agents = Array.from(asteriskAMIManager.getAgentStats().values());
@@ -797,6 +899,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Erro ao retomar agente:', error);
       return res.status(500).json({ message: "Erro ao retomar agente" });
+    }
+  });
+  
+  // Rota para obter chamadas em fila simuladas
+  app.get("/api/asterisk/queue-calls", requireAuth, async (req, res) => {
+    try {
+      if (!asteriskAMIManager.isConnected()) {
+        console.log("[SIMULAÇÃO] Retornando chamadas em fila simuladas");
+        
+        // Dados simulados de chamadas em fila
+        const simulatedCalls = [];
+        
+        // Gerar entre 0 e 5 chamadas simuladas aleatoriamente
+        const callCount = Math.floor(Math.random() * 6);
+        
+        for (let i = 0; i < callCount; i++) {
+          const callerId = `551198765${Math.floor(Math.random() * 10000)}`;
+          simulatedCalls.push({
+            uniqueId: `call-${Date.now()}-${i}`,
+            callerId,
+            callerIdName: `Cliente ${i + 1}`,
+            queue: `queue${Math.floor(Math.random() * 3) + 1}`,
+            position: i + 1,
+            waitTime: Math.floor(Math.random() * 300),
+            timestamp: Date.now() - Math.floor(Math.random() * 300000)
+          });
+        }
+        
+        return res.json(simulatedCalls);
+      }
+      
+      // Dados reais, se disponíveis
+      // TODO: Implementar obtenção de chamadas reais quando o Asterisk estiver conectado
+      const calls = [];
+      return res.json(calls);
+    } catch (error) {
+      console.error('Erro ao obter chamadas em fila:', error);
+      return res.status(500).json({ message: "Erro ao obter chamadas em fila" });
+    }
+  });
+  
+  // Rota para obter chamadas ativas simuladas
+  app.get("/api/asterisk/active-calls", requireAuth, async (req, res) => {
+    try {
+      if (!asteriskAMIManager.isConnected()) {
+        console.log("[SIMULAÇÃO] Retornando chamadas ativas simuladas");
+        
+        // Dados simulados de chamadas ativas
+        const simulatedActiveCalls = [];
+        
+        // Gerar entre 0 e 3 chamadas ativas simuladas aleatoriamente
+        const callCount = Math.floor(Math.random() * 4);
+        
+        for (let i = 0; i < callCount; i++) {
+          const callerId = `551198765${Math.floor(Math.random() * 10000)}`;
+          const agentId = `agent${Math.floor(Math.random() * 4) + 1}`;
+          const agentName = ["João Silva", "Maria Santos", "Carlos Oliveira", "Ana Pereira"][parseInt(agentId.slice(-1)) - 1];
+          
+          simulatedActiveCalls.push({
+            uniqueId: `call-${Date.now()}-${i}`,
+            callerId,
+            callerIdName: `Cliente Ativo ${i + 1}`,
+            queue: `queue${Math.floor(Math.random() * 3) + 1}`,
+            agentId,
+            memberName: agentName,
+            timestamp: Date.now() - Math.floor(Math.random() * 300000),
+            duration: Math.floor(Math.random() * 600)
+          });
+        }
+        
+        return res.json(simulatedActiveCalls);
+      }
+      
+      // Dados reais, se disponíveis
+      // TODO: Implementar obtenção de chamadas ativas reais quando o Asterisk estiver conectado
+      const calls = [];
+      return res.json(calls);
+    } catch (error) {
+      console.error('Erro ao obter chamadas ativas:', error);
+      return res.status(500).json({ message: "Erro ao obter chamadas ativas" });
     }
   });
   

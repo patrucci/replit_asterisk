@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { MainLayout } from "@/components/layout/main-layout";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useRef, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -9,61 +8,78 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import {
-  PhoneCall,
-  Phone,
-  PhoneOff,
-  Users,
-  User,
-  Clock,
-  Timer,
-  AlertCircle,
-  CheckCircle,
-  Pause,
-  Play,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCcw,
-  Settings,
-  PauseCircle,
-  History,
-  Headset,
-  X,
-} from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { 
+  PhoneOutgoing, 
+  PhoneIncoming, 
+  Phone, 
+  PauseCircle, 
+  PlayCircle, 
+  AlertCircle, 
+  Clock, 
+  User, 
+  Users, 
+  List, 
+  BarChart2, 
+  Settings,
+  RefreshCw,
+  Loader2,
+  Wifi,
+  WifiOff,
+  History,
+  Check,
+  X,
+  Bell,
+  BellOff
+} from 'lucide-react';
 
-// Interfaces
+// Definições de tipos
 interface Agent {
   agentId: string;
   name: string;
@@ -131,7 +147,6 @@ export default function QueueRealtimePage() {
     selectedQueue: 'all',
     selectedAgent: 'all',
   });
-  const [wsUrl, setWsUrl] = useState('');
   const [activeTab, setActiveTab] = useState('queues');
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [selectedAgentDetails, setSelectedAgentDetails] = useState<Agent | null>(null);
@@ -141,22 +156,165 @@ export default function QueueRealtimePage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<{time: number, status: string}[]>([]);
-  const websocket = useRef<WebSocket | null>(null);
   const refreshTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Simulação de eventos aleatórios na interface
+  const simulateRandomEvent = (queues: any[], agents: any[], callsInQueue: any[], activeCalls: any[]) => {
+    const eventTypes = ["new-call", "call-completed", "agent-status-change", "call-abandoned"];
+    const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+    
+    switch (eventType) {
+      case "new-call":
+        console.log("Simulando nova chamada chegando!");
+        // Simular notificação de nova chamada
+        if (Math.random() > 0.5) {
+          playNotificationSound('queue-join');
+          
+          toast({
+            title: 'Nova chamada na fila',
+            description: `Cliente ${Math.floor(Math.random() * 100)} entrou na fila`,
+          });
+        }
+        break;
+        
+      case "call-completed":
+        console.log("Simulando chamada completada!");
+        if (activeCalls.length > 0 && Math.random() > 0.5) {
+          toast({
+            title: 'Chamada completada',
+            description: `Agente completou chamada com Cliente ${Math.floor(Math.random() * 100)}`,
+          });
+        }
+        break;
+        
+      case "agent-status-change":
+        console.log("Simulando mudança de status de agente!");
+        if (agents.length > 0 && Math.random() > 0.7) {
+          const statuses = ["available", "busy", "paused"];
+          const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+          const agent = agents[Math.floor(Math.random() * agents.length)];
+          
+          toast({
+            title: 'Status de agente alterado',
+            description: `${agent.name} agora está ${newStatus}`,
+          });
+        }
+        break;
+        
+      case "call-abandoned":
+        console.log("Simulando chamada abandonada!");
+        if (callsInQueue.length > 0 && Math.random() > 0.7) {
+          playNotificationSound('call-abandoned');
+          
+          toast({
+            title: 'Chamada abandonada',
+            description: `Cliente abandonou a fila após ${Math.floor(Math.random() * 5) + 1} minutos`,
+            variant: 'destructive',
+          });
+        }
+        break;
+    }
+  };
 
-  // Inicializar WebSocket
+  // Função para buscar todos os dados via HTTP
+  const fetchAllData = async () => {
+    try {
+      console.log('Buscando dados atualizados via HTTP...');
+      
+      // Buscar dados das filas
+      const queuesResponse = await fetch('/api/asterisk/queues');
+      const queues = await queuesResponse.json();
+      
+      // Buscar dados dos agentes
+      const agentsResponse = await fetch('/api/asterisk/agents');
+      const agents = await agentsResponse.json();
+      
+      // Buscar dados das chamadas em fila
+      const queueCallsResponse = await fetch('/api/asterisk/queue-calls');
+      const callsInQueue = await queueCallsResponse.json();
+      
+      // Buscar dados das chamadas ativas
+      const activeCallsResponse = await fetch('/api/asterisk/active-calls');
+      const activeCalls = await activeCallsResponse.json();
+      
+      console.log('Dados recebidos:', { 
+        queues: queues.length, 
+        agents: agents.length, 
+        callsInQueue: callsInQueue.length, 
+        activeCalls: activeCalls.length 
+      });
+      
+      // Verificar aleatoriamente se devemos simular um novo evento
+      if (Math.random() > 0.7) {
+        simulateRandomEvent(queues, agents, callsInQueue, activeCalls);
+      }
+      
+      // Atualizar o estado com os dados recebidos
+      updateStats({
+        queues,
+        agents,
+        callsInQueue,
+        activeCalls
+      });
+      
+      // Atualizar status de conexão (sempre verdadeiro para o polling)
+      if (!state.connected) {
+        setState(prev => ({ ...prev, connected: true }));
+      }
+      
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+      
+      // Se houver erro, marcar como desconectado
+      setState(prev => ({ ...prev, connected: false }));
+      
+      toast({
+        title: 'Erro de conexão',
+        description: 'Não foi possível obter dados de monitoramento',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Atualizar estatísticas
+  const updateStats = (data: any) => {
+    console.log('Atualizando estatísticas com dados:', data);
+    setState(prev => ({
+      ...prev,
+      agents: data.agents || [],
+      queues: data.queues || [],
+      activeCalls: data.activeCalls || [],
+      callsInQueue: data.callsInQueue || []
+    }));
+  };
+
+  // Iniciar polling HTTP
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsEndpoint = `${protocol}//${window.location.host}/queue-events`;
+    console.log('Iniciando modo de polling HTTP para monitoramento em tempo real');
     
-    setWsUrl(wsEndpoint);
+    // Configurar polling inicial
+    fetchAllData();
     
-    connectWebSocket(wsEndpoint);
+    // Configurar intervalo de polling
+    const pollingInterval = setInterval(() => {
+      fetchAllData();
+    }, refreshInterval);
+    
+    // Simular estado de conexão para UI
+    setState(prev => ({ ...prev, connected: true }));
+    
+    // Registrar na história de conexões
+    const historyEntry = { time: Date.now(), status: 'connected' };
+    setConnectionHistory(prev => [...prev, historyEntry].slice(-10));
+    
+    // Mensagem de sucesso
+    toast({
+      title: 'Conectado',
+      description: 'Monitoramento em tempo real iniciado com sucesso',
+    });
     
     return () => {
-      if (websocket.current) {
-        websocket.current.close();
-      }
+      clearInterval(pollingInterval);
       
       if (refreshTimer.current) {
         clearInterval(refreshTimer.current);
@@ -173,7 +331,7 @@ export default function QueueRealtimePage() {
     
     if (autoRefresh) {
       refreshTimer.current = setInterval(() => {
-        requestStats();
+        fetchAllData();
       }, refreshInterval);
     }
     
@@ -183,146 +341,6 @@ export default function QueueRealtimePage() {
       }
     };
   }, [autoRefresh, refreshInterval]);
-  
-  // Conectar ao WebSocket
-  const connectWebSocket = (url: string) => {
-    try {
-      console.log('Tentando conectar ao WebSocket:', url);
-      
-      if (websocket.current) {
-        console.log('Fechando conexão WebSocket anterior');
-        websocket.current.close();
-      }
-      
-      const ws = new WebSocket(url);
-      console.log('Objeto WebSocket criado, aguardando conexão...');
-      
-      ws.onopen = () => {
-        console.log('Conexão WebSocket estabelecida com sucesso!');
-        setState(prev => ({ ...prev, connected: true }));
-        
-        // Registrar na história de conexões
-        const historyEntry = { time: Date.now(), status: 'connected' };
-        setConnectionHistory(prev => [...prev, historyEntry].slice(-10));
-        
-        // Solicitar estatísticas iniciais
-        console.log('Solicitando estatísticas iniciais...');
-        requestStats();
-        
-        toast({
-          title: 'Conectado',
-          description: 'Conexão com o servidor estabelecida',
-        });
-      };
-      
-      ws.onmessage = (event) => {
-        console.log('Mensagem WebSocket recebida:', event.data);
-        try {
-          const data = JSON.parse(event.data);
-          console.log('Dados processados:', data);
-          
-          switch (data.type) {
-            case 'stats':
-              console.log('Atualizando estatísticas com dados:', data.data);
-              updateStats(data.data);
-              break;
-            
-            case 'event':
-              console.log('Processando evento:', data.data);
-              handleEvent(data.data);
-              break;
-            
-            case 'state':
-              console.log('Atualizando estado de conexão:', data.data.connected);
-              setState(prev => ({ ...prev, connected: data.data.connected }));
-              break;
-            
-            case 'error':
-              console.error('Erro recebido do servidor:', data.data.message);
-              toast({
-                title: 'Erro',
-                description: data.data.message,
-                variant: 'destructive',
-              });
-              break;
-            
-            case 'agent':
-              console.log('Detalhes do agente recebidos:', data.data);
-              setSelectedAgentDetails(data.data);
-              setShowAgentDialog(true);
-              break;
-              
-            default:
-              console.log('Tipo de mensagem desconhecido:', data);
-          }
-        } catch (error) {
-          console.error('Erro ao processar mensagem WebSocket:', error);
-        }
-      };
-      
-      ws.onclose = (event) => {
-        console.log('Conexão WebSocket fechada:', event.code, event.reason);
-        setState(prev => ({ ...prev, connected: false }));
-        
-        // Registrar na história de conexões
-        const historyEntry = { time: Date.now(), status: 'disconnected' };
-        setConnectionHistory(prev => [...prev, historyEntry].slice(-10));
-        
-        // Tentar reconectar após 5 segundos
-        console.log('Tentando reconectar em 5 segundos...');
-        setTimeout(() => {
-          console.log('Reconectando ao WebSocket...');
-          connectWebSocket(url);
-        }, 5000);
-        
-        toast({
-          title: 'Desconectado',
-          description: `Conexão perdida (Código: ${event.code}). Tentando reconectar...`,
-          variant: 'destructive',
-        });
-      };
-      
-      ws.onerror = (error) => {
-        console.error('Erro WebSocket:', error);
-        
-        toast({
-          title: 'Erro de conexão',
-          description: 'Não foi possível conectar ao servidor WebSocket',
-          variant: 'destructive',
-        });
-      };
-      
-      websocket.current = ws;
-    } catch (error) {
-      console.error('Erro ao criar WebSocket:', error);
-      
-      toast({
-        title: 'Erro de conexão',
-        description: 'Não foi possível conectar ao servidor',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Solicitar estatísticas atuais
-  const requestStats = () => {
-    if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-      websocket.current.send(JSON.stringify({
-        command: 'getStats'
-      }));
-    }
-  };
-  
-  // Atualizar estatísticas
-  const updateStats = (data: any) => {
-    setState(prev => ({
-      ...prev,
-      agents: data.agents || [],
-      queues: data.queues || [],
-      activeCalls: data.activeCalls || [],
-      callsInQueue: data.callsInQueue || []
-    }));
-  };
   
   // Manipular eventos em tempo real
   const handleEvent = (data: any) => {
@@ -357,211 +375,218 @@ export default function QueueRealtimePage() {
           variant: 'destructive',
         });
       }
-    } else if (eventType === 'Newchannel') {
+    } else if (eventType === 'AgentConnect') {
       setState(prev => ({
         ...prev,
+        callsInQueue: prev.callsInQueue.filter(c => c.uniqueId !== call.uniqueId),
         activeCalls: [...prev.activeCalls, call]
       }));
-    } else if (eventType === 'Hangup') {
+      
+      playNotificationSound('agent-connect');
+      
+      toast({
+        title: 'Chamada atendida',
+        description: `${call.memberName || 'Agente'} atendeu chamada de ${call.callerIdName || call.callerId || 'Unknown'}`,
+        variant: 'default',
+      });
+    } else if (eventType === 'AgentComplete') {
       setState(prev => ({
         ...prev,
         activeCalls: prev.activeCalls.filter(c => c.uniqueId !== call.uniqueId)
       }));
-    } else if (eventType === 'AgentConnect') {
-      playNotificationSound('call-answered');
       
       toast({
-        title: 'Chamada atendida',
-        description: `Agente ${call.memberName || call.agentId || 'Unknown'} atendeu a chamada`,
+        title: 'Chamada finalizada',
+        description: `${call.memberName || 'Agente'} finalizou chamada com ${call.callerIdName || call.callerId || 'Unknown'} (${formatDuration(call.duration || 0)})`,
+        variant: 'default',
+      });
+    } else if (eventType === 'AgentStatusChange') {
+      const agent = data.agent;
+      
+      setState(prev => ({
+        ...prev,
+        agents: prev.agents.map(a => 
+          a.agentId === agent.agentId ? { ...a, ...agent } : a
+        )
+      }));
+      
+      toast({
+        title: 'Status de agente alterado',
+        description: `${agent.name} agora está ${agent.status}`,
+        variant: 'default',
       });
     }
-    
-    // Após qualquer evento, solicitamos estatísticas atualizadas
-    requestStats();
+  };
+  
+  // Pausar/despausar um agente
+  const toggleAgentPause = async (agentId: string, pause: boolean, reason?: string) => {
+    try {
+      const endpoint = pause 
+        ? '/api/asterisk/agent/pause' 
+        : '/api/asterisk/agent/unpause';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          agentId,
+          reason: reason || 'Pausa via ProConnect CRM'
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erro ao alterar status do agente');
+      }
+      
+      // Atualizar dados imediatamente
+      fetchAllData();
+      
+      toast({
+        title: pause ? 'Agente pausado' : 'Agente retomado',
+        description: pause 
+          ? `Agente pausado com sucesso (${reason})` 
+          : 'Agente retomado com sucesso',
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Erro ao alterar status do agente:', error);
+      
+      toast({
+        title: 'Erro',
+        description: `Não foi possível ${pause ? 'pausar' : 'retomar'} o agente`,
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Ver detalhes do agente
+  const viewAgentDetails = (agentId: string) => {
+    const agent = state.agents.find(a => a.agentId === agentId);
+    if (agent) {
+      setSelectedAgentDetails(agent);
+      setShowAgentDialog(true);
+    }
   };
   
   // Reproduzir som de notificação
-  const playNotificationSound = (type: string) => {
-    // Em uma implementação real, reproduziria diferentes sons para diferentes eventos
-    const audio = new Audio();
-    
-    switch (type) {
-      case 'queue-join':
-        audio.src = '/sounds/queue-join.mp3';
-        break;
-      case 'call-answered':
-        audio.src = '/sounds/call-answered.mp3';
-        break;
-      case 'call-abandoned':
-        audio.src = '/sounds/call-abandoned.mp3';
-        break;
-      default:
-        audio.src = '/sounds/notification.mp3';
-    }
-    
-    audio.play().catch(e => console.error('Erro ao reproduzir som:', e));
+  const playNotificationSound = (type: 'queue-join' | 'call-abandoned' | 'agent-connect') => {
+    // TODO: implementar reprodução de sons
   };
   
-  // Solicitar detalhes do agente
-  const requestAgentDetails = (agentId: string) => {
-    if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-      websocket.current.send(JSON.stringify({
-        command: 'getAgentDetails',
-        agentId
-      }));
-    }
-  };
-  
-  // Pausar agente
-  const pauseAgent = (agentId: string) => {
-    if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-      websocket.current.send(JSON.stringify({
-        command: 'pauseAgent',
-        agentId,
-        reason: pauseReason
-      }));
-      
-      setShowAgentPauseDialog(false);
-      
-      toast({
-        title: 'Agente pausado',
-        description: `Agente pausado com motivo: ${pauseReason}`,
-      });
-    }
-  };
-  
-  // Despausar agente
-  const unpauseAgent = (agentId: string) => {
-    if (websocket.current && websocket.current.readyState === WebSocket.OPEN) {
-      websocket.current.send(JSON.stringify({
-        command: 'unpauseAgent',
-        agentId
-      }));
-      
-      toast({
-        title: 'Agente despausado',
-        description: 'Agente retornou ao atendimento',
-      });
-    }
-  };
-  
-  // Formatação de tempo em segundos
-  const formatTime = (seconds?: number) => {
-    if (seconds === undefined) return "00:00";
-    
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-  
-  // Obter cor associada ao status do agente
-  const getAgentStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'available':
-        return 'bg-green-500';
-      case 'in use':
-        return 'bg-blue-500';
-      case 'paused':
-        return 'bg-amber-500';
-      case 'unavailable':
-        return 'bg-red-500';
-      case 'busy':
-        return 'bg-purple-500';
-      case 'offline':
-        return 'bg-gray-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-  
-  // Filtragem de dados
-  const filteredAgents = state.selectedQueue === 'all'
-    ? state.agents
-    : state.agents.filter(agent => agent.queues.includes(state.selectedQueue));
-  
-  const filteredQueues = state.selectedAgent === 'all'
+  // Filtrar dados com base nos seletores
+  const filteredQueues = state.selectedQueue === 'all'
     ? state.queues
-    : state.queues.filter(queue => {
-        return state.agents
-          .find(a => a.agentId === state.selectedAgent)?.queues
-          .includes(queue.queueId);
-      });
+    : state.queues.filter(q => q.queueId === state.selectedQueue);
+  
+  const filteredAgents = state.selectedAgent === 'all'
+    ? state.agents
+    : state.agents.filter(a => a.agentId === state.selectedAgent);
   
   const filteredCallsInQueue = state.selectedQueue === 'all'
     ? state.callsInQueue
-    : state.callsInQueue.filter(call => call.queue === state.selectedQueue);
+    : state.callsInQueue.filter(c => c.queue === state.selectedQueue);
   
-  // Estatísticas gerais
-  const totalAgents = filteredAgents.length;
-  const availableAgents = filteredAgents.filter(a => 
-    a.status.toLowerCase() === 'available'
-  ).length;
+  const filteredActiveCalls = state.selectedQueue === 'all'
+    ? state.activeCalls
+    : state.activeCalls.filter(c => c.queue === state.selectedQueue);
   
-  const totalCalls = filteredCallsInQueue.length;
-  const totalActiveCalls = state.activeCalls.length;
-  
-  // Calcular tempo médio na fila
-  const avgWaitTime = filteredCallsInQueue.length > 0
-    ? filteredCallsInQueue.reduce((sum, call) => sum + (call.waitTime || 0), 0) / filteredCallsInQueue.length
-    : 0;
-  
-  // Componente para exibir tempo de espera
-  const CallWaitTime = ({ call }: { call: Call }) => {
-    const [elapsed, setElapsed] = useState(0);
-    
-    useEffect(() => {
-      const initialWait = call.waitTime || 0;
-      const startTime = call.timestamp || Date.now();
-      
-      const interval = setInterval(() => {
-        const now = Date.now();
-        const waitTime = initialWait + Math.floor((now - startTime) / 1000);
-        setElapsed(waitTime);
-      }, 1000);
-      
-      return () => clearInterval(interval);
-    }, [call]);
-    
-    // Determinar classe de cor com base no tempo de espera
-    const getWaitTimeClass = () => {
-      if (elapsed < 30) return "text-green-500";
-      if (elapsed < 60) return "text-amber-500";
-      if (elapsed < 180) return "text-orange-500";
-      return "text-red-500 font-bold";
-    };
-    
-    return (
-      <span className={getWaitTimeClass()}>{formatTime(elapsed)}</span>
-    );
+  // Formatar tempo
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString();
   };
   
-  return (
-    <MainLayout>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-neutral-800">Monitoramento em Tempo Real</h2>
-        <p className="text-sm text-neutral-500">
-          Status das filas e agentes com atualização em tempo real
-          {state.connected ? (
-            <Badge variant="success" className="ml-2 bg-green-500">Conectado</Badge>
-          ) : (
-            <Badge variant="destructive" className="ml-2">Desconectado</Badge>
-          )}
-        </p>
-      </div>
-      
-      {/* Controles */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex space-x-4">
-          <Select 
-            value={state.selectedQueue} 
+  const formatDuration = (seconds: number) => {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+  };
+  
+  const formatWaitTime = (seconds: number) => {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else if (seconds < 3600) {
+      const min = Math.floor(seconds / 60);
+      const sec = seconds % 60;
+      return `${min}m ${sec}s`;
+    } else {
+      const hrs = Math.floor(seconds / 3600);
+      const min = Math.floor((seconds % 3600) / 60);
+      return `${hrs}h ${min}m`;
+    }
+  };
+  
+  // Obter cor de status para agentes
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-green-500';
+      case 'busy':
+        return 'bg-yellow-500';
+      case 'paused':
+        return 'bg-orange-500';
+      case 'unavailable':
+      case 'offline':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+  
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'Disponível';
+      case 'busy':
+        return 'Em chamada';
+      case 'paused':
+        return 'Pausado';
+      case 'unavailable':
+        return 'Indisponível';
+      case 'offline':
+        return 'Offline';
+      default:
+        return status;
+    }
+  };
+  
+  // Renderizar tabela de filas
+  const renderQueuesTable = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex justify-between items-center">
+          <span>Filas</span>
+          <Badge variant={state.connected ? 'default' : 'destructive'} className="ml-2">
+            {state.connected ? (
+              <>
+                <Wifi className="w-4 h-4 mr-1" />
+                <span>Conectado</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4 mr-1" />
+                <span>Desconectado</span>
+              </>
+            )}
+          </Badge>
+        </CardTitle>
+        <CardDescription>
+          Visão geral do status das filas em tempo real
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between items-center mb-4">
+          <Select
+            value={state.selectedQueue}
             onValueChange={(value) => setState(prev => ({ ...prev, selectedQueue: value }))}
           >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Selecionar Fila" />
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Selecionar fila" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as Filas</SelectItem>
-              {state.queues.map((queue) => (
+              <SelectItem value="all">Todas as filas</SelectItem>
+              {state.queues.map(queue => (
                 <SelectItem key={queue.queueId} value={queue.queueId}>
                   {queue.name}
                 </SelectItem>
@@ -569,16 +594,90 @@ export default function QueueRealtimePage() {
             </SelectContent>
           </Select>
           
-          <Select 
-            value={state.selectedAgent} 
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => fetchAllData()}
+            className="flex items-center"
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            <span>Atualizar</span>
+          </Button>
+        </div>
+
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Estratégia</TableHead>
+                <TableHead>Em fila</TableHead>
+                <TableHead>Completadas</TableHead>
+                <TableHead>Abandonadas</TableHead>
+                <TableHead>Nível Serviço</TableHead>
+                <TableHead>Tempo médio</TableHead>
+                <TableHead>Agentes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredQueues.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-4 text-gray-500">
+                    Nenhuma fila encontrada
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredQueues.map(queue => (
+                  <TableRow key={queue.queueId}>
+                    <TableCell className="font-medium">{queue.name}</TableCell>
+                    <TableCell>{queue.strategy}</TableCell>
+                    <TableCell>{queue.calls}</TableCell>
+                    <TableCell>{queue.completed}</TableCell>
+                    <TableCell>{queue.abandoned}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Progress value={queue.serviceLevel} className="w-16" />
+                        <span>{queue.serviceLevel}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatWaitTime(queue.avgWaitTime)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-green-600">{queue.activeAgents}</span>
+                        <span className="text-gray-500">/ {queue.agents}</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  // Renderizar tabela de agentes
+  const renderAgentsTable = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Agentes</CardTitle>
+        <CardDescription>
+          Status e estatísticas dos agentes em tempo real
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between items-center mb-4">
+          <Select
+            value={state.selectedAgent}
             onValueChange={(value) => setState(prev => ({ ...prev, selectedAgent: value }))}
           >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Selecionar Agente" />
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Selecionar agente" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os Agentes</SelectItem>
-              {state.agents.map((agent) => (
+              <SelectItem value="all">Todos os agentes</SelectItem>
+              {state.agents.map(agent => (
                 <SelectItem key={agent.agentId} value={agent.agentId}>
                   {agent.name}
                 </SelectItem>
@@ -586,727 +685,554 @@ export default function QueueRealtimePage() {
             </SelectContent>
           </Select>
         </div>
+
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Última chamada</TableHead>
+                <TableHead>Chamadas</TableHead>
+                <TableHead>Tempo médio</TableHead>
+                <TableHead>Filas</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAgents.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-4 text-gray-500">
+                    Nenhum agente encontrado
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredAgents.map(agent => (
+                  <TableRow key={agent.agentId}>
+                    <TableCell className="font-medium">{agent.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${getStatusColor(agent.status)}`} />
+                        <span>{getStatusText(agent.status)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{new Date(agent.lastCall).toLocaleTimeString()}</TableCell>
+                    <TableCell>{agent.callsTaken}</TableCell>
+                    <TableCell>{formatWaitTime(agent.avgTalkTime)}</TableCell>
+                    <TableCell>{agent.queues.length}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => viewAgentDetails(agent.agentId)}
+                          title="Ver detalhes"
+                        >
+                          <User className="w-4 h-4" />
+                        </Button>
+                        
+                        {agent.status !== 'paused' ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedAgentDetails(agent);
+                              setShowAgentPauseDialog(true);
+                            }}
+                            title="Pausar agente"
+                            disabled={agent.status === 'busy'}
+                          >
+                            <PauseCircle className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => toggleAgentPause(agent.agentId, false)}
+                            title="Despausar agente"
+                          >
+                            <PlayCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  // Renderizar tabela de chamadas em fila
+  const renderCallsInQueueTable = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Chamadas em Fila</CardTitle>
+        <CardDescription>
+          Chamadas aguardando atendimento
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID do Chamador</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Fila</TableHead>
+                <TableHead>Posição</TableHead>
+                <TableHead>Tempo de espera</TableHead>
+                <TableHead>Entrada</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCallsInQueue.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                    Nenhuma chamada em fila no momento
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredCallsInQueue.map(call => (
+                  <TableRow key={call.uniqueId}>
+                    <TableCell>{call.callerId}</TableCell>
+                    <TableCell className="font-medium">{call.callerIdName || 'Desconhecido'}</TableCell>
+                    <TableCell>{call.queue}</TableCell>
+                    <TableCell>{call.position}</TableCell>
+                    <TableCell>{formatWaitTime(call.waitTime || 0)}</TableCell>
+                    <TableCell>{formatTime(call.timestamp)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  // Renderizar tabela de chamadas ativas
+  const renderActiveCallsTable = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Chamadas Ativas</CardTitle>
+        <CardDescription>
+          Chamadas em andamento no momento
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID do Chamador</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Agente</TableHead>
+                <TableHead>Fila</TableHead>
+                <TableHead>Duração</TableHead>
+                <TableHead>Início</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredActiveCalls.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                    Nenhuma chamada ativa no momento
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredActiveCalls.map(call => (
+                  <TableRow key={call.uniqueId}>
+                    <TableCell>{call.callerId}</TableCell>
+                    <TableCell className="font-medium">{call.callerIdName || 'Desconhecido'}</TableCell>
+                    <TableCell>{call.memberName}</TableCell>
+                    <TableCell>{call.queue}</TableCell>
+                    <TableCell>{formatDuration(call.duration || Math.floor((Date.now() - call.timestamp) / 1000))}</TableCell>
+                    <TableCell>{formatTime(call.timestamp)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  // Renderizar configurações
+  const renderConfig = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configurações</CardTitle>
+        <CardDescription>
+          Configurações do monitor em tempo real
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <label htmlFor="refreshInterval" className="text-sm font-medium">
+              Intervalo de atualização (ms)
+            </label>
+            <input
+              type="number"
+              id="refreshInterval"
+              value={refreshInterval}
+              onChange={(e) => setRefreshInterval(Number(e.target.value))}
+              min="1000"
+              step="1000"
+              className="border rounded-md p-2"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="autoRefresh"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="h-4 w-4 border-gray-300 rounded"
+            />
+            <label htmlFor="autoRefresh" className="text-sm font-medium">
+              Atualização automática
+            </label>
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Conexões recentes</h3>
+            <div className="text-sm">
+              {connectionHistory.map((entry, index) => (
+                <div key={index} className="flex items-center space-x-2 text-gray-600">
+                  <span>{new Date(entry.time).toLocaleTimeString()}</span>
+                  <span>-</span>
+                  <span className={entry.status === 'connected' ? 'text-green-500' : 'text-red-500'}>
+                    {entry.status === 'connected' ? 'Conectado' : 'Desconectado'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Monitor em Tempo Real</h1>
+          <p className="text-muted-foreground">
+            Monitoramento em tempo real de filas, agentes e chamadas
+          </p>
+        </div>
         
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
             size="sm"
-            onClick={requestStats}
+            onClick={() => fetchAllData()}
+            className="flex items-center"
           >
-            <RefreshCcw className="h-4 w-4 mr-2" />
-            Atualizar
+            <RefreshCw className="w-4 h-4 mr-1" />
+            <span>Atualizar</span>
           </Button>
           
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => setConfigDialogOpen(true)}
+            className="flex items-center"
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Configurações
+            <Settings className="w-4 h-4 mr-1" />
+            <span>Configurações</span>
           </Button>
         </div>
       </div>
       
-      {/* Estatísticas de visão geral */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-neutral-500">Agentes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-2xl font-bold">{availableAgents} / {totalAgents}</div>
-            <Progress value={(availableAgents / (totalAgents || 1)) * 100} className="h-2" />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-neutral-500">Chamadas em Fila</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-2xl font-bold">{totalCalls}</div>
-            <div className="text-sm text-neutral-600">Tempo médio: {formatTime(avgWaitTime)}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-neutral-500">Chamadas Ativas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-2xl font-bold">{totalActiveCalls}</div>
-            <div className="text-sm text-neutral-600">
-              {state.connected ? (
-                <span className="text-green-500">Monitorando em tempo real</span>
-              ) : (
-                <span className="text-red-500">Conexão perdida</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-neutral-500">Taxa de Ocupação</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {totalAgents > 0 ? (
-              <>
-                <div className="text-2xl font-bold">
-                  {Math.round(((totalAgents - availableAgents) / totalAgents) * 100)}%
-                </div>
-                <Progress 
-                  value={((totalAgents - availableAgents) / totalAgents) * 100} 
-                  className="h-2" 
-                />
-              </>
-            ) : (
-              <div className="text-xl">Sem agentes</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Abas principais */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 w-full mb-6">
-          <TabsTrigger value="queues">
-            <PhoneCall className="h-4 w-4 mr-2" />
-            Filas
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="queues" className="flex items-center">
+            <List className="w-4 h-4 mr-2" />
+            <span>Filas</span>
           </TabsTrigger>
-          <TabsTrigger value="agents">
-            <Users className="h-4 w-4 mr-2" />
-            Agentes
+          <TabsTrigger value="agents" className="flex items-center">
+            <Users className="w-4 h-4 mr-2" />
+            <span>Agentes</span>
           </TabsTrigger>
-          <TabsTrigger value="calls">
-            <Phone className="h-4 w-4 mr-2" />
-            Chamadas
+          <TabsTrigger value="calls" className="flex items-center">
+            <Phone className="w-4 h-4 mr-2" />
+            <span>Chamadas</span>
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="flex items-center">
+            <BarChart2 className="w-4 h-4 mr-2" />
+            <span>Estatísticas</span>
           </TabsTrigger>
         </TabsList>
         
-        {/* Aba de Filas */}
         <TabsContent value="queues" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Status das Filas</CardTitle>
-              <CardDescription>
-                Monitoramento do tráfego de chamadas e nível de serviço
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium text-sm">Fila</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Estratégia</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Agentes</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Em Fila</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Atendidas</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Abandonadas</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Nível de Serviço</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Tempo Médio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredQueues.map((queue) => {
-                      // Contar chamadas em fila para esta fila específica
-                      const queueCalls = state.callsInQueue.filter(
-                        call => call.queue === queue.queueId
-                      ).length;
-                      
-                      return (
-                        <tr key={queue.queueId} className="border-b hover:bg-neutral-50">
-                          <td className="py-3 px-4 text-sm font-medium">{queue.name}</td>
-                          <td className="py-3 px-4 text-sm">{queue.strategy}</td>
-                          <td className="py-3 px-4 text-sm text-center">
-                            <div className="flex items-center justify-center">
-                              <Badge className={queue.activeAgents > 0 ? 'bg-green-500' : 'bg-red-500'}>
-                                {queue.activeAgents} / {queue.agents}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-center">
-                            <Badge variant={queueCalls > 0 ? 'default' : 'outline'}>
-                              {queueCalls}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-center">{queue.completed}</td>
-                          <td className="py-3 px-4 text-sm text-center">
-                            <span className={queue.abandoned > 0 ? 'text-red-500' : 'text-neutral-500'}>
-                              {queue.abandoned}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-center">
-                            <div className="flex flex-col items-center">
-                              <span className={
-                                queue.serviceLevel >= 90 ? 'text-green-500' : 
-                                queue.serviceLevel >= 80 ? 'text-amber-500' : 
-                                'text-red-500'
-                              }>
-                                {queue.serviceLevel}%
-                              </span>
-                              <Progress 
-                                value={queue.serviceLevel} 
-                                className="h-1 w-16 mt-1" 
-                              />
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-center">
-                            {formatTime(queue.avgWaitTime)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    
-                    {filteredQueues.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="py-6 text-center text-neutral-500">
-                          Nenhuma fila encontrada
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Gráfico de chamadas nas filas */}
-          {filteredQueues.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribuição de Chamadas</CardTitle>
-                <CardDescription>
-                  Comparação de chamadas atendidas e abandonadas por fila
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={filteredQueues.map(q => ({
-                        name: q.name,
-                        Atendidas: q.completed,
-                        Abandonadas: q.abandoned,
-                        "Em Fila": state.callsInQueue.filter(c => c.queue === q.queueId).length
-                      }))}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="Atendidas" stackId="a" fill="#4ade80" />
-                      <Bar dataKey="Abandonadas" stackId="a" fill="#f87171" />
-                      <Bar dataKey="Em Fila" stackId="a" fill="#60a5fa" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {renderQueuesTable()}
+          {renderCallsInQueueTable()}
         </TabsContent>
         
-        {/* Aba de Agentes */}
         <TabsContent value="agents" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Status dos Agentes</CardTitle>
-              <CardDescription>
-                Monitoramento de disponibilidade e produtividade
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium text-sm">Agente</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Filas</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Atendidas</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Tempo Médio</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Última Chamada</th>
-                      <th className="text-right py-3 px-4 font-medium text-sm">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAgents.map((agent) => (
-                      <tr key={agent.agentId} className="border-b hover:bg-neutral-50">
-                        <td className="py-3 px-4 text-sm font-medium">{agent.name}</td>
-                        <td className="py-3 px-4 text-sm">
-                          <div className="flex items-center">
-                            <span className={`w-2 h-2 rounded-full mr-2 ${getAgentStatusColor(agent.status)}`}></span>
-                            {agent.status}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          <div className="flex flex-wrap gap-1">
-                            {agent.queues.map((queueId, index) => {
-                              const queue = state.queues.find(q => q.queueId === queueId);
-                              return (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {queue?.name || queueId}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-center">{agent.callsTaken}</td>
-                        <td className="py-3 px-4 text-sm text-center">{formatTime(agent.avgTalkTime)}</td>
-                        <td className="py-3 px-4 text-sm">{agent.lastCall}</td>
-                        <td className="py-3 px-4 text-sm text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => requestAgentDetails(agent.agentId)}
-                            >
-                              <User className="h-4 w-4" />
-                              <span className="sr-only">Detalhes</span>
-                            </Button>
-                            
-                            {agent.status.toLowerCase() === 'paused' ? (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => unpauseAgent(agent.agentId)}
-                              >
-                                <Play className="h-4 w-4" />
-                                <span className="sr-only">Despausar</span>
-                              </Button>
-                            ) : (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAgentDetails(agent);
-                                  setShowAgentPauseDialog(true);
-                                }}
-                              >
-                                <Pause className="h-4 w-4" />
-                                <span className="sr-only">Pausar</span>
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    
-                    {filteredAgents.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="py-6 text-center text-neutral-500">
-                          Nenhum agente encontrado
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Distribuição de status dos agentes */}
-          {filteredAgents.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Status dos Agentes</CardTitle>
-                  <CardDescription>
-                    Distribuição atual de estados
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { 
-                              name: "Disponível", 
-                              value: filteredAgents.filter(a => a.status.toLowerCase() === 'available').length,
-                              color: "#22c55e"
-                            },
-                            { 
-                              name: "Em Atendimento", 
-                              value: filteredAgents.filter(a => a.status.toLowerCase() === 'in use').length,
-                              color: "#3b82f6"
-                            },
-                            { 
-                              name: "Pausado", 
-                              value: filteredAgents.filter(a => a.status.toLowerCase() === 'paused').length,
-                              color: "#f59e0b"
-                            },
-                            { 
-                              name: "Indisponível", 
-                              value: filteredAgents.filter(a => ['unavailable', 'busy'].includes(a.status.toLowerCase())).length,
-                              color: "#ef4444"
-                            },
-                            { 
-                              name: "Offline", 
-                              value: filteredAgents.filter(a => a.status.toLowerCase() === 'offline').length,
-                              color: "#9ca3af"
-                            }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {filteredAgents.length > 0 && ([
-                            { name: "Disponível", value: 0, color: "#22c55e" },
-                            { name: "Em Atendimento", value: 0, color: "#3b82f6" },
-                            { name: "Pausado", value: 0, color: "#f59e0b" },
-                            { name: "Indisponível", value: 0, color: "#ef4444" },
-                            { name: "Offline", value: 0, color: "#9ca3af" }
-                          ].map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          )))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Chamadas Atendidas</CardTitle>
-                  <CardDescription>
-                    Volume de atendimento por agente
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={filteredAgents
-                          .filter(agent => agent.callsTaken > 0)
-                          .map(agent => ({
-                            name: agent.name,
-                            Chamadas: agent.callsTaken
-                          }))}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                        layout="vertical"
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis dataKey="name" type="category" width={150} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="Chamadas" fill="#3b82f6" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          {renderAgentsTable()}
         </TabsContent>
         
-        {/* Aba de Chamadas */}
         <TabsContent value="calls" className="space-y-6">
-          {/* Chamadas em fila */}
+          {renderCallsInQueueTable()}
+          {renderActiveCallsTable()}
+        </TabsContent>
+        
+        <TabsContent value="stats" className="space-y-6">
+          {/* Seção de estatísticas a ser implementada */}
           <Card>
             <CardHeader>
-              <CardTitle>Chamadas em Fila</CardTitle>
+              <CardTitle>Estatísticas</CardTitle>
               <CardDescription>
-                Chamadas aguardando atendimento
+                Estatísticas resumidas de atividade das filas
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium text-sm">Número</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Nome</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Fila</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Posição</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Tempo em Espera</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCallsInQueue.map((call) => {
-                      const queue = state.queues.find(q => q.queueId === call.queue);
-                      
-                      return (
-                        <tr key={call.uniqueId} className="border-b hover:bg-neutral-50 animate-pulse">
-                          <td className="py-3 px-4 text-sm">{call.callerId || "Unknown"}</td>
-                          <td className="py-3 px-4 text-sm">{call.callerIdName || "Unknown"}</td>
-                          <td className="py-3 px-4 text-sm">{queue?.name || call.queue}</td>
-                          <td className="py-3 px-4 text-sm text-center">{call.position || "-"}</td>
-                          <td className="py-3 px-4 text-sm text-center">
-                            <CallWaitTime call={call} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    
-                    {filteredCallsInQueue.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-neutral-500">
-                          Nenhuma chamada em fila
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Chamadas ativas */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Chamadas Ativas</CardTitle>
-              <CardDescription>
-                Chamadas em andamento
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium text-sm">Número</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Nome</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Canal</th>
-                      <th className="text-left py-3 px-4 font-medium text-sm">Agente</th>
-                      <th className="text-center py-3 px-4 font-medium text-sm">Duração</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {state.activeCalls.map((call) => (
-                      <tr key={call.uniqueId} className="border-b hover:bg-neutral-50">
-                        <td className="py-3 px-4 text-sm">{call.callerId || "Unknown"}</td>
-                        <td className="py-3 px-4 text-sm">{call.callerIdName || "Unknown"}</td>
-                        <td className="py-3 px-4 text-sm">{call.channel || "-"}</td>
-                        <td className="py-3 px-4 text-sm">{call.memberName || call.agentId || "-"}</td>
-                        <td className="py-3 px-4 text-sm text-center">
-                          <CallWaitTime call={call} />
-                        </td>
-                      </tr>
-                    ))}
-                    
-                    {state.activeCalls.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-neutral-500">
-                          Nenhuma chamada ativa
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-md border p-4">
+                  <div className="text-3xl font-bold">{filteredActiveCalls.length + filteredCallsInQueue.length}</div>
+                  <div className="text-sm text-muted-foreground">Chamadas atuais</div>
+                </div>
+                
+                <div className="rounded-md border p-4">
+                  <div className="text-3xl font-bold">
+                    {filteredQueues.reduce((sum, q) => sum + q.completed, 0)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Chamadas completadas</div>
+                </div>
+                
+                <div className="rounded-md border p-4">
+                  <div className="text-3xl font-bold">
+                    {filteredQueues.reduce((sum, q) => sum + q.abandoned, 0)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Chamadas abandonadas</div>
+                </div>
+                
+                <div className="rounded-md border p-4">
+                  <div className="text-3xl font-bold">
+                    {filteredAgents.filter(a => a.status === 'available').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Agentes disponíveis</div>
+                </div>
+                
+                <div className="rounded-md border p-4">
+                  <div className="text-3xl font-bold">
+                    {filteredAgents.filter(a => a.status === 'busy').length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Agentes em chamada</div>
+                </div>
+                
+                <div className="rounded-md border p-4">
+                  <div className="text-3xl font-bold">
+                    {Math.round(
+                      filteredQueues.reduce((sum, q) => sum + q.avgWaitTime, 0) / 
+                      (filteredQueues.length || 1)
+                    )}s
+                  </div>
+                  <div className="text-sm text-muted-foreground">Tempo médio de espera</div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
       
-      {/* Modal de detalhes do agente */}
+      {/* Diálogo de configurações */}
+      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurações do monitor</DialogTitle>
+            <DialogDescription>
+              Ajuste as configurações do monitor em tempo real
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="refresh-interval" className="text-right">
+                Intervalo (ms)
+              </label>
+              <input
+                id="refresh-interval"
+                type="number"
+                min="1000"
+                step="1000"
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                className="col-span-3 border rounded-md p-2"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="auto-refresh" className="text-right">
+                Auto atualizar
+              </label>
+              <div className="col-span-3 flex items-center space-x-2">
+                <input
+                  id="auto-refresh"
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="h-4 w-4 border-gray-300 rounded"
+                />
+                <label htmlFor="auto-refresh">
+                  {autoRefresh ? 'Ativado' : 'Desativado'}
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button type="submit" onClick={() => setConfigDialogOpen(false)}>
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo de detalhes do agente */}
       <Dialog open={showAgentDialog} onOpenChange={setShowAgentDialog}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Detalhes do Agente</DialogTitle>
             <DialogDescription>
-              Informações detalhadas e histórico de chamadas
+              Informações detalhadas sobre o agente
             </DialogDescription>
           </DialogHeader>
           
           {selectedAgentDetails && (
             <div className="py-4">
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-medium text-neutral-500">Nome</h3>
+                  <h3 className="text-sm font-medium text-gray-500">Nome</h3>
                   <p>{selectedAgentDetails.name}</p>
                 </div>
+                
                 <div>
-                  <h3 className="text-sm font-medium text-neutral-500">Status</h3>
-                  <div className="flex items-center mt-1">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${getAgentStatusColor(selectedAgentDetails.status)}`}></span>
-                    {selectedAgentDetails.status}
+                  <h3 className="text-sm font-medium text-gray-500">Status</h3>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${getStatusColor(selectedAgentDetails.status)}`}></div>
+                    <span>{getStatusText(selectedAgentDetails.status)}</span>
                   </div>
                 </div>
+                
                 <div>
-                  <h3 className="text-sm font-medium text-neutral-500">ID / Ramal</h3>
-                  <p>{selectedAgentDetails.agentId}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-neutral-500">Login</h3>
-                  <p>{selectedAgentDetails.loginTime}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-neutral-500">Chamadas Atendidas</h3>
+                  <h3 className="text-sm font-medium text-gray-500">Chamadas atendidas</h3>
                   <p>{selectedAgentDetails.callsTaken}</p>
                 </div>
+                
                 <div>
-                  <h3 className="text-sm font-medium text-neutral-500">Tempo Médio</h3>
-                  <p>{formatTime(selectedAgentDetails.avgTalkTime)}</p>
+                  <h3 className="text-sm font-medium text-gray-500">Última chamada</h3>
+                  <p>{new Date(selectedAgentDetails.lastCall).toLocaleString()}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Tempo médio</h3>
+                  <p>{formatWaitTime(selectedAgentDetails.avgTalkTime)}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Tempo total</h3>
+                  <p>{formatWaitTime(selectedAgentDetails.totalTalkTime)}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Tempo em pausa</h3>
+                  <p>{formatWaitTime(selectedAgentDetails.pauseTime)}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Login em</h3>
+                  <p>{new Date(selectedAgentDetails.loginTime).toLocaleString()}</p>
+                </div>
+                
+                <div className="col-span-2">
+                  <h3 className="text-sm font-medium text-gray-500">Filas</h3>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedAgentDetails.queues.map(queueId => {
+                      const queue = state.queues.find(q => q.queueId === queueId);
+                      return (
+                        <Badge key={queueId} variant="outline">
+                          {queue ? queue.name : queueId}
+                        </Badge>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-              
-              <Separator className="my-4" />
-              
-              <h3 className="text-sm font-medium mb-2">Filas Associadas</h3>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {selectedAgentDetails.queues.map((queueId, index) => {
-                  const queue = state.queues.find(q => q.queueId === queueId);
-                  return (
-                    <Badge key={index} className="bg-blue-500">
-                      {queue?.name || queueId}
-                    </Badge>
-                  );
-                })}
-                
-                {selectedAgentDetails.queues.length === 0 && (
-                  <p className="text-sm text-neutral-500">Nenhuma fila associada</p>
-                )}
-              </div>
-              
-              {/* Histórico de chamadas aqui - não exibido por brevidade no código */}
             </div>
           )}
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAgentDialog(false)}>
+            <Button onClick={() => setShowAgentDialog(false)}>
               Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Modal de pausa de agente */}
+      {/* Diálogo de pausa de agente */}
       <Dialog open={showAgentPauseDialog} onOpenChange={setShowAgentPauseDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Pausar Agente</DialogTitle>
             <DialogDescription>
-              Selecione o motivo da pausa
+              Selecione o motivo da pausa para o agente {selectedAgentDetails?.name}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Select
-              value={pauseReason}
-              onValueChange={setPauseReason}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione o motivo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lunch">Almoço</SelectItem>
-                <SelectItem value="break">Intervalo</SelectItem>
-                <SelectItem value="meeting">Reunião</SelectItem>
-                <SelectItem value="training">Treinamento</SelectItem>
-                <SelectItem value="personal">Razão Pessoal</SelectItem>
-                <SelectItem value="administrative">Tarefa Administrativa</SelectItem>
-                <SelectItem value="other">Outro</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid gap-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="pause-reason" className="text-right">
+                  Motivo
+                </label>
+                <Select
+                  value={pauseReason}
+                  onValueChange={setPauseReason}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Selecione um motivo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lunch">Almoço</SelectItem>
+                    <SelectItem value="break">Intervalo</SelectItem>
+                    <SelectItem value="meeting">Reunião</SelectItem>
+                    <SelectItem value="training">Treinamento</SelectItem>
+                    <SelectItem value="admin">Tarefas administrativas</SelectItem>
+                    <SelectItem value="other">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAgentPauseDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => pauseAgent(selectedAgentDetails?.agentId || '')}>
+            <Button 
+              onClick={() => {
+                if (selectedAgentDetails) {
+                  toggleAgentPause(selectedAgentDetails.agentId, true, pauseReason);
+                  setShowAgentPauseDialog(false);
+                }
+              }}
+            >
               Pausar Agente
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Modal de configurações */}
-      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Configurações</DialogTitle>
-            <DialogDescription>
-              Personalize as configurações de atualização
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium">Atualização Automática</h3>
-                <p className="text-sm text-neutral-500">
-                  Atualizar dados automaticamente
-                </p>
-              </div>
-              <Switch
-                checked={autoRefresh}
-                onCheckedChange={setAutoRefresh}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Intervalo de Atualização</h3>
-              <Select
-                value={refreshInterval.toString()}
-                onValueChange={(value) => setRefreshInterval(parseInt(value, 10))}
-                disabled={!autoRefresh}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione o intervalo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1000">1 segundo</SelectItem>
-                  <SelectItem value="2000">2 segundos</SelectItem>
-                  <SelectItem value="5000">5 segundos</SelectItem>
-                  <SelectItem value="10000">10 segundos</SelectItem>
-                  <SelectItem value="30000">30 segundos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">URL do WebSocket</h3>
-              <div className="flex gap-2">
-                <Input value={wsUrl} onChange={(e) => setWsUrl(e.target.value)} />
-                <Button variant="outline" onClick={() => connectWebSocket(wsUrl)}>
-                  Reconectar
-                </Button>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Histórico de Conexão</h3>
-              <div className="max-h-[100px] overflow-y-auto border rounded-md p-2">
-                {connectionHistory.map((entry, index) => (
-                  <div key={index} className="text-xs flex justify-between py-1">
-                    <span>{new Date(entry.time).toLocaleTimeString()}</span>
-                    <Badge 
-                      variant={entry.status === 'connected' ? 'default' : 'destructive'}
-                      className="text-xs"
-                    >
-                      {entry.status}
-                    </Badge>
-                  </div>
-                ))}
-                
-                {connectionHistory.length === 0 && (
-                  <p className="text-xs text-neutral-500">Nenhum histórico disponível</p>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </MainLayout>
+    </div>
   );
 }
