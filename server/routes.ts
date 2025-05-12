@@ -738,9 +738,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Usar o método específico de teste de conexão
-      const success = await asteriskAMIManager.testConnection(host, port, username, password);
+      const result = await asteriskAMIManager.testConnection(host, port, username, password);
       
-      if (success) {
+      if (result.success) {
         return res.json({ 
           success: true, 
           message: "Teste de conexão com o Asterisk AMI bem-sucedido" 
@@ -748,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         return res.status(400).json({ 
           success: false, 
-          message: "Não foi possível estabelecer conexão com o Asterisk AMI" 
+          message: result.message || "Não foi possível estabelecer conexão com o Asterisk AMI" 
         });
       }
     } catch (error) {
