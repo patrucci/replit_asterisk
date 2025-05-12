@@ -239,9 +239,12 @@ export default function QueuesPage() {
   });
 
   // Consulta para estatísticas
-  const { data: queueStats = [], isLoading: isLoadingStats } = useQuery<QueueStats[]>({
+  const { data: queueStatsData, isLoading: isLoadingStats } = useQuery<any>({
     queryKey: ["/api/queue-stats"],
   });
+  
+  // Extrair o array de estatísticas da resposta
+  const queueStats = queueStatsData?.queueStats || [];
 
   // Mutação para criar/atualizar fila
   const queueMutation = useMutation({
