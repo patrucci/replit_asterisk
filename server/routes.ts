@@ -936,6 +936,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Armazenamento do plano de discagem em memória (temporário)
+  // Em uma implementação completa, isso estaria no banco de dados
+  let dialPlanSteps: any[] = [];
+  
+  // Rota para obter o plano de discagem
+  app.get("/api/asterisk/dialplan", requireAuth, async (req, res) => {
+    try {
+      console.log("Retornando plano de discagem");
+      res.json(dialPlanSteps);
+    } catch (error) {
+      console.error("Erro ao obter plano de discagem:", error);
+      res.status(500).json({ 
+        error: "Falha ao obter plano de discagem",
+        message: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+  
+  // Rota para salvar o plano de discagem
+  app.post("/api/asterisk/dialplan", requireAuth, async (req, res) => {
+    try {
+      console.log("Salvando plano de discagem:", JSON.stringify(req.body));
+      
+      // Validar se steps está presente
+      if (!req.body.steps && !Array.isArray(req.body)) {
+        return res.status(400).json({ 
+          error: "Formato inválido",
+          message: "O plano de discagem deve ser um array de passos"
+        });
+      }
+      
+      // Atualizar o plano de discagem em memória
+      dialPlanSteps = Array.isArray(req.body) ? req.body : req.body.steps;
+      
+      res.status(200).json({ 
+        success: true,
+        message: "Plano de discagem salvo com sucesso" 
+      });
+    } catch (error) {
+      console.error("Erro ao salvar plano de discagem:", error);
+      res.status(500).json({ 
+        error: "Falha ao salvar plano de discagem",
+        message: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+  
   // Excluir arquivo de áudio
   app.delete("/api/asterisk/audio/:id", requireAuth, (req, res) => {
     try {
