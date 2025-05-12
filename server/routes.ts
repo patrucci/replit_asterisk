@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import { setupAsteriskRoutes } from "./asterisk-routes";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -84,6 +85,9 @@ let audioFiles: AudioFile[] = [];
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
+  
+  // Setup Asterisk routes
+  setupAsteriskRoutes(app, requireAuth);
 
   // Client routes
   app.get("/api/clients", requireAuth, async (req, res) => {

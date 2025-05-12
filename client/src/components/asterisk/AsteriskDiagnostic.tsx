@@ -1,252 +1,255 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, Network, ServerOff, Server } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, CheckCircle, Circle, AlertTriangle, Network } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AsteriskDiagnostic() {
   const { toast } = useToast();
-  const [host, setHost] = useState('');
-  const [port, setPort] = useState('5038');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [testing, setTesting] = useState(false);
-  const [connectionResult, setConnectionResult] = useState<{
-    success: boolean;
+  const [host, setHost] = useState<string>("");
+  const [port, setPort] = useState<string>("5038");
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [isTestingTcp, setIsTestingTcp] = useState<boolean>(false);
+  const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<{
+    success?: boolean;
     message?: string;
     details?: string;
+    type?: "tcp" | "ami";
   } | null>(null);
-  
-  const runTcpTest = async () => {
+
+  // Status da conexão AMI
+  const { data: statusData, isLoading: isStatusLoading } = useQuery({
+    queryKey: ["/api/asterisk/status"],
+    queryFn: async () => {
+      const res = await fetch("/api/asterisk/status");
+      if (!res.ok) throw new Error("Falha ao buscar status");
+      return res.json();
+    },
+    refetchInterval: 5000, // Atualiza a cada 5 segundos
+  });
+
+  // Função para testar conexão TCP
+  const handleTestTcp = async () => {
     if (!host || !port) {
       toast({
-        title: "Dados incompletos",
-        description: "Por favor, preencha o host e a porta para o teste",
+        title: "Campos obrigatórios",
+        description: "Host e porta são obrigatórios para o teste",
         variant: "destructive",
       });
       return;
     }
-    
-    setTesting(true);
-    setConnectionResult(null);
-    
+
     try {
-      const response = await apiRequest("POST", "/api/asterisk/test", {
+      setIsTestingTcp(true);
+      setTestResult(null);
+
+      const res = await apiRequest("POST", "/api/asterisk/test-connection", {
         host,
         port: parseInt(port),
-        username: username || 'admin', // valor padrão para testar apenas a conexão TCP
-        password: password || 'password', // valor padrão para testar apenas a conexão TCP
-        testTcpOnly: true // Adicionar flag para testar apenas TCP
+        testTcpOnly: true,
       });
-      
-      const result = await response.json();
-      
-      setConnectionResult(result);
-      
-      if (result.success) {
-        toast({
-          title: "Teste TCP bem-sucedido",
-          description: "A conexão TCP com o servidor foi estabelecida com sucesso",
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        setTestResult({
+          success: false,
+          message: errorData.message || "Falha no teste TCP",
+          details: errorData.details,
+          type: "tcp",
         });
-      } else {
-        toast({
-          title: "Falha no teste TCP",
-          description: result.message,
-          variant: "destructive",
-        });
+        return;
       }
+
+      const data = await res.json();
+      setTestResult({
+        success: true,
+        message: data.message || "Teste TCP bem-sucedido",
+        details: "A porta TCP está acessível e respondendo",
+        type: "tcp",
+      });
     } catch (error) {
-      console.error("Erro ao testar conexão TCP:", error);
-      setConnectionResult({
+      console.error("Erro ao testar TCP:", error);
+      setTestResult({
         success: false,
         message: "Erro ao executar teste TCP",
-        details: error instanceof Error ? error.message : "Erro desconhecido"
-      });
-      
-      toast({
-        title: "Erro no teste",
-        description: "Não foi possível executar o teste TCP",
-        variant: "destructive",
+        details: error instanceof Error ? error.message : String(error),
+        type: "tcp",
       });
     } finally {
-      setTesting(false);
+      setIsTestingTcp(false);
     }
   };
-  
-  const testFullConnection = async () => {
+
+  // Função para testar conexão AMI
+  const handleTestAmi = async () => {
     if (!host || !port || !username || !password) {
       toast({
-        title: "Dados incompletos",
-        description: "Por favor, preencha todos os campos para o teste completo",
+        title: "Campos obrigatórios",
+        description: "Todos os campos são obrigatórios para o teste AMI",
         variant: "destructive",
       });
       return;
     }
-    
-    setTesting(true);
-    setConnectionResult(null);
-    
+
     try {
-      const response = await apiRequest("POST", "/api/asterisk/test", {
+      setIsTesting(true);
+      setTestResult(null);
+
+      const res = await apiRequest("POST", "/api/asterisk/test-connection", {
         host,
         port: parseInt(port),
         username,
-        password
+        password,
+        testTcpOnly: false,
       });
-      
-      const result = await response.json();
-      
-      setConnectionResult(result);
-      
-      if (result.success) {
-        toast({
-          title: "Teste bem-sucedido",
-          description: "A conexão com o Asterisk AMI foi estabelecida com sucesso",
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        setTestResult({
+          success: false,
+          message: errorData.message || "Falha no teste AMI",
+          details: errorData.details,
+          type: "ami",
         });
-      } else {
-        toast({
-          title: "Falha no teste",
-          description: result.message,
-          variant: "destructive",
-        });
+        return;
       }
-    } catch (error) {
-      console.error("Erro ao testar conexão:", error);
-      setConnectionResult({
-        success: false,
-        message: "Erro ao executar teste",
-        details: error instanceof Error ? error.message : "Erro desconhecido"
+
+      const data = await res.json();
+      setTestResult({
+        success: true,
+        message: data.message || "Teste AMI bem-sucedido",
+        details: "A conexão AMI foi estabelecida com sucesso",
+        type: "ami",
       });
-      
-      toast({
-        title: "Erro no teste",
-        description: "Não foi possível executar o teste",
-        variant: "destructive",
+    } catch (error) {
+      console.error("Erro ao testar AMI:", error);
+      setTestResult({
+        success: false,
+        message: "Erro ao executar teste AMI",
+        details: error instanceof Error ? error.message : String(error),
+        type: "ami",
       });
     } finally {
-      setTesting(false);
+      setIsTesting(false);
     }
   };
-  
+
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Network className="h-5 w-5 mr-2" />
+        <CardTitle className="flex items-center gap-2">
+          <Network className="h-5 w-5" />
           Diagnóstico de Conexão Asterisk
         </CardTitle>
         <CardDescription>
-          Ferramentas para diagnosticar problemas de conexão com o servidor Asterisk
+          Ferramentas para diagnóstico da conexão com o servidor Asterisk
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-          <div>
-            <Label htmlFor="host-diagnostic">Endereço do servidor</Label>
-            <Input
-              id="host-diagnostic"
-              placeholder="Ex: asterisk.exemplo.com"
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="port-diagnostic">Porta AMI</Label>
-            <Input
-              id="port-diagnostic"
-              placeholder="Padrão: 5038"
-              value={port}
-              onChange={(e) => setPort(e.target.value)}
-            />
-          </div>
+        <div className="flex flex-col space-y-1.5">
+          <Label htmlFor="host">Host do Servidor</Label>
+          <Input
+            id="host"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            placeholder="Endereço IP ou domínio"
+          />
         </div>
-        
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-          <div>
-            <Label htmlFor="username-diagnostic">Usuário AMI</Label>
-            <Input
-              id="username-diagnostic"
-              placeholder="Usuário do AMI"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="password-diagnostic">Senha</Label>
-            <Input
-              id="password-diagnostic"
-              type="password"
-              placeholder="Senha do AMI"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+        <div className="flex flex-col space-y-1.5">
+          <Label htmlFor="port">Porta AMI</Label>
+          <Input
+            id="port"
+            value={port}
+            onChange={(e) => setPort(e.target.value)}
+            placeholder="5038"
+          />
         </div>
-        
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-          <Button
-            variant="outline"
-            onClick={runTcpTest}
-            disabled={testing || !host || !port}
-          >
-            <Server className="h-4 w-4 mr-2" />
-            {testing ? "Testando..." : "Testar Conexão TCP"}
-          </Button>
-          
-          <Button
-            onClick={testFullConnection}
-            disabled={testing || !host || !port || !username || !password}
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            {testing ? "Testando..." : "Testar Conexão AMI Completa"}
-          </Button>
+        <div className="flex flex-col space-y-1.5">
+          <Label htmlFor="username">Usuário AMI</Label>
+          <Input
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Usuário do Asterisk Manager Interface"
+          />
         </div>
-        
-        {connectionResult && (
-          <>
-            <Separator className="my-4" />
-            
-            <Alert variant={connectionResult.success ? "default" : "destructive"}>
-              {connectionResult.success ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
-              )}
-              <AlertTitle className="ml-2">
-                {connectionResult.success ? "Conexão bem-sucedida" : "Falha na conexão"}
-              </AlertTitle>
-              <AlertDescription className="ml-2">
-                {connectionResult.message}
-                
-                {connectionResult.details && (
-                  <div className="mt-2 p-2 text-xs bg-muted rounded border">
-                    <p className="font-semibold">Detalhes técnicos:</p>
-                    <p className="whitespace-pre-wrap">{connectionResult.details}</p>
-                  </div>
-                )}
-              </AlertDescription>
-            </Alert>
-            
-            {!connectionResult.success && (
-              <div className="text-sm space-y-2">
-                <h4 className="font-medium">Dicas de resolução:</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Verifique se o servidor Asterisk está em execução.</li>
-                  <li>Confirme que a porta AMI (geralmente 5038) está aberta no firewall.</li>
-                  <li>Verifique as configurações no arquivo <code>manager.conf</code> do Asterisk.</li>
-                  <li>Confirme que o usuário AMI tem permissões adequadas.</li>
-                  <li>Teste a conexão diretamente do servidor com <code>telnet localhost 5038</code>.</li>
-                </ul>
-              </div>
+        <div className="flex flex-col space-y-1.5">
+          <Label htmlFor="password">Senha AMI</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Senha do AMI"
+          />
+        </div>
+
+        {/* Status do Servidor */}
+        <div className="bg-muted p-3 rounded-md">
+          <div className="font-medium mb-2">Status Atual da Conexão</div>
+          <div className="flex items-center gap-2">
+            {isStatusLoading ? (
+              <Circle className="h-4 w-4 animate-pulse text-muted-foreground" />
+            ) : statusData?.connected ? (
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-amber-500" />
             )}
-          </>
+            <span>
+              {isStatusLoading
+                ? "Verificando status..."
+                : statusData?.connected
+                ? "Conectado ao servidor Asterisk"
+                : "Desconectado do servidor Asterisk"}
+            </span>
+          </div>
+        </div>
+
+        {/* Resultado do Teste */}
+        {testResult && (
+          <div
+            className={`p-3 rounded-md ${
+              testResult.success ? "bg-green-100 dark:bg-green-900/20" : "bg-red-100 dark:bg-red-900/20"
+            }`}
+          >
+            <div className="flex items-center gap-2 font-medium mb-1">
+              {testResult.success ? (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              )}
+              <span>{testResult.message}</span>
+            </div>
+            {testResult.details && <div className="text-sm opacity-80">{testResult.details}</div>}
+            <div className="text-xs mt-2 opacity-70">
+              Tipo de teste: {testResult.type === "tcp" ? "Conectividade TCP" : "Autenticação AMI"}
+            </div>
+          </div>
         )}
       </CardContent>
+      <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between">
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={handleTestTcp}
+          disabled={isTestingTcp || !host || !port}
+        >
+          {isTestingTcp ? "Testando..." : "Testar Conectividade TCP"}
+        </Button>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={handleTestAmi}
+          disabled={isTesting || !host || !port || !username || !password}
+        >
+          {isTesting ? "Testando..." : "Testar Conexão AMI"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

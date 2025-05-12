@@ -1065,7 +1065,7 @@ class AsteriskAMIManager extends EventEmitter {
   }
   
   // Método adicional para testar apenas a conectividade TCP
-  private testTCPConnection(host: string, port: number): Promise<{success: boolean, message?: string}> {
+  testTCPConnection(host: string, port: number): Promise<{success: boolean, message?: string}> {
     return new Promise((resolve) => {
       console.log(`Iniciando teste TCP básico para ${host}:${port}...`);
       
