@@ -1692,30 +1692,49 @@ Verifique as configurações do Asterisk no arquivo 'manager.conf':
       diagnosticInfo += "\n";
       
       // Adicionar recomendações com base nos resultados
+      diagnosticInfo += `### Recomendações Automáticas:\n\n`;
+      
       if (portaAlternativaEncontrada) {
-        diagnosticInfo += `### Porta alternativa encontrada!\n`;
+        diagnosticInfo += `✓ Porta alternativa encontrada!\n`;
         diagnosticInfo += `Parece que o servidor Asterisk pode estar rodando na porta ${portaSugerida} em vez da porta padrão ${port}.\n`;
         diagnosticInfo += `Recomendação: Tente conectar usando a porta ${portaSugerida} em vez de ${port}.\n\n`;
+      } else {
+        // Se nenhuma porta alternativa foi encontrada, adicione outras recomendações
+        diagnosticInfo += `1. Verifique se o endereço do servidor está correto\n`;
+        diagnosticInfo += `2. Confirme se o serviço Asterisk está em execução no servidor\n`;
+        diagnosticInfo += `3. Verifique a configuração do firewall no servidor (portas 5038/5039 precisam estar abertas)\n`;
+        diagnosticInfo += `4. Se você está em uma rede corporativa, verifique se há algum proxy ou firewall bloqueando a conexão\n`;
+        diagnosticInfo += `5. Verifique o arquivo manager.conf no servidor Asterisk e confirme as configurações:\n`;
+        diagnosticInfo += `   - enabled = yes\n`;
+        diagnosticInfo += `   - bindaddr = 0.0.0.0 (ou seu IP específico)\n`;
+        diagnosticInfo += `   - port = ${port}\n\n`;
+        
+        // Adicionar opções de troubleshooting
+        diagnosticInfo += `### Passos de Troubleshooting no Servidor:\n\n`;
+        diagnosticInfo += `Comandos úteis para executar no servidor Asterisk:\n`;
+        diagnosticInfo += `\`\`\`bash\n`;
+        diagnosticInfo += `# Verificar se o Asterisk está rodando\nsudo systemctl status asterisk\n\n`;
+        diagnosticInfo += `# Verificar arquivos de configuração do AMI\ncat /etc/asterisk/manager.conf\n\n`;
+        diagnosticInfo += `# Verificar portas em uso pelo Asterisk\nsudo netstat -tulpn | grep asterisk\n\n`;
+        diagnosticInfo += `# Verificar logs do Asterisk para erros\ntail -f /var/log/asterisk/full\n`;
+        diagnosticInfo += `\`\`\`\n\n`;
       }
       
-      // Adicionar recomendações gerais
-      diagnosticInfo += "### Recomendações para resolver o problema:\n\n";
-      diagnosticInfo += "1. **Verifique o arquivo `manager.conf` no servidor Asterisk**\n";
-      diagnosticInfo += "   - Certifique-se que `enabled = yes`\n";
-      diagnosticInfo += "   - Verifique a porta configurada em `port = 5038`\n";
-      diagnosticInfo += "   - Certifique-se que `bindaddr = 0.0.0.0` para permitir conexões externas\n\n";
-      
-      diagnosticInfo += "2. **Verifique o firewall do servidor**\n";
-      diagnosticInfo += "   - A porta 5038 (ou a porta configurada) precisa estar aberta para conexões TCP\n";
-      diagnosticInfo += "   - Execute `sudo ufw status` ou `sudo iptables -L` para verificar regras de firewall\n\n";
-      
-      diagnosticInfo += "3. **Verifique se o serviço Asterisk está rodando**\n";
-      diagnosticInfo += "   - No servidor, execute `sudo systemctl status asterisk` ou `sudo service asterisk status`\n";
-      diagnosticInfo += "   - Se não estiver rodando, inicie com `sudo systemctl start asterisk`\n\n";
-      
-      diagnosticInfo += "4. **Verifique a configuração de usuário no AMI**\n";
-      diagnosticInfo += "   - O usuário deve ter as permissões corretas configuradas\n";
-      diagnosticInfo += "   - A senha deve corresponder exatamente à configurada no servidor\n\n";
+      // Se o diagnóstico detalhado não já tiver sido adicionado em outras seções
+      if (!portaAlternativaEncontrada) {
+        diagnosticInfo += "### Verificação de Conectividade de Rede:\n\n";
+        
+        diagnosticInfo += "1. **Tente usar ferramentas de linha de comando no cliente**\n";
+        diagnosticInfo += "   - Use `telnet ${host} ${port}` para verificar conectividade TCP\n";
+        diagnosticInfo += "   - Use `ping ${host}` para verificar se o servidor está respondendo\n\n";
+        
+        diagnosticInfo += "2. **Verifique a configuração de rede**\n";
+        diagnosticInfo += "   - Certifique-se que não há VPN ou proxy interferindo na conexão\n";
+        diagnosticInfo += "   - Verifique se a porta 5038 não está sendo redirecionada por NAT\n\n";
+        
+        diagnosticInfo += "3. **Considere usar o endereço IP em vez do nome de domínio**\n";
+        diagnosticInfo += "   - Se a resolução DNS estiver correta, tente usar o endereço IP diretamente\n\n";
+      }
       
       return diagnosticInfo;
     } catch (error) {
