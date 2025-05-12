@@ -16,6 +16,7 @@ import SchedulePage from "@/pages/schedule-page";
 import PaymentsPage from "@/pages/payments-page";
 import MessagesPage from "@/pages/messages-page";
 import SettingsPage from "@/pages/settings-page";
+import AsteriskConfigPage from "@/pages/asterisk-config-page";
 
 function Router() {
   return (
@@ -27,6 +28,7 @@ function Router() {
       <ProtectedRoute path="/payments" component={PaymentsPage} />
       <ProtectedRoute path="/messages" component={MessagesPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/asterisk-config" component={AsteriskConfigPage} />
       <Route component={NotFound} />
     </Switch>
   );

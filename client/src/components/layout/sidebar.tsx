@@ -13,6 +13,7 @@ import {
   Settings,
   X,
   Menu,
+  Phone,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,6 +39,7 @@ export function Sidebar({ className }: SidebarProps) {
     { path: "/schedule", label: "Agenda", icon: <Calendar className="h-5 w-5 mr-3" /> },
     { path: "/payments", label: "Pagamentos", icon: <CreditCard className="h-5 w-5 mr-3" /> },
     { path: "/messages", label: "Mensagens", icon: <MessageSquare className="h-5 w-5 mr-3" /> },
+    { path: "/asterisk-config", label: "Asterisk", icon: <Phone className="h-5 w-5 mr-3" /> },
     { path: "/settings", label: "Configurações", icon: <Settings className="h-5 w-5 mr-3" /> },
   ];
 
