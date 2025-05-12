@@ -38,6 +38,9 @@ import {
   Plus, 
   Trash2,
   ArrowRight,
+  ArrowLeft,
+  ArrowUp,
+  ArrowDown,
   Clock,
   MessageSquare,
   Voicemail
@@ -557,6 +560,34 @@ export default function AsteriskConfigPage() {
     }
   };
 
+  // Ajustar posição de um passo
+  const adjustStepPosition = (stepId: string, direction: 'up' | 'down' | 'left' | 'right') => {
+    const step = dialPlanSteps.find(s => s.id === stepId);
+    if (!step) return;
+    
+    const moveAmount = 100;
+    let newX = step.x || 100;
+    let newY = step.y || 100;
+    
+    switch (direction) {
+      case 'up':
+        newY = Math.max(50, newY - moveAmount);
+        break;
+      case 'down':
+        newY = newY + moveAmount;
+        break;
+      case 'left':
+        newX = Math.max(50, newX - moveAmount);
+        break;
+      case 'right':
+        newX = newX + moveAmount;
+        break;
+    }
+    
+    const updatedStep = { ...step, x: newX, y: newY };
+    updateDialPlanStep(updatedStep);
+  };
+  
   // Renderização do componente
   return (
     <MainLayout>
@@ -808,6 +839,126 @@ export default function AsteriskConfigPage() {
                     <Separator />
                     
                     {renderStepParameters()}
+                    
+                    {/* Seção de Conexões */}
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-sm font-medium">Conexões</label>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            const dlgStep = dialPlanSteps.find(step => 
+                              step.id !== selectedStep.id && 
+                              (!selectedStep.nextSteps || !selectedStep.nextSteps.some(next => next.stepId === step.id))
+                            );
+                            if (dlgStep) {
+                              addConnection(selectedStep.id, dlgStep.id);
+                            }
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Adicionar
+                        </Button>
+                      </div>
+                      
+                      {selectedStep.nextSteps && selectedStep.nextSteps.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedStep.nextSteps.map((next, index) => {
+                            const targetStep = dialPlanSteps.find(s => s.id === next.stepId);
+                            if (!targetStep) return null;
+                            
+                            return (
+                              <div key={index} className="flex items-center justify-between p-2 border rounded-md bg-neutral-50">
+                                <div className="flex items-center gap-2">
+                                  <ArrowRight className="h-4 w-4 text-primary" />
+                                  <div>
+                                    <div className="text-sm font-medium">
+                                      {targetStep.label || getDefaultLabel(targetStep.type)}
+                                    </div>
+                                    {next.condition && (
+                                      <div className="text-xs text-neutral-500">
+                                        Se {next.condition}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => {
+                                      // Editar condição (implementar)
+                                      const condition = prompt("Condição (ex: ${OPCAO}=1):", next.condition || "");
+                                      if (condition !== null) {
+                                        const updatedStep = {
+                                          ...selectedStep,
+                                          nextSteps: (selectedStep.nextSteps || []).map((n, i) => 
+                                            i === index 
+                                              ? { ...n, condition, label: condition ? `Se ${condition}` : 'Continuar' }
+                                              : n
+                                          )
+                                        };
+                                        updateDialPlanStep(updatedStep);
+                                      }
+                                    }}
+                                  >
+                                    <Settings className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => removeConnection(selectedStep.id, next.stepId)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-neutral-500 italic">
+                          Sem conexões. Este é um passo terminal.
+                        </div>
+                      )}
+                      
+                      {/* Formulário para adicionar nova conexão */}
+                      {dialPlanSteps.filter(step => 
+                        step.id !== selectedStep.id && 
+                        (!selectedStep.nextSteps || !selectedStep.nextSteps.some(next => next.stepId === step.id))
+                      ).length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="text-xs font-medium mb-2">Conectar a...</div>
+                          <div className="grid grid-cols-1 gap-2">
+                            {dialPlanSteps
+                              .filter(step => 
+                                step.id !== selectedStep.id && 
+                                (!selectedStep.nextSteps || !selectedStep.nextSteps.some(next => next.stepId === step.id))
+                              )
+                              .map(step => (
+                                <Button
+                                  key={step.id}
+                                  variant="outline"
+                                  size="sm"
+                                  className="justify-between text-xs h-7"
+                                  onClick={() => {
+                                    // Perguntar por condição
+                                    const condition = prompt("Condição (deixe em branco se não houver):");
+                                    addConnection(selectedStep.id, step.id, condition || undefined);
+                                  }}
+                                >
+                                  <span>{step.label || getDefaultLabel(step.type)}</span>
+                                  <ArrowRight className="h-3 w-3 ml-1" />
+                                </Button>
+                              ))
+                            }
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -830,39 +981,134 @@ export default function AsteriskConfigPage() {
                     ref={diagramRef} 
                     className="min-h-[500px] border rounded-md p-4 relative bg-neutral-50"
                   >
-                    <div className="flex flex-col gap-4">
-                      {dialPlanSteps.map((step, index) => (
+                    <div className="grid grid-cols-3 gap-8">
+                      {dialPlanSteps.map((step) => (
                         <div 
                           key={step.id}
+                          style={{
+                            gridColumn: Math.ceil((step.x || 100) / 200),
+                            gridRow: Math.ceil((step.y || 100) / 120)
+                          }}
                           className={`
-                            flex items-center gap-2 p-3 bg-white border rounded-md shadow-sm
+                            flex flex-col gap-2 p-3 bg-white border rounded-md shadow-sm
                             ${selectedStep?.id === step.id ? 'ring-2 ring-primary' : ''}
-                            cursor-pointer transition-all hover:shadow-md
+                            cursor-pointer transition-all hover:shadow-md relative
                           `}
                           onClick={() => setSelectedStep(step)}
                         >
-                          <div className="flex-shrink-0 h-8 w-8 bg-primary/10 text-primary rounded-full flex items-center justify-center">
-                            {getStepIcon(step.type)}
-                          </div>
-                          <div className="flex-grow">
-                            <div className="font-medium">{step.label || getDefaultLabel(step.type)}</div>
-                            <div className="text-xs text-neutral-500">
-                              {step.type === "dial" && step.parameters?.extension && (
-                                <>Ramal: {step.parameters.extension}</>
-                              )}
-                              {step.type === "playback" && step.parameters?.file && (
-                                <>Arquivo: {step.parameters.file}</>
-                              )}
-                              {step.type === "wait" && step.parameters?.seconds && (
-                                <>{step.parameters.seconds} segundos</>
-                              )}
+                          {/* Controles de posicionamento */}
+                          {selectedStep?.id === step.id && (
+                            <div className="absolute left-1/2 transform -translate-x-1/2 -top-8 flex gap-1 bg-white border rounded-md shadow-sm p-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  adjustStepPosition(step.id, 'left');
+                                }}
+                              >
+                                <ArrowLeft className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  adjustStepPosition(step.id, 'up');
+                                }}
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  adjustStepPosition(step.id, 'down');
+                                }}
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  adjustStepPosition(step.id, 'right');
+                                }}
+                              >
+                                <ArrowRight className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="flex-shrink-0 h-8 w-8 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                              {getStepIcon(step.type)}
+                            </div>
+                            <div className="flex-grow">
+                              <div className="font-medium">{step.label || getDefaultLabel(step.type)}</div>
                             </div>
                           </div>
-                          <div className="flex-shrink-0 w-6">
-                            {index < dialPlanSteps.length - 1 && (
-                              <div className="absolute left-1/2 transform -translate-x-1/2 mt-3 w-px h-4 bg-gray-300"></div>
+                          
+                          <div className="text-xs text-neutral-500 border-t pt-2">
+                            {step.type === "dial" && step.parameters?.extension && (
+                              <div>Ramal: {step.parameters.extension}</div>
+                            )}
+                            {step.type === "playback" && step.parameters?.file && (
+                              <div>Arquivo: {step.parameters.file}</div>
+                            )}
+                            {step.type === "wait" && step.parameters?.seconds && (
+                              <div>{step.parameters.seconds} segundos</div>
+                            )}
+                            {step.type === "gotoif" && step.parameters?.expression && (
+                              <div>Condição: {step.parameters.expression}</div>
                             )}
                           </div>
+                          
+                          {/* Mostrar conexões de saída */}
+                          {step.nextSteps && step.nextSteps.length > 0 && (
+                            <div className="mt-1 pt-1 border-t">
+                              <div className="text-xs font-medium mb-1">Conexões:</div>
+                              <div className="space-y-1">
+                                {step.nextSteps.map((next, idx) => {
+                                  const targetStep = dialPlanSteps.find(s => s.id === next.stepId);
+                                  return targetStep ? (
+                                    <div key={idx} className="text-xs flex items-center">
+                                      <ArrowRight className="h-3 w-3 mr-1" />
+                                      <span>{next.label || 'Continuar'}</span>
+                                      <span className="mx-1 text-neutral-400">→</span>
+                                      <span className="font-medium">{targetStep.label || getDefaultLabel(targetStep.type)}</span>
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Indicador visual de conexões */}
+                          {step.nextSteps && step.nextSteps.map((next, idx) => {
+                            const targetStep = dialPlanSteps.find(s => s.id === next.stepId);
+                            if (!targetStep) return null;
+                            
+                            // Determinar a direção da conexão
+                            const direction = (targetStep.x || 0) > (step.x || 0) ? 'right' : 
+                                            (targetStep.x || 0) < (step.x || 0) ? 'left' : 'down';
+                                            
+                            return (
+                              <div 
+                                key={`${step.id}-${next.stepId}`}
+                                className={`absolute bg-neutral-300 ${
+                                  direction === 'right' ? 'h-1 right-0 top-1/2 w-10 mr-[-40px]' :
+                                  direction === 'left' ? 'h-1 left-0 top-1/2 w-10 ml-[-40px]' :
+                                  'w-1 bottom-0 left-1/2 h-10 mb-[-40px]'
+                                }`}
+                              />
+                            );
+                          })}
                         </div>
                       ))}
                     </div>
