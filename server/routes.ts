@@ -89,6 +89,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup Asterisk routes
   setupAsteriskRoutes(app, requireAuth);
+  
+  // Setup Queue routes
+  setupQueueRoutes(app, requireAuth);
 
   // Client routes
   app.get("/api/clients", requireAuth, async (req, res) => {

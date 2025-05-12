@@ -229,44 +229,31 @@ export default function QueuesPage() {
   });
 
   // Consulta para obter filas
-  const { data: queues, isLoading: isLoadingQueues } = useQuery({
+  const { data: queues = [], isLoading: isLoadingQueues } = useQuery<Queue[]>({
     queryKey: ["/api/queues"],
-    queryFn: async () => {
-      // Em uma implementação real, buscaríamos do backend
-      return mockQueues;
-    }
   });
 
   // Consulta para obter agentes
-  const { data: agents, isLoading: isLoadingAgents } = useQuery({
+  const { data: agents = [], isLoading: isLoadingAgents } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],
-    queryFn: async () => {
-      // Em uma implementação real, buscaríamos do backend
-      return mockAgents;
-    }
   });
 
   // Consulta para estatísticas
-  const { data: queueStats, isLoading: isLoadingStats } = useQuery({
+  const { data: queueStats = [], isLoading: isLoadingStats } = useQuery<QueueStats[]>({
     queryKey: ["/api/queue-stats"],
-    queryFn: async () => {
-      // Em uma implementação real, buscaríamos do backend
-      return mockQueueStats;
-    }
   });
 
   // Mutação para criar/atualizar fila
   const queueMutation = useMutation({
     mutationFn: async (queue: Partial<Queue>) => {
-      // Simulação de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       if (editingQueue) {
         // Atualização
-        return { ...editingQueue, ...queue };
+        const res = await apiRequest("PUT", `/api/queues/${editingQueue.id}`, queue);
+        return await res.json();
       } else {
         // Criação
-        return { ...queue, id: Date.now() };
+        const res = await apiRequest("POST", "/api/queues", queue);
+        return await res.json();
       }
     },
     onSuccess: () => {
@@ -370,8 +357,7 @@ export default function QueuesPage() {
   // Função para remover uma fila
   const handleDeleteQueue = async (queueId: number) => {
     try {
-      // Simulação de API
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await apiRequest("DELETE", `/api/queues/${queueId}`);
       
       toast({
         title: "Fila removida",
