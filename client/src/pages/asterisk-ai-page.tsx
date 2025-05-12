@@ -67,13 +67,13 @@ type ScriptGenerationFormValues = z.infer<typeof scriptGenerationSchema>;
 // Schema para o formulário de configuração de IA
 const aiConfigSchema = z.object({
   enabled: z.boolean().default(true),
-  responseTimeout: z.string().transform(val => parseInt(val, 10)).default("10"),
-  confidenceThreshold: z.string().transform(val => parseFloat(val) / 100).default("70"),
+  responseTimeout: z.number().default(10),
+  confidenceThreshold: z.number().default(0.7),
   callAnalysis: z.boolean().default(true),
   transcriptionEnabled: z.boolean().default(true),
   defaultVoice: z.enum(["female1", "female2", "male1", "male2"]).default("female1"),
-  speechRate: z.string().transform(val => parseFloat(val)).default("1.0"),
-  maxCallDuration: z.string().transform(val => parseInt(val, 10)).default("300"),
+  speechRate: z.number().default(1.0),
+  maxCallDuration: z.number().default(300),
   apiModel: z.enum(["gpt-4o", "claude-3.5-sonnet", "claude-3-opus"]).default("gpt-4o"),
 });
 
@@ -170,7 +170,7 @@ export default function AsteriskAIPage() {
       useCustomScript: false,
       scheduleCall: false,
       callTime: "",
-      maxAttempts: "3",
+      maxAttempts: 3,
       voiceType: "female1",
     },
   });
@@ -194,13 +194,13 @@ export default function AsteriskAIPage() {
     resolver: zodResolver(aiConfigSchema),
     defaultValues: {
       enabled: true,
-      responseTimeout: "10",
-      confidenceThreshold: "70",
+      responseTimeout: 10,
+      confidenceThreshold: 0.7,
       callAnalysis: true,
       transcriptionEnabled: true,
       defaultVoice: "female1",
-      speechRate: "1.0",
-      maxCallDuration: "300",
+      speechRate: 1.0,
+      maxCallDuration: 300,
       apiModel: "gpt-4o"
     },
   });
@@ -557,7 +557,7 @@ export default function AsteriskAIPage() {
                       placeholder="3" 
                       min="1" 
                       max="10" 
-                      {...callForm.register("maxAttempts")}
+                      {...callForm.register("maxAttempts", { valueAsNumber: true })}
                     />
                   </div>
                   
@@ -604,6 +604,10 @@ export default function AsteriskAIPage() {
                 <Button 
                   type="submit" 
                   disabled={makeCallMutation.isPending}
+                  onClick={() => {
+                    const values = callForm.getValues();
+                    makeCallMutation.mutate(values as AICallFormValues);
+                  }}
                 >
                   {makeCallMutation.isPending ? (
                     "Processando..."
@@ -1056,7 +1060,7 @@ export default function AsteriskAIPage() {
                       placeholder="10"
                       min="5"
                       max="30"
-                      {...configForm.register("responseTimeout")}
+                      {...configForm.register("responseTimeout", { valueAsNumber: true })}
                     />
                     <p className="text-xs text-neutral-500 mt-1">
                       Tempo máximo que a IA aguardará por uma resposta do cliente.
@@ -1071,7 +1075,7 @@ export default function AsteriskAIPage() {
                       placeholder="70"
                       min="0"
                       max="100"
-                      {...configForm.register("confidenceThreshold")}
+                      {...configForm.register("confidenceThreshold", { valueAsNumber: true })}
                     />
                     <p className="text-xs text-neutral-500 mt-1">
                       Nível mínimo de confiança para a IA aceitar uma resposta como válida.
@@ -1087,7 +1091,7 @@ export default function AsteriskAIPage() {
                       step="0.1"
                       min="0.5"
                       max="2.0"
-                      {...configForm.register("speechRate")}
+                      {...configForm.register("speechRate", { valueAsNumber: true })}
                     />
                     <p className="text-xs text-neutral-500 mt-1">
                       Velocidade da fala da IA (1.0 = normal, &lt;1.0 = mais lento, &gt;1.0 = mais rápido).
@@ -1102,7 +1106,7 @@ export default function AsteriskAIPage() {
                       placeholder="300"
                       min="60"
                       max="1800"
-                      {...configForm.register("maxCallDuration")}
+                      {...configForm.register("maxCallDuration", { valueAsNumber: true })}
                     />
                     <p className="text-xs text-neutral-500 mt-1">
                       Tempo máximo de duração de uma chamada (em segundos).
