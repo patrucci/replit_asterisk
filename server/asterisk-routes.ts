@@ -52,7 +52,9 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
       console.log(`Executando diagnóstico de conexão para ${host}...`);
       
       // Usar o método de diagnóstico do AMI Manager
-      const diagnosticInfo = await asteriskAMIManager.runConnectionDiagnostics(host, port ? Number(port) : undefined);
+      // Usar a porta padrão 5038 se não for especificada
+      const portNumber = port ? Number(port) : 5038;
+      const diagnosticInfo = await asteriskAMIManager.runConnectionDiagnostics(host, portNumber);
       
       return res.json({
         success: true,

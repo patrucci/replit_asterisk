@@ -638,6 +638,7 @@ export default function AsteriskConfigPage() {
 
         <TabsContent value="diagnóstico" className="space-y-6">
           <AsteriskDiagnostic />
+          <AsteriskConnectionTest />
         </TabsContent>
 
         <TabsContent value="connection" className="space-y-6">
