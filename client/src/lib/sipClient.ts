@@ -65,7 +65,7 @@ export class SipClient extends EventEmitter implements ISipClient {
   private isHold: boolean = false;
   private isMuted: boolean = false;
   private peerConnection: RTCPeerConnection | null = null;
-  private mockMode: boolean = false; // Modo de simulação para testes
+  private mockMode: boolean = false; // Modo de simulação para testes - SEMPRE FALSO PARA CONEXÃO REAL
   private mockRegisterTimer: any = null;
   private mockCallTimer: any = null;
   
@@ -91,17 +91,10 @@ export class SipClient extends EventEmitter implements ISipClient {
     console.log(`Usuário: ${this.config.authorizationUser}`);
     console.log(`Tempo de registro: ${this.config.registerExpires || 600} segundos`);
     
-    // Detectar automaticamente se devemos tentar modo de simulação
-    // (remova esta condição se você quiser sempre tentar conectar ao servidor real)
-    if (false && (this.config.domain.includes('lansolver') || this.config.wsUri.includes('lansolver'))) {
-      // Detectamos que estamos tentando conectar ao servidor lansolver que não está respondendo
-      // Ativar automaticamente o modo de simulação
-      console.log("Ativando modo de simulação para o softphone devido a problemas de conectividade com o servidor real");
-      this.mockMode = true;
-    }
+    // Desativar completamente o modo de simulação para garantir tentativa de conexão real
+    this.mockMode = false;
     
-    // Ativar manualmente o modo de simulação - defina como true para testar sem servidor real
-    // this.mockMode = false;
+    console.log("Modo de simulação está DESATIVADO. Tentando conexão real com servidor SIP.");
     
     // Se estamos em modo de simulação, simular um registro bem-sucedido
     if (this.mockMode) {
