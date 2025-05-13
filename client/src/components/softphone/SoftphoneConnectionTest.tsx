@@ -4,15 +4,27 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Wifi, CheckCircle, AlertTriangle, XCircle, Settings, Globe, Server } from 'lucide-react';
+import { Loader2, Wifi, CheckCircle, AlertTriangle, XCircle, Settings, Globe, Server, HelpCircle, Shield } from 'lucide-react';
 import { sipClient } from '@/lib/sipClient';
 import { apiRequest } from '@/lib/queryClient';
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface TestResult {
   success: boolean;
   message: string;
   details?: string;
+}
+
+interface DiagnosticResult {
+  host: string;
+  ip: string;
+  dnsResolved: boolean;
+  mainPort: number;
+  mainPortOpen: boolean;
+  errorType: string;
+  openPorts: number[];
+  recommendations: string[];
 }
 
 export function SoftphoneConnectionTest() {
@@ -23,6 +35,8 @@ export function SoftphoneConnectionTest() {
   const [savedConfig, setSavedConfig] = useState<any>(null);
   const [dnsResults, setDnsResults] = useState<any>(null);
   const [hostName, setHostName] = useState('voip.lansolver.com');
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [diagnosticResult, setDiagnosticResult] = useState<DiagnosticResult | null>(null);
   
   // Carregar configurações salvas do softphone
   useEffect(() => {
