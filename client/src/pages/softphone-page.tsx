@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { SoftPhone } from "@/components/softphone/SoftPhone";
 import { SoftphoneConnectionTest } from "@/components/softphone/SoftphoneConnectionTest";
+import { AsteriskConnectionStatus } from "@/components/asterisk/AsteriskConnectionStatus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -180,8 +181,8 @@ export default function SoftphonePage() {
           
           {/* Coluna de Configurações e Informações */}
           <div>
-            <Tabs defaultValue="status" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 gap-1">
+            <Tabs defaultValue="diagnostico" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1">
                 <TabsTrigger value="status" className="text-xs">
                   <PhoneCall className="h-3 w-3 mr-1" />
                   <span className="truncate">Status</span>
@@ -318,7 +319,18 @@ export default function SoftphonePage() {
               
               {/* Aba de Diagnóstico */}
               <TabsContent value="diagnostico">
-                <SoftphoneConnectionTest />
+                <div className="space-y-4">
+                  <AsteriskConnectionStatus host="voip.lansolver.com" />
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Teste de Conectividade SIP</CardTitle>
+                      <CardDescription>Teste avançado de conectividade SIP/WebSocket</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <SoftphoneConnectionTest />
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
               
               {/* Aba de Configurações */}

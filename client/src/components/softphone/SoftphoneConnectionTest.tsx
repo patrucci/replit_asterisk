@@ -27,6 +27,20 @@ export function SoftphoneConnectionTest() {
   const [websocketResult, setWebsocketResult] = useState<DiagnosticResult | null>(null);
   const [dnsResult, setDnsResult] = useState<DiagnosticResult | null>(null);
   const [activeTab, setActiveTab] = useState("tcp");
+  
+  // Executar testes automaticamente ao montar o componente
+  React.useEffect(() => {
+    // Pequeno atraso para não sobrecarregar a página durante o carregamento
+    const timer = setTimeout(() => {
+      runDnsTest();
+      
+      // Pequeno intervalo entre os testes para não sobrecarregar o servidor
+      setTimeout(() => runTcpTest(), 1500);
+      setTimeout(() => runWebsocketTest(), 3000);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const runTcpTest = async () => {
     setLoading(true);
