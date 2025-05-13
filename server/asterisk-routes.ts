@@ -108,14 +108,148 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
       
       console.log(`Executando diagnóstico de conexão para ${host}...`);
       
-      // Usar o método de diagnóstico do AMI Manager
       // Usar a porta padrão 5038 se não for especificada
       const portNumber = port ? Number(port) : 5038;
-      const diagnosticInfo = await asteriskAMIManager.runConnectionDiagnostics(host, portNumber);
+      
+      // Estrutura para armazenar os resultados do diagnóstico
+      const diagnosticResults = {
+        host: {
+          name: host,
+          ip: null,
+          resolved: false,
+          resolveError: null
+        },
+        connection: {
+          tcp: false,
+          tcpError: null,
+          ami: false,
+          amiError: null,
+        },
+        ports: {
+          tested: [portNumber],
+          open: [],
+          closed: [],
+          timeout: []
+        },
+        firewall: {
+          detected: false,
+          type: null
+        },
+        recommendations: []
+      };
+      
+      // 1. Verificar resolução de DNS
+      try {
+        console.log(`Verificando resolução DNS para ${host}...`);
+        const dns = require('dns');
+        const util = require('util');
+        const lookup = util.promisify(dns.lookup);
+        
+        const { address } = await lookup(host);
+        diagnosticResults.host.ip = address;
+        diagnosticResults.host.resolved = true;
+        console.log(`DNS resolvido: ${host} -> ${address}`);
+      } catch (err: any) {
+        console.error(`Erro de resolução DNS: ${err.message}`);
+        diagnosticResults.host.resolveError = err.message;
+        diagnosticResults.recommendations.push(
+          "Verifique se o nome de domínio está correto e acessível da sua rede"
+        );
+      }
+      
+      // 2. Testar conexão TCP
+      if (diagnosticResults.host.resolved) {
+        try {
+          console.log(`Testando conexão TCP para ${host}:${portNumber}...`);
+          // Usar timeout menor para este teste específico (2 segundos)
+          const tcpResult = await asteriskAMIManager.testTCPConnection(host, portNumber, 2000);
+          
+          diagnosticResults.connection.tcp = tcpResult.success;
+          if (!tcpResult.success) {
+            diagnosticResults.connection.tcpError = tcpResult.message;
+            diagnosticResults.ports.closed.push(portNumber);
+            
+            if (tcpResult.message?.includes('ECONNREFUSED')) {
+              diagnosticResults.firewall.detected = true;
+              diagnosticResults.firewall.type = "ECONNREFUSED";
+              diagnosticResults.recommendations.push(
+                "O servidor está ativamente recusando conexões. Verifique se o serviço Asterisk está rodando e configurado para aceitar conexões na porta especificada."
+              );
+              diagnosticResults.recommendations.push(
+                "Verifique se o firewall do servidor está permitindo conexões na porta " + portNumber
+              );
+            } else if (tcpResult.message?.includes('ETIMEDOUT')) {
+              diagnosticResults.firewall.detected = true;
+              diagnosticResults.firewall.type = "ETIMEDOUT";
+              diagnosticResults.ports.timeout.push(portNumber);
+              diagnosticResults.recommendations.push(
+                "Timeout na conexão. Isto geralmente indica que um firewall está silenciosamente bloqueando o tráfego para esta porta."
+              );
+            }
+          } else {
+            diagnosticResults.ports.open.push(portNumber);
+          }
+        } catch (err: any) {
+          diagnosticResults.connection.tcpError = err.message;
+        }
+      }
+      
+      // 3. Testar portas alternativas comuns do Asterisk
+      const alternativePorts = [5039, 5060, 8088, 8089];
+      
+      for (const altPort of alternativePorts) {
+        console.log(`Testando porta alternativa ${altPort}...`);
+        try {
+          // Usar timeout ainda menor para portas alternativas (1.5 segundos)
+          const result = await asteriskAMIManager.testTCPConnection(host, altPort, 1500);
+          diagnosticResults.ports.tested.push(altPort);
+          
+          if (result.success) {
+            diagnosticResults.ports.open.push(altPort);
+            
+            if (altPort === 8088 || altPort === 8089) {
+              diagnosticResults.recommendations.push(
+                `A porta ${altPort} está aberta, que é comumente usada para Asterisk HTTP/WebSocket. Considere usar esta porta para conexão WebSocket.`
+              );
+            }
+          } else {
+            if (result.message?.includes('ETIMEDOUT')) {
+              diagnosticResults.ports.timeout.push(altPort);
+            } else {
+              diagnosticResults.ports.closed.push(altPort);
+            }
+          }
+        } catch (error: any) {
+          console.error(`Erro ao testar porta ${altPort}:`, error);
+          // Continuar com o próximo teste mesmo com erro
+        }
+      }
+      
+      // 4. Gerar recomendações finais
+      if (diagnosticResults.ports.open.length === 0) {
+        diagnosticResults.recommendations.push(
+          "Nenhuma porta comum do Asterisk está acessível. Verifique a configuração de rede e firewall entre este servidor e o servidor Asterisk."
+        );
+      }
+      
+      if (diagnosticResults.connection.tcp) {
+        diagnosticResults.recommendations.push(
+          "A conexão TCP está funcionando. Se o problema persiste, verifique as credenciais AMI (usuário/senha) e as configurações no Asterisk."
+        );
+      }
+      
+      // Diagnóstico específico para softphone via WebSocket
+      diagnosticResults.recommendations.push(
+        "Para o softphone, verifique se o serviço Asterisk WebSocket está rodando (normalmente nas portas 8088 ou 8089)."
+      );
+      
+      // Execute também o diagnóstico original para dados adicionais
+      const additionalDiagnostics = await asteriskAMIManager.runConnectionDiagnostics(host, portNumber);
       
       return res.json({
         success: true,
-        diagnosticInfo
+        diagnosticResults,
+        additionalDiagnostics
       });
     } catch (error: any) {
       console.error("Erro ao executar diagnóstico:", error);
