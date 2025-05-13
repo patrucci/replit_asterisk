@@ -6,9 +6,9 @@ import { eq } from "drizzle-orm";
 import dns from "dns";
 import { promisify } from "util";
 
-// Desativar modo de simulação para usar conexão real com Asterisk
-// Somente use o modo de simulação em situações onde não há servidor Asterisk disponível
-const SIMULATION_MODE = false; // false = usar conexão real, true = usar simulação
+// Ativar modo de simulação enquanto resolve problemas de conexão
+// Uma vez resolvidos os problemas, você pode desativar para usar a conexão real
+const SIMULATION_MODE = true; // false = usar conexão real, true = usar simulação
 
 export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   // Rota para testar a conexão TCP com o servidor Asterisk
@@ -307,6 +307,56 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
         return res.status(400).json({
           success: false,
           message: "Usuário não pertence a uma organização"
+        });
+      }
+      
+      // Se estiver em modo de simulação, retornar sucesso simulado
+      if (SIMULATION_MODE) {
+        console.log(`[SIMULAÇÃO] Simulando conexão bem-sucedida ao Asterisk AMI: ${host}:${port}`);
+        
+        // Salvar as configurações de simulação no banco de dados
+        try {
+          // Verificar se já existe configuração para essa organização
+          const [existingSettings] = await db.select()
+            .from(asteriskSettings)
+            .where(eq(asteriskSettings.organizationId, organizationId));
+          
+          if (existingSettings) {
+            // Atualizar configurações existentes
+            await db.update(asteriskSettings)
+              .set({
+                host,
+                port: parseInt(port),
+                username,
+                password,
+                enabled: true,
+                simulation: true,
+                updatedAt: new Date()
+              })
+              .where(eq(asteriskSettings.organizationId, organizationId));
+          } else {
+            // Criar novas configurações
+            await db.insert(asteriskSettings)
+              .values({
+                organizationId,
+                host,
+                port: parseInt(port),
+                username,
+                password,
+                enabled: true,
+                simulation: true,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              });
+          }
+        } catch (dbError) {
+          console.error('Erro ao salvar configurações de simulação:', dbError);
+        }
+        
+        return res.status(200).json({
+          success: true,
+          message: `[SIMULAÇÃO] Conexão simulada ao Asterisk AMI estabelecida com sucesso`,
+          simulation: true
         });
       }
       

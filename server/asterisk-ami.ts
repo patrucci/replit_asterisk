@@ -400,8 +400,10 @@ class AsteriskAMIManager extends EventEmitter {
       
       // Iniciar modo de simulação se estiver ativado
       if (this.simulationMode && !this.simulationTimer) {
-        console.log('Iniciando modo de simulação para exemplos de fila e agentes...');
+        console.log('Iniciando modo de simulação de Asterisk para exemplos de fila e agentes...');
+        this.initializeSimulatedData(); // Inicializar dados simulados antes de iniciar a simulação
         this.startSimulation();
+        console.log('Simulação iniciada com sucesso!');
       }
       
       ws.on('message', (message: string) => {
