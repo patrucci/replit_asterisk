@@ -728,7 +728,7 @@ export function SoftPhone({
     ];
     
     return (
-      <div className="grid grid-cols-3 gap-1 md:gap-2">
+      <div className="grid grid-cols-3 gap-0.5 sm:gap-1">
         {dialpadButtons.map((row, rowIndex) => (
           <React.Fragment key={rowIndex}>
             {row.map(button => (
@@ -736,7 +736,7 @@ export function SoftPhone({
                 key={button}
                 variant="outline"
                 size="sm"
-                className="h-9 sm:h-10 md:h-12 text-base sm:text-lg font-medium sm:font-semibold p-0"
+                className="h-8 sm:h-9 md:h-10 text-sm sm:text-base p-0 min-w-[32px]"
                 onClick={() => sendDTMF(button)}
                 disabled={callState !== CallState.NONE && callState !== CallState.ESTABLISHED}
               >
@@ -1019,13 +1019,13 @@ export function SoftPhone({
           
           <TabsContent value="dial" className="pt-4">
             {/* Campo de número */}
-            <div className="mb-4">
+            <div className="mb-2">
               <Input
                 type="text"
                 placeholder="Digite um número..."
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="text-center text-lg font-medium"
+                className="text-center text-sm sm:text-base h-9"
                 disabled={callState !== CallState.NONE}
               />
             </div>
@@ -1034,14 +1034,14 @@ export function SoftPhone({
             {renderDialpad()}
             
             {/* Botão de chamada */}
-            <div className="mt-4 flex justify-center">
+            <div className="mt-3 flex justify-center">
               <Button
-                size="lg"
-                className="rounded-full h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 p-0"
+                size="default"
+                className="rounded-full h-10 w-10 sm:h-12 sm:w-12 p-0"
                 disabled={callState !== CallState.NONE || !phoneNumber || registerState !== RegisterState.REGISTERED}
                 onClick={makeCall}
               >
-                <Phone className="h-5 w-5 sm:h-6 sm:w-6" />
+                <Phone className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
           </TabsContent>
@@ -1252,13 +1252,12 @@ export function SoftPhone({
           </div>
           
           {/* Opção para alternar entre modo real e simulação */}
-          <div className="space-y-2 mt-4 mb-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+          <div className="mt-2 mb-2 p-2 bg-blue-50 rounded-md border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="simulationMode" className="font-medium text-blue-800">Modo de Simulação</Label>
-                <p className="text-xs text-blue-700">
-                  Quando ativado, simula a conexão com o servidor Asterisk sem precisar de um servidor real.
-                  Útil para testar e desenvolver sem um servidor Asterisk disponível.
+                <Label htmlFor="simulationMode" className="text-xs font-medium text-blue-800">Modo de Simulação</Label>
+                <p className="text-[10px] text-blue-700">
+                  Simula conexão sem servidor real para testes.
                 </p>
               </div>
               <Switch
@@ -1268,82 +1267,83 @@ export function SoftPhone({
                   setSimulationMode(checked);
                   localStorage.setItem('softphone_simulation_mode', checked.toString());
                 }}
+                className="scale-75"
               />
             </div>
           </div>
           
-          <div className="space-y-4 py-2 my-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
-            <h4 className="text-sm font-medium text-yellow-800">Dicas de conexão</h4>
-            <ul className="text-xs text-yellow-700 list-disc pl-4 space-y-1">
-              <li>Verifique se o servidor Asterisk está ativo e acessível</li>
-              <li>Se estiver usando HTTPS, o WebSocket precisa ser WSS (wss://)</li>
-              <li>Certifique-se que a porta do WebSocket (normalmente 8088 ou 8089) está aberta no firewall</li>
-              <li>Tente usar o endereço IP do servidor em vez do nome de domínio</li>
-              <li>Consulte os logs do console do navegador (F12) para mais detalhes sobre erros de conexão</li>
+          <div className="my-2 rounded-md border border-yellow-200 bg-yellow-50 p-2">
+            <h4 className="text-xs font-medium text-yellow-800">Dicas rápidas</h4>
+            <ul className="text-[10px] text-yellow-700 list-disc pl-3 mt-1">
+              <li>Verifique se o servidor está ativo</li>
+              <li>Use WSS para conexões seguras</li>
+              <li>Verifique se porta 8088/8089 está aberta</li>
             </ul>
           </div>
           
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-            <div className="w-full sm:w-auto order-3 sm:order-1">
-              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setConfigDialogOpen(false)}>
-                Cancelar
-              </Button>
-            </div>
-            <div className="w-full sm:w-auto order-2">
-              <Button 
-                variant="secondary"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  // Validação básica
-                  if (!config.wsUri) {
-                    toast({
-                      title: "URI WebSocket necessário",
-                      description: "Informe o URI do WebSocket para testar a conexão",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
+          <DialogFooter className="flex sm:flex-row gap-1 border-t pt-2 mt-1">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-xs h-7 px-2"
+              onClick={() => setConfigDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 px-2"
+              onClick={() => {
+                // Validação básica
+                if (!config.wsUri) {
+                  toast({
+                    title: "URI WebSocket necessário",
+                    description: "Informe o URI do WebSocket para testar a conexão",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                // Testar apenas o WebSocket
+                try {
+                  const ws = new WebSocket(config.wsUri);
                   
-                  // Testar apenas o WebSocket
-                  try {
-                    const ws = new WebSocket(config.wsUri);
-                    
+                  toast({
+                    title: "Testando conexão...",
+                    description: "Tentando conectar ao WebSocket",
+                  });
+                  
+                  ws.onopen = () => {
                     toast({
-                      title: "Testando conexão...",
-                      description: "Tentando conectar ao WebSocket. Verifique o console (F12) para detalhes.",
+                      title: "Conexão bem-sucedida",
+                      description: "WebSocket conectado!",
                     });
-                    
-                    ws.onopen = () => {
-                      toast({
-                        title: "Conexão WebSocket bem-sucedida",
-                        description: "WebSocket conectado com sucesso!",
-                      });
-                      ws.close();
-                    };
-                    
-                    ws.onerror = (error) => {
-                      console.error("Erro na conexão WebSocket:", error);
-                      toast({
-                        title: "Falha na conexão WebSocket",
-                        description: "Não foi possível conectar ao servidor. Verifique o URI e se o servidor está acessível.",
-                        variant: "destructive",
-                      });
-                    };
-                  } catch (error) {
-                    console.error("Erro ao iniciar websocket:", error);
+                    ws.close();
+                  };
+                  
+                  ws.onerror = (error) => {
+                    console.error("Erro na conexão WebSocket:", error);
                     toast({
-                      title: "Erro na conexão",
-                      description: "Formato de URI inválido ou erro ao inicializar a conexão WebSocket",
+                      title: "Falha na conexão",
+                      description: "Não foi possível conectar ao servidor",
                       variant: "destructive",
                     });
-                  }
-                }}
-              >
-                Testar Conexão
-              </Button>
-            </div>
-            <div className="w-full sm:w-auto order-1 sm:order-3">
-              <Button className="w-full sm:w-auto" onClick={() => {
+                  };
+                } catch (error) {
+                  console.error("Erro ao iniciar websocket:", error);
+                  toast({
+                    title: "Erro na conexão",
+                    description: "Formato de URI inválido",
+                    variant: "destructive",
+                  });
+                }
+              }}>
+              Testar
+            </Button>
+            <Button 
+              size="sm"
+              className="text-xs h-7 px-2" 
+              onClick={() => {
                 setConfigDialogOpen(false);
                 
                 // Salvar configurações no localStorage para persistência
@@ -1352,7 +1352,7 @@ export function SoftPhone({
                   
                   toast({
                     title: "Configurações salvas",
-                    description: "As configurações do softphone foram salvas com sucesso"
+                    description: "As configurações foram salvas com sucesso"
                   });
                   
                   // Se já estiver registrado, desregistre primeiro para aplicar as novas configurações
@@ -1373,9 +1373,8 @@ export function SoftPhone({
                   });
                 }
               }}>
-                Salvar configurações
-              </Button>
-            </div>
+              Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
