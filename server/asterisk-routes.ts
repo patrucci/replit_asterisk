@@ -259,24 +259,29 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
         console.log(`Endereço padrão: ${defaultAddress.address} (${defaultAddress.family})`);
       } catch (err: any) {
         console.error(`Erro ao resolver endereço padrão: ${err.message}`);
+        // Adicionar informação de erro
+        results.error = `Não foi possível resolver o nome de domínio ${hostname}: ${err.message}`;
       }
       
-      // Obter todos os endereços IPv4
-      try {
-        const ipv4 = await resolve4(hostname);
-        results.ipv4Addresses = ipv4;
-        console.log(`Endereços IPv4: ${ipv4.join(', ')}`);
-      } catch (err: any) {
-        console.error(`Erro ao resolver IPv4: ${err.message}`);
-      }
-      
-      // Obter todos os endereços IPv6
-      try {
-        const ipv6 = await resolve6(hostname);
-        results.ipv6Addresses = ipv6;
-        console.log(`Endereços IPv6: ${ipv6.join(', ')}`);
-      } catch (err: any) {
-        console.error(`Erro ao resolver IPv6: ${err.message}`);
+      // Se o lookup falhou completamente, não tentar os outros métodos
+      if (!results.error) {
+        // Obter todos os endereços IPv4
+        try {
+          const ipv4 = await resolve4(hostname);
+          results.ipv4Addresses = ipv4;
+          console.log(`Endereços IPv4: ${ipv4.join(', ')}`);
+        } catch (err: any) {
+          console.error(`Erro ao resolver IPv4: ${err.message}`);
+        }
+        
+        // Obter todos os endereços IPv6
+        try {
+          const ipv6 = await resolve6(hostname);
+          results.ipv6Addresses = ipv6;
+          console.log(`Endereços IPv6: ${ipv6.join(', ')}`);
+        } catch (err: any) {
+          console.error(`Erro ao resolver IPv6: ${err.message}`);
+        }
       }
       
       // Obter registros MX
