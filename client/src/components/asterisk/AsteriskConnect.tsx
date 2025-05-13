@@ -11,6 +11,7 @@ import { Loader2, CheckCircle, XCircle } from "lucide-react";
 interface AsteriskConnectionStatus {
   connected: boolean;
   configured: boolean;
+  simulation?: boolean;
   host?: string;
   port?: number;
   username?: string;
@@ -136,16 +137,25 @@ export default function AsteriskConnect() {
           Configure a conexão com o Asterisk Manager Interface para monitorar filas
         </CardDescription>
         {!isStatusLoading && status && (
-          <div className="mt-2 flex items-center gap-2 text-sm">
-            <span>Status:</span>
-            {status.connected ? (
-              <span className="flex items-center text-green-600">
-                <CheckCircle className="h-4 w-4 mr-1" /> Conectado
-              </span>
-            ) : (
-              <span className="flex items-center text-red-600">
-                <XCircle className="h-4 w-4 mr-1" /> Desconectado
-              </span>
+          <div className="mt-2 flex flex-col gap-1 text-sm">
+            <div className="flex items-center gap-2">
+              <span>Status:</span>
+              {status.connected ? (
+                <span className="flex items-center text-green-600">
+                  <CheckCircle className="h-4 w-4 mr-1" /> Conectado
+                </span>
+              ) : (
+                <span className="flex items-center text-red-600">
+                  <XCircle className="h-4 w-4 mr-1" /> Desconectado
+                </span>
+              )}
+            </div>
+            
+            {status.simulation && (
+              <div className="flex items-center gap-2 bg-amber-100 p-1 px-2 rounded-md text-amber-800 text-xs">
+                <span className="font-bold">MODO DE SIMULAÇÃO:</span> 
+                <span>Usando dados simulados para demonstração</span>
+              </div>
             )}
           </div>
         )}

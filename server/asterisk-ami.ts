@@ -391,20 +391,20 @@ class AsteriskAMIManager extends EventEmitter {
   setupWebsocket(server: Server, path: string = '/queue-events') {
     this.wss = new WebSocketServer({ server, path });
     
+    // Iniciar modo de simulação imediatamente se estiver ativado
+    if (this.simulationMode && !this.simulationTimer) {
+      console.log('Iniciando modo de simulação de Asterisk para exemplos de fila e agentes...');
+      this.initializeSimulatedData(); // Inicializar dados simulados antes de iniciar a simulação
+      this.startSimulation();
+      console.log('Simulação iniciada com sucesso!');
+    }
+    
     this.wss.on('connection', (ws: WebSocket) => {
       console.log('Nova conexão WebSocket');
       this.clients.add(ws);
       
       // Enviar estatísticas atuais para o novo cliente
       this.sendStatsToClient(ws);
-      
-      // Iniciar modo de simulação se estiver ativado
-      if (this.simulationMode && !this.simulationTimer) {
-        console.log('Iniciando modo de simulação de Asterisk para exemplos de fila e agentes...');
-        this.initializeSimulatedData(); // Inicializar dados simulados antes de iniciar a simulação
-        this.startSimulation();
-        console.log('Simulação iniciada com sucesso!');
-      }
       
       ws.on('message', (message: string) => {
         try {
