@@ -308,30 +308,37 @@ export function SoftPhone({
   // Método para registrar no servidor SIP
   const registerSip = () => {
     try {
-      // Validar campos obrigatórios
-      if (!config.domain || !config.wsUri || !config.authorizationUser) {
-        toast({
-          title: "Configuração incompleta",
-          description: "Preencha todos os campos obrigatórios (Domínio SIP, URI WebSocket e Ramal)",
-          variant: "destructive",
-        });
-        return;
-      }
+      // Configurar modo de simulação
+      sipClient.setMockMode(simulationMode);
+      console.log(`SoftPhone: Definindo modo de simulação: ${simulationMode ? 'ATIVADO' : 'DESATIVADO'}`);
       
-      // Verificar se o wsUri tem o protocolo correto
-      if (!config.wsUri.startsWith('ws://') && !config.wsUri.startsWith('wss://')) {
-        toast({
-          title: "URI WebSocket inválido",
-          description: "O URI WebSocket deve iniciar com ws:// ou wss://",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Se não tiver senha, perguntar se deseja continuar
-      if (!config.password) {
-        if (!confirm("Você não inseriu uma senha. Deseja continuar com a tentativa de registro sem senha?")) {
+      // Em modo de simulação, não precisamos validar todos os campos
+      if (!simulationMode) {
+        // Validar campos obrigatórios apenas se NÃO estiver em modo de simulação
+        if (!config.domain || !config.wsUri || !config.authorizationUser) {
+          toast({
+            title: "Configuração incompleta",
+            description: "Preencha todos os campos obrigatórios (Domínio SIP, URI WebSocket e Ramal)",
+            variant: "destructive",
+          });
           return;
+        }
+        
+        // Verificar se o wsUri tem o protocolo correto
+        if (!config.wsUri.startsWith('ws://') && !config.wsUri.startsWith('wss://')) {
+          toast({
+            title: "URI WebSocket inválido",
+            description: "O URI WebSocket deve iniciar com ws:// ou wss://",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Se não tiver senha, perguntar se deseja continuar
+        if (!config.password) {
+          if (!confirm("Você não inseriu uma senha. Deseja continuar com a tentativa de registro sem senha?")) {
+            return;
+          }
         }
       }
       
@@ -350,11 +357,11 @@ export function SoftPhone({
       
       // Preparar configuração ajustada
       const adjustedConfig = {
-        domain: config.domain,
-        wsUri: connectionUri,
-        authorizationUser: config.authorizationUser,
-        password: config.password,
-        displayName: config.displayName,
+        domain: config.domain || "sip.example.com", // Valor padrão para modo de simulação
+        wsUri: simulationMode ? "ws://demo.simulator:8088/ws" : connectionUri,
+        authorizationUser: config.authorizationUser || "1001", // Valor padrão para modo de simulação
+        password: config.password || "demo123", // Valor padrão para modo de simulação
+        displayName: config.displayName || "Usuário Simulado", // Valor padrão para modo de simulação
         registerExpires: config.registerExpires,
         debug: true, // Forçar modo debug para melhor diagnóstico
       };
@@ -364,20 +371,17 @@ export function SoftPhone({
       
       console.log("Definindo configurações para o cliente SIP...", adjustedConfig);
       
-      // Definir explicitamente se deve usar modo de simulação
-      // Garantir que o modo de simulação seja definido antes de qualquer configuração
-      sipClient.setMockMode(simulationMode);
-      console.log(`SoftPhone: Definindo modo de simulação: ${simulationMode ? 'ATIVADO' : 'DESATIVADO'}`);
-      
+      // Verificar novamente se o modo de simulação está corretamente configurado
       if (simulationMode) {
         toast({
           title: "Modo de Simulação Ativo",
-          description: "Usando modo de simulação para demonstração sem servidor real.",
+          description: "Funcionando em modo de demonstração sem servidor real.",
+          variant: "default",
         });
       } else {
         toast({
           title: "Conectando ao Servidor Real",
-          description: `Tentando conectar a ${connectionUri} como ${config.authorizationUser}`,
+          description: `Tentando conectar a ${connectionUri} como ${adjustedConfig.authorizationUser}`,
         });
       }
       
