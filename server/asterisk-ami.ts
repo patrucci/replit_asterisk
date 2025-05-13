@@ -1510,7 +1510,7 @@ class AsteriskAMIManager extends EventEmitter {
   }
   
   // Método adicional para testar apenas a conectividade TCP
-  testTCPConnection(host: string, port: number): Promise<{success: boolean, message?: string, diagnosticInfo?: string}> {
+  testTCPConnection(host: string, port: number, timeoutMs: number = 5000): Promise<{success: boolean, message?: string, diagnosticInfo?: string}> {
     return new Promise((resolve) => {
       console.log(`Iniciando teste TCP básico para ${host}:${port}...`);
       
@@ -1525,17 +1525,17 @@ class AsteriskAMIManager extends EventEmitter {
         this.runConnectionDiagnostics(host, port).then(diagnosticInfo => {
           resolve({
             success: false,
-            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos. Verifique se o servidor está online e acessível.`,
+            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após ${timeoutMs/1000} segundos. Verifique se o servidor está online e acessível.`,
             diagnosticInfo
           });
         }).catch(err => {
           resolve({
             success: false,
-            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após 5 segundos. Verifique se o servidor está online e acessível.`,
+            message: `Timeout ao tentar conectar ao servidor ${host}:${port} após ${timeoutMs/1000} segundos. Verifique se o servidor está online e acessível.`,
             diagnosticInfo: `Erro ao executar diagnóstico adicional: ${err instanceof Error ? err.message : String(err)}`
           });
         });
-      }, 5000); // 5 segundos de timeout
+      }, timeoutMs); // Timeout definido pelo parâmetro
       
       // Configurar eventos
       socket.on('connect', () => {
