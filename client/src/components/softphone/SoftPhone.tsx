@@ -1099,116 +1099,124 @@ export function SoftPhone({
       
       {/* Diálogo de configuração */}
       <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configurações do Softphone</DialogTitle>
-            <DialogDescription>
-              Configure os parâmetros de conexão SIP. As configurações serão salvas no navegador e carregadas automaticamente na próxima vez.
+        <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:max-w-md">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-lg">Configurações do Softphone</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Configure os parâmetros de conexão SIP. As configurações serão salvas no navegador.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div className="rounded-md bg-yellow-50 p-3 mb-3">
+          <div className="space-y-2 py-2">
+            <div className="rounded-md bg-yellow-50 p-2 mb-2">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                  <AlertTriangle className="h-4 w-4 text-yellow-400" />
                 </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800">Atenção</h3>
-                  <div className="mt-2 text-sm text-yellow-700">
-                    <p>Os campos de Ramal, Domínio SIP e URI do WebSocket são obrigatórios para o funcionamento do softphone.</p>
+                <div className="ml-2">
+                  <h3 className="text-xs font-medium text-yellow-800">Atenção</h3>
+                  <div className="mt-1 text-xs text-yellow-700">
+                    <p>Ramal, Domínio SIP e URI do WebSocket são obrigatórios.</p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="extension">Ramal</Label>
+            <div className="grid gap-1 mb-1">
+              <Label htmlFor="extension" className="text-xs">Ramal</Label>
               <Input
                 id="extension"
                 value={config.authorizationUser}
                 onChange={(e) => setConfig({...config, authorizationUser: e.target.value})}
                 placeholder="Ex: 1001, 2001, ext123"
+                className="h-8"
               />
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="display-name">Nome de exibição</Label>
+            <div className="grid gap-1 mb-1">
+              <Label htmlFor="display-name" className="text-xs">Nome de exibição</Label>
               <Input
                 id="display-name"
                 value={config.displayName}
                 onChange={(e) => setConfig({...config, displayName: e.target.value})}
                 placeholder="Ex: João Silva"
+                className="h-8"
               />
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
+            <div className="grid gap-1 mb-1">
+              <Label htmlFor="password" className="text-xs">Senha</Label>
               <Input
                 id="password"
                 type="password"
                 value={config.password}
                 onChange={(e) => setConfig({...config, password: e.target.value})}
                 placeholder="Senha do ramal"
+                className="h-8"
               />
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="domain">Domínio SIP</Label>
+            <div className="grid gap-1 mb-1">
+              <Label htmlFor="domain" className="text-xs">Domínio SIP</Label>
               <Input
                 id="domain"
                 value={config.domain}
                 onChange={(e) => setConfig({...config, domain: e.target.value})}
                 placeholder="Ex: pbx.suaempresa.com, asterisk.local"
+                className="h-8"
               />
-              <div className="text-xs text-muted-foreground mt-1">
-                <p>Se você está enfrentando problemas de conexão, experimente usar o endereço IP do servidor ao invés do nome de domínio.</p>
+              <div className="text-[10px] text-muted-foreground">
+                <p>Se você está enfrentando problemas de conexão, experimente usar o endereço IP do servidor.</p>
               </div>
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="ws-uri">URI do WebSocket</Label>
+            <div className="grid gap-1 mb-1">
+              <Label htmlFor="ws-uri" className="text-xs">URI do WebSocket</Label>
               <Input
                 id="ws-uri"
                 value={config.wsUri}
                 onChange={(e) => setConfig({...config, wsUri: e.target.value})}
                 placeholder="Ex: wss://pbx.suaempresa.com:8089/ws"
+                className="h-8"
               />
+              <div className="text-[10px] text-neutral-500">
+                <p>Formato: wss://dominio.com:porta/ws | Portas: 8088 ou 8089</p>
+              </div>
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="expires">Tempo de registro (segundos)</Label>
+            <div className="grid gap-1 mb-1">
+              <Label htmlFor="expires" className="text-xs">Tempo de registro (segundos)</Label>
               <Input
                 id="expires"
                 type="number"
                 value={config.registerExpires}
                 onChange={(e) => setConfig({...config, registerExpires: parseInt(e.target.value)})}
                 placeholder="Ex: 600"
+                className="h-8"
               />
             </div>
             
-            <Separator />
-            
-            <div className="grid gap-2">
+            <div className="mb-1">
               <div className="flex items-center justify-between">
-                <Label htmlFor="debug-mode">Modo de depuração</Label>
+                <Label htmlFor="debug-mode" className="text-xs">Modo de depuração</Label>
                 <Switch
                   id="debug-mode"
                   checked={config.debug}
                   onCheckedChange={(checked) => setConfig({...config, debug: checked})}
+                  className="scale-75"
                 />
               </div>
-              <p className="text-xs text-neutral-500">
+              <p className="text-[10px] text-neutral-500">
                 Ativa logs detalhados no console do navegador
               </p>
             </div>
             
             <Separator />
             
-            <div className="space-y-2">
-              <Label>Controles de volume</Label>
+            <div className="space-y-1">
+              <Label className="text-xs">Controles de volume</Label>
               
-              <div className="flex items-center space-x-2">
-                <Mic className="h-4 w-4" />
+              <div className="flex items-center gap-1">
+                <Mic className="h-3 w-3" />
                 <div className="w-full">
                   <Label htmlFor="mic-volume" className="sr-only">Volume do microfone</Label>
                   <input
@@ -1218,14 +1226,14 @@ export function SoftPhone({
                     max="100"
                     value={micVolume}
                     onChange={(e) => setMicVolume(parseInt(e.target.value))}
-                    className="w-full"
+                    className="w-full h-3"
                   />
                 </div>
-                <span className="text-xs w-10 text-right">{micVolume}%</span>
+                <span className="text-[10px] w-8 text-right">{micVolume}%</span>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Volume className="h-4 w-4" />
+              <div className="flex items-center gap-1">
+                <Volume className="h-3 w-3" />
                 <div className="w-full">
                   <Label htmlFor="speaker-volume" className="sr-only">Volume do alto-falante</Label>
                   <input
@@ -1235,10 +1243,10 @@ export function SoftPhone({
                     max="100"
                     value={speakerVolume}
                     onChange={(e) => setSpeakerVolume(parseInt(e.target.value))}
-                    className="w-full"
+                    className="w-full h-3"
                   />
                 </div>
-                <span className="text-xs w-10 text-right">{speakerVolume}%</span>
+                <span className="text-[10px] w-8 text-right">{speakerVolume}%</span>
               </div>
             </div>
           </div>
