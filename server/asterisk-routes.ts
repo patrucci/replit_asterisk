@@ -306,6 +306,105 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
     }
   });
   
+  // Rota para testar a resolução DNS de um hostname - sem autenticação para diagnósticos
+  app.post("/api/asterisk/test-dns", async (req, res) => {
+    try {
+      const { host } = req.body;
+      
+      if (!host) {
+        return res.status(400).json({
+          success: false,
+          message: "Host é obrigatório para o teste de DNS"
+        });
+      }
+      
+      // Verificar se é um endereço IP
+      const isIpAddress = host.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
+      
+      if (isIpAddress) {
+        return res.status(200).json({
+          success: true,
+          message: `O valor fornecido (${host}) é um endereço IP, não é necessário resolver DNS.`,
+          ip: host
+        });
+      }
+
+      console.log(`Resolvendo DNS para ${host}...`);
+      const dnsLookup = promisify(dns.lookup);
+      
+      try {
+        const result = await dnsLookup(host);
+        return res.status(200).json({
+          success: true,
+          message: `Resolução DNS bem-sucedida para ${host}`,
+          hostname: host,
+          ip: result.address,
+          family: `IPv${result.family}`
+        });
+      } catch (dnsError) {
+        console.error(`Erro ao resolver DNS para ${host}:`, dnsError);
+        return res.status(400).json({
+          success: false,
+          message: `Não foi possível resolver o DNS para ${host}`,
+          error: dnsError instanceof Error ? dnsError.message : String(dnsError),
+          diagnosticInfo: `Tente verificar:\n- Se o hostname está digitado corretamente\n- Se você tem acesso à internet\n- Se o servidor DNS está respondendo`
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao testar DNS:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao testar DNS",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Rota para testar conexões WebSocket (portas 8088 e 8089) - sem autenticação para diagnósticos
+  app.post("/api/asterisk/test-websocket", async (req, res) => {
+    try {
+      const { host, ports = [8088, 8089], timeout = 5000 } = req.body;
+      
+      if (!host) {
+        return res.status(400).json({
+          success: false,
+          message: "Host é obrigatório para o teste de WebSocket"
+        });
+      }
+      
+      console.log(`Testando conexão WebSocket em ${host} nas portas ${ports.join(', ')}...`);
+      
+      const results = [];
+      let anySuccess = false;
+      
+      for (const port of ports) {
+        const result = await asteriskAMIManager.testTCPConnection(host, port, timeout);
+        results.push({ port, ...result });
+        if (result.success) {
+          anySuccess = true;
+        }
+      }
+      
+      return res.status(200).json({
+        success: anySuccess,
+        message: anySuccess 
+          ? `Conexão bem-sucedida em pelo menos uma porta WebSocket no servidor ${host}`
+          : `Nenhuma porta WebSocket disponível no servidor ${host}`,
+        results,
+        diagnosticInfo: anySuccess
+          ? `O servidor ${host} está aceitando conexões WebSocket. Isso é um bom sinal para o funcionamento do softphone.`
+          : `O servidor ${host} não está aceitando conexões nas portas WebSocket (8088/8089). Verifique se o módulo WebSocket está habilitado no Asterisk.`
+      });
+    } catch (error) {
+      console.error('Erro ao testar WebSocket:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Erro ao testar WebSocket",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Rota para verificar o status da conexão Asterisk (pública para facilitar diagnóstico)
   app.get("/api/asterisk/status", async (req, res) => {
     try {
