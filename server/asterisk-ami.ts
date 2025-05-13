@@ -386,7 +386,7 @@ class AsteriskAMIManager extends EventEmitter {
   
   // Configurar WebSocket server para comunicação em tempo real
   private simulationTimer: NodeJS.Timeout | null = null;
-  public simulationMode = true; // Ativar modo de simulação temporariamente enquanto resolvemos os problemas de conexão
+  public simulationMode = false; // Desativar modo de simulação para conectar ao servidor real
   
   setupWebsocket(server: Server, path: string = '/queue-events') {
     this.wss = new WebSocketServer({ server, path });
@@ -1633,7 +1633,9 @@ Verifique as configurações do Asterisk no arquivo 'manager.conf':
   async runConnectionDiagnostics(host: string, port: number): Promise<string> {
     console.log(`Executando diagnóstico avançado para ${host}:${port}...`);
     
-    let diagnosticInfo = "## Diagnóstico de Conexão Asterisk\n\n";
+    let diagnosticInfo = "## DIAGNÓSTICO DETALHADO DE CONEXÃO ASTERISK\n\n";
+    diagnosticInfo += `Data/Hora: ${new Date().toISOString()}\n`;
+    diagnosticInfo += `Servidor alvo: ${host}:${port}\n\n`;
     
     try {
       // Verificar portas alternativas comuns para Asterisk AMI

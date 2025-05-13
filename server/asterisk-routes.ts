@@ -6,9 +6,8 @@ import { eq } from "drizzle-orm";
 import dns from "dns";
 import { promisify } from "util";
 
-// Ativar modo de simulação enquanto resolve problemas de conexão
-// Uma vez resolvidos os problemas, você pode desativar para usar a conexão real
-const SIMULATION_MODE = true; // false = usar conexão real, true = usar simulação
+// Desativar modo de simulação para usar conexão real com Asterisk
+const SIMULATION_MODE = false; // false = usar conexão real, true = usar simulação
 
 export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   // Definir modo de simulação do manager
