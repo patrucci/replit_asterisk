@@ -127,13 +127,47 @@ export class SipClient extends EventEmitter implements ISipClient {
       
       // Verificar e ajustar o URI do WebSocket para compatibilidade com páginas HTTPS
       let wsUri = this.config.wsUri;
+      const originalUri = wsUri;
       
+      // CORREÇÃO: Verificar todos os casos possíveis de protocolo
       // Em páginas HTTPS, precisamos usar WebSocket seguro (wss://)
-      if (window.location.protocol === 'https:' && wsUri.startsWith('ws://')) {
-        console.warn('Página HTTPS detectada mas URI WebSocket está usando protocolo inseguro ws://');
-        console.warn('Convertendo automaticamente de ws:// para wss:// para evitar bloqueio de mixed-content');
-        wsUri = wsUri.replace('ws://', 'wss://');
-        
+      if (window.location.protocol === 'https:') {
+        if (wsUri.startsWith('ws://')) {
+          console.warn('Página HTTPS detectada mas URI WebSocket está usando protocolo inseguro ws://');
+          console.warn('Convertendo automaticamente de ws:// para wss:// para evitar bloqueio de mixed-content');
+          wsUri = wsUri.replace('ws://', 'wss://');
+        } else if (!wsUri.startsWith('wss://')) {
+          // Se o usuário forneceu apenas o domínio sem protocolo, adicionar wss://
+          console.warn('Nenhum protocolo encontrado na URI WebSocket. Adicionando protocolo seguro wss://');
+          wsUri = 'wss://' + wsUri;
+        }
+      } else {
+        // Em páginas HTTP, podemos usar ws:// ou wss://
+        if (!wsUri.startsWith('ws://') && !wsUri.startsWith('wss://')) {
+          console.warn('Nenhum protocolo encontrado na URI WebSocket. Adicionando protocolo ws://');
+          wsUri = 'ws://' + wsUri;
+        }
+      }
+      
+      // Garantir que a porta esteja especificada (8088 é a padrão do Asterisk)
+      if (!wsUri.includes(':8088') && !wsUri.includes(':8089') && 
+          !wsUri.match(/:\d+\//) && !wsUri.endsWith(':8088') && !wsUri.endsWith(':8089')) {
+        console.warn('Nenhuma porta especificada na URI WebSocket. Adicionando porta padrão 8088');
+        if (wsUri.includes('/ws')) {
+          wsUri = wsUri.replace('/ws', ':8088/ws');
+        } else {
+          wsUri = wsUri + ':8088/ws';
+        }
+      }
+      
+      // Garantir que o caminho /ws esteja presente
+      if (!wsUri.includes('/ws')) {
+        console.warn('Caminho /ws não encontrado na URI WebSocket. Adicionando caminho /ws');
+        wsUri = wsUri + '/ws';
+      }
+      
+      if (originalUri !== wsUri) {
+        console.log(`URI WebSocket corrigida: ${originalUri} -> ${wsUri}`);
         // Atualizar a configuração para referências futuras
         this.config.wsUri = wsUri;
       }
@@ -151,14 +185,53 @@ export class SipClient extends EventEmitter implements ISipClient {
         if (wsSocket) {
           wsSocket.addEventListener('open', () => {
             console.log(`[SIP WebSocket] Conexão aberta com ${wsUri}`);
+            this.emit('connection_status', { 
+              status: 'connected', 
+              uri: wsUri,
+              message: 'Conexão WebSocket estabelecida com sucesso'
+            });
           });
           
           wsSocket.addEventListener('error', (err: any) => {
             console.error(`[SIP WebSocket] Erro na conexão com ${wsUri}:`, err);
+            const errorMsg = err && err.message ? err.message : 'Erro desconhecido na conexão WebSocket';
+            
+            this.emit('connection_status', { 
+              status: 'error', 
+              uri: wsUri,
+              message: errorMsg,
+              details: `Não foi possível conectar ao servidor Asterisk via WebSocket. Verifique se o servidor está online e se as portas 8088/8089 estão abertas no firewall.`
+            });
           });
           
           wsSocket.addEventListener('close', (evt: any) => {
             console.warn(`[SIP WebSocket] Conexão fechada com ${wsUri}. Código: ${evt.code}, Razão: ${evt.reason}`);
+            
+            let closeReason = 'Conexão fechada';
+            if (evt && evt.code) {
+              if (evt.code === 1000) closeReason = 'Fechamento normal';
+              else if (evt.code === 1001) closeReason = 'Endpoint foi embora';
+              else if (evt.code === 1002) closeReason = 'Erro no protocolo';
+              else if (evt.code === 1003) closeReason = 'Dados não aceitos';
+              else if (evt.code === 1005) closeReason = 'Sem código de status';
+              else if (evt.code === 1006) closeReason = 'Conexão fechada anormalmente';
+              else if (evt.code === 1007) closeReason = 'Dados inválidos';
+              else if (evt.code === 1008) closeReason = 'Violação de política';
+              else if (evt.code === 1009) closeReason = 'Mensagem muito grande';
+              else if (evt.code === 1010) closeReason = 'Extensões não negociadas';
+              else if (evt.code === 1011) closeReason = 'Erro inesperado';
+              else if (evt.code === 1015) closeReason = 'Falha TLS';
+              else closeReason = `Conexão fechada (código ${evt.code})`;
+            }
+            
+            if (evt && evt.reason) closeReason += ': ' + evt.reason;
+            
+            this.emit('connection_status', { 
+              status: 'disconnected', 
+              uri: wsUri,
+              message: closeReason,
+              code: evt ? evt.code : null
+            });
           });
         }
         
