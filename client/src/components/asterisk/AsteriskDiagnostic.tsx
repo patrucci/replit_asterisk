@@ -284,7 +284,10 @@ export default function AsteriskDiagnostic() {
               </div>
             )}
             
-            {!testResult.success && !testResult.diagnosticInfo && (
+            {!testResult.success && !testResult.message?.includes("ECONNREFUSED") &&
+              !testResult.message?.includes("ENOTFOUND") &&
+              !testResult.message?.includes("ETIMEDOUT") && 
+              !testResult.diagnosticInfo && (
               <div className="mt-3 text-sm">
                 <strong>Recomendações:</strong>
                 <ul className="list-disc pl-5 space-y-1 mt-1">
@@ -304,6 +307,18 @@ export default function AsteriskDiagnostic() {
                     </>
                   )}
                 </ul>
+              </div>
+            )}
+            
+            {testResult && testResult.message?.includes("Authentication") && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm">
+                <p className="font-medium text-amber-800 mb-1">Erro de Autenticação - Diagnóstico:</p>
+                <ul className="list-disc pl-5 space-y-1 text-amber-700">
+                  <li>A conexão TCP com o servidor <strong>{host}:{port}</strong> foi estabelecida com sucesso</li>
+                  <li>O servidor Asterisk recusou as credenciais fornecidas</li>
+                  <li>As credenciais do usuário "<strong>{username}</strong>" estão incorretas ou este usuário não tem permissão AMI</li>
+                </ul>
+                <p className="mt-2 text-xs">Verifique o arquivo manager.conf no servidor Asterisk para confirmar as credenciais corretas. O arquivo está normalmente em /etc/asterisk/manager.conf.</p>
               </div>
             )}
           </div>

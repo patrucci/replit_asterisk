@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import * as net from 'net';
 import * as util from 'util';
+import * as dns from 'dns';
 
 // Interface para eventos de chamada
 interface CallEvent {
@@ -1644,11 +1645,9 @@ Verifique as configurações do Asterisk no arquivo 'manager.conf':
     diagnosticInfo += `===== TESTES REALIZADOS =====\n`;
     
     try {
-      // Usar estas variáveis ao longo do método
-      const utilModule = require('util');
-      const dnsModule = require('dns');
-      const promisifyFn = utilModule.promisify;
-      const lookupFn = promisifyFn(dnsModule.lookup);
+      // Usar as funções importadas
+      const { promisify } = util;
+      const lookupFn = promisify(dns.lookup);
       
       // Verificar resolução DNS primeiro
       diagnosticInfo += `1. RESOLUÇÃO DNS\n`;
@@ -1676,9 +1675,11 @@ Verifique as configurações do Asterisk no arquivo 'manager.conf':
       let portaAlternativaEncontrada = false;
       let portaSugerida = 0;
       
-      // Já verificamos o DNS acima, vamos pular direto para o ping
+      // Recriar testes de ping e conectividade
       try {
-        // Assumimos que o DNS já foi resolvido na seção anterior
+        // Primeiro obter o endereço IP para usar nos testes
+        const serverIp = (await lookupFn(host)).address;
+        
         diagnosticInfo += `* Teste de conectividade básica do servidor: `;
         
         // Tentar fazer ping no servidor (usando um socket TCP na porta 80 para verificar se o servidor está online)
@@ -1703,13 +1704,13 @@ Verifique as configurações do Asterisk no arquivo 'manager.conf':
             resolve(false);
           }, 3000);
           
-          pingSocket.connect(80, resultado.address);
+          pingSocket.connect(80, serverIp);
         });
         
         if (pingResult) {
-          diagnosticInfo += `SUCESSO - O servidor ${resultado.address} está online e respondendo na porta 80\n`;
+          diagnosticInfo += `SUCESSO - O servidor ${serverIp} está online e respondendo na porta 80\n`;
         } else {
-          diagnosticInfo += `FALHA - O servidor ${resultado.address} não responde na porta 80 (isso não significa que outras portas estejam indisponíveis)\n`;
+          diagnosticInfo += `FALHA - O servidor ${serverIp} não responde na porta 80 (isso não significa que outras portas estejam indisponíveis)\n`;
         }
         
       } catch (dnsErr) {
