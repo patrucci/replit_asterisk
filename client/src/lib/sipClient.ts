@@ -65,7 +65,7 @@ export class SipClient extends EventEmitter implements ISipClient {
   private isHold: boolean = false;
   private isMuted: boolean = false;
   private peerConnection: RTCPeerConnection | null = null;
-  private mockMode: boolean = false; // Modo de simulação para testes - SEMPRE FALSO PARA CONEXÃO REAL
+  public mockMode: boolean = false; // Modo de simulação para testes - SEMPRE FALSO PARA CONEXÃO REAL
   private mockRegisterTimer: any = null;
   private mockCallTimer: any = null;
   
