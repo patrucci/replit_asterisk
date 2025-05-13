@@ -830,62 +830,51 @@ export function SoftPhone({
 
   return (
     <Card className={`shadow-lg ${className}`}>
-      <CardHeader className="pb-2">
+      <CardHeader className="py-2 px-3">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">Softphone</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Badge
-              variant={
-                registerState === RegisterState.REGISTERED
-                  ? "default"
-                  : registerState === RegisterState.REGISTERING
-                  ? "outline"
-                  : "destructive"
-              }
-            >
-              {registerState === RegisterState.REGISTERED
-                ? "Conectado"
-                : registerState === RegisterState.REGISTERING
-                ? "Conectando..."
-                : "Desconectado"}
-            </Badge>
+          <div>
+            <CardTitle className="text-base">Softphone</CardTitle>
+            <CardDescription className="text-xs">
+              {config.displayName ? `${config.displayName} (${config.authorizationUser})` : config.authorizationUser}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-6 w-6 p-0"
               onClick={() => setIsMinimized(true)}
+              title="Minimizar"
             >
-              <Pause className="h-4 w-4" />
+              <Pause className="h-3 w-3" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-6 w-6 p-0"
               onClick={() => setConfigDialogOpen(true)}
+              title="Configurações"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-3 w-3" />
             </Button>
           </div>
         </div>
-        <CardDescription>
-          {config.displayName ? `${config.displayName} (${config.authorizationUser})` : config.authorizationUser}
-        </CardDescription>
       </CardHeader>
       
       {/* Aviso de modo de simulação */}
       {registerState === RegisterState.REGISTERED && simulationMode && (
-        <div className="mx-4 my-2 p-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded">
+        <div className="mx-3 my-1 p-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-sm">
           <p className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-            <strong>Modo de Simulação Ativo</strong>: O softphone está operando em modo de simulação para demonstração.
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <strong>Simulação Ativa</strong>: Modo de demonstração sem servidor real.
           </p>
         </div>
       )}
       
-      <CardContent className="pt-0">
+      <CardContent className="p-3 pt-0">
         {/* Mostrar chamada em andamento */}
         {callState !== CallState.NONE && (
-          <div className="mb-4 p-3 bg-secondary rounded-md">
+          <div className="mb-2 p-2 bg-secondary rounded-md">
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-medium">
@@ -906,59 +895,35 @@ export function SoftPhone({
               <div className="flex space-x-2">
                 {callState === CallState.ESTABLISHED && (
                   <>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-8 w-8 p-0 ${isMuted ? 'bg-amber-100' : ''}`}
-                            onClick={toggleMute}
-                          >
-                            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isMuted ? 'Ativar microfone' : 'Mudo'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 w-7 p-0 ${isMuted ? 'bg-amber-100' : ''}`}
+                      onClick={toggleMute}
+                      title={isMuted ? 'Ativar microfone' : 'Mudo'}
+                    >
+                      {isMuted ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+                    </Button>
                     
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-8 w-8 p-0 ${isHold ? 'bg-amber-100' : ''}`}
-                            onClick={toggleHold}
-                          >
-                            {isHold ? <PhoneForwarded className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isHold ? 'Retomar' : 'Espera'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 w-7 p-0 ${isHold ? 'bg-amber-100' : ''}`}
+                      onClick={toggleHold}
+                      title={isHold ? 'Retomar' : 'Espera'}
+                    >
+                      {isHold ? <PhoneForwarded className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                    </Button>
                     
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => setShowKeypad(!showKeypad)}
-                          >
-                            {showKeypad ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {showKeypad ? 'Fechar teclado' : 'Teclado numérico'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => setShowKeypad(!showKeypad)}
+                      title={showKeypad ? 'Fechar teclado' : 'Teclado numérico'}
+                    >
+                      {showKeypad ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                    </Button>
                   </>
                 )}
                 
@@ -969,10 +934,11 @@ export function SoftPhone({
                   <Button
                     variant="destructive"
                     size="sm"
+                    className="h-7 p-0 px-2 text-xs"
                     onClick={hangupCall}
                   >
-                    <PhoneOff className="h-4 w-4 mr-2" />
-                    Desligar
+                    <PhoneOff className="h-3 w-3 mr-1" />
+                    Desl
                   </Button>
                 )}
                 
@@ -982,19 +948,21 @@ export function SoftPhone({
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="h-7 p-0 px-2 text-xs"
                       onClick={rejectCall}
                     >
-                      <PhoneOff className="h-4 w-4 mr-2" />
-                      Rejeitar
+                      <PhoneOff className="h-3 w-3 mr-1" />
+                      Rej
                     </Button>
                     
                     <Button
                       variant="default"
                       size="sm"
+                      className="h-7 p-0 px-2 text-xs"
                       onClick={answerCall}
                     >
-                      <Phone className="h-4 w-4 mr-2" />
-                      Atender
+                      <Phone className="h-3 w-3 mr-1" />
+                      Atd
                     </Button>
                   </>
                 )}
@@ -1052,23 +1020,24 @@ export function SoftPhone({
         </Tabs>
       </CardContent>
       
-      <CardFooter className="pt-0 flex justify-between items-center">
+      <CardFooter className="pt-0 pb-2 flex justify-between items-center">
         {/* Botão de registro */}
         {registerState === RegisterState.REGISTERED ? (
-          <Button variant="outline" size="sm" onClick={unregisterSip}>
+          <Button variant="outline" size="sm" className="h-7 text-xs px-2 py-0" onClick={unregisterSip}>
             Desconectar
           </Button>
         ) : (
           <Button 
             variant="default" 
-            size="sm" 
+            size="sm"
+            className="h-7 text-xs px-2 py-0"
             onClick={registerSip}
             disabled={isRegistering || !config.authorizationUser || !config.password}
           >
             {isRegistering ? (
               <>
-                <RotateCw className="h-4 w-4 mr-2 animate-spin" />
-                Conectando...
+                <RotateCw className="h-3 w-3 mr-1 animate-spin" />
+                Conectando
               </>
             ) : (
               'Conectar'
@@ -1080,15 +1049,15 @@ export function SoftPhone({
         <div>
           <Badge 
             variant="outline"
-            className={
+            className={`text-xs py-0 px-1 ${
               registerState === RegisterState.REGISTERED ? 'bg-green-100 text-green-800' :
               registerState === RegisterState.REGISTERING ? 'bg-amber-100 text-amber-800' :
               'bg-red-100 text-red-800'
-            }
+            }`}
           >
-            {registerState === RegisterState.REGISTERED && <Check className="h-3 w-3 mr-1" />}
-            {registerState === RegisterState.REGISTERING && <RotateCw className="h-3 w-3 mr-1 animate-spin" />}
-            {registerState === RegisterState.FAILED && <AlertTriangle className="h-3 w-3 mr-1" />}
+            {registerState === RegisterState.REGISTERED && <Check className="h-2 w-2 mr-0.5" />}
+            {registerState === RegisterState.REGISTERING && <RotateCw className="h-2 w-2 mr-0.5 animate-spin" />}
+            {registerState === RegisterState.FAILED && <AlertTriangle className="h-2 w-2 mr-0.5" />}
             {registerState === RegisterState.UNREGISTERED && "Offline"}
             {registerState === RegisterState.REGISTERED && "Online"}
             {registerState === RegisterState.REGISTERING && "Conectando"}
