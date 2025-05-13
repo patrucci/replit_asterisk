@@ -32,11 +32,53 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
       const openPorts: number[] = [];
       
       // Testar cada porta individualmente
+      // Para o teste de portas personalizadas, precisamos procurar o método testTCPConnection
+      // no asteriskAMIManager. Vamos implementar uma versão modificada aqui com timeout mais curto
+      
+      const net = require('net');
+      
       for (const port of ports) {
+        console.log(`Testando porta ${port} em ${host}...`);
+        
         try {
-          // Usar o método já existente para testar conexão TCP
-          const result = await asteriskAMIManager.testTCPConnection(host, port);
-          if (result.success) {
+          // Teste TCP básico com timeout reduzido (3 segundos)
+          const isOpen = await new Promise<boolean>((resolve) => {
+            const socket = new net.Socket();
+            let resolved = false;
+            
+            const timeout = setTimeout(() => {
+              if (!resolved) {
+                resolved = true;
+                socket.destroy();
+                console.log(`Timeout na porta ${port}`);
+                resolve(false);
+              }
+            }, 3000); // Timeout reduzido para 3 segundos
+            
+            socket.on('connect', () => {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                socket.destroy();
+                console.log(`Porta ${port} está ABERTA`);
+                resolve(true);
+              }
+            });
+            
+            socket.on('error', (err: any) => {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                socket.destroy();
+                console.log(`Erro na porta ${port}: ${err.code || err.message}`);
+                resolve(false);
+              }
+            });
+            
+            socket.connect(port, host);
+          });
+          
+          if (isOpen) {
             openPorts.push(port);
           }
         } catch (err) {
