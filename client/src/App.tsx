@@ -23,11 +23,13 @@ import QueueDashboardPage from "@/pages/queue-dashboard-page";
 import QueueRealtimePage from "@/pages/queue-realtime-page";
 import QueueConfigPage from "@/pages/queue-config-page";
 import SoftphonePage from "@/pages/softphone-page";
+import DiagnosticoPage from "@/pages/diagnostico-page";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/diagnostico" component={DiagnosticoPage} />
       <ProtectedRoute path="/" component={DashboardPage} />
       <ProtectedRoute path="/clients" component={ClientsPage} />
       <ProtectedRoute path="/schedule" component={SchedulePage} />

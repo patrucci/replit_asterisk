@@ -306,8 +306,8 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
     }
   });
   
-  // Rota para verificar o status da conexão Asterisk
-  app.get("/api/asterisk/status", requireAuth, async (req, res) => {
+  // Rota para verificar o status da conexão Asterisk (pública para facilitar diagnóstico)
+  app.get("/api/asterisk/status", async (req, res) => {
     try {
       // Se estiver em modo de simulação, considerar como conectado
       if (SIMULATION_MODE) {
@@ -326,10 +326,10 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
       let configDetails = {};
       
       try {
-        // Buscar a organização do usuário
-        const organizationId = req.user!.organizationId;
-        
-        if (organizationId) {
+        // Se o usuário estiver autenticado, buscar as configurações da sua organização
+        if (req.user && req.user.organizationId) {
+          const organizationId = req.user.organizationId;
+          
           const [settings] = await db.select()
             .from(asteriskSettings)
             .where(eq(asteriskSettings.organizationId, organizationId));
