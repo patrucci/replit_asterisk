@@ -170,15 +170,112 @@ export function SoftphoneConnectionTest() {
       baseUri = baseUri.replace('ws://', '');
     }
     
-    // Definir os URIs para testar
-    const secureUri = `wss://${baseUri}`;
-    const insecureUri = `ws://${baseUri}`;
+    // Extrair hostname e path
+    let hostname = baseUri;
+    let path = '/ws';
+    let port = '';
     
-    // Atualizar o URI atual para o seguro e iniciar o teste
-    setWsUri(secureUri);
-    setTimeout(() => {
-      testWebSocketConnection();
-    }, 100);
+    // Se tiver porta e/ou path, extrair
+    if (baseUri.includes(':')) {
+      const parts = baseUri.split(':');
+      hostname = parts[0];
+      
+      // Se o segundo elemento contém uma /, precisa dividir novamente
+      if (parts[1].includes('/')) {
+        const portPathParts = parts[1].split('/');
+        port = portPathParts[0];
+        path = '/' + portPathParts.slice(1).join('/');
+      } else {
+        port = parts[1];
+      }
+    } else if (baseUri.includes('/')) {
+      const parts = baseUri.split('/');
+      hostname = parts[0];
+      path = '/' + parts.slice(1).join('/');
+    }
+    
+    // Se o path for vazio, usar /ws como padrão
+    if (!path || path === '/') {
+      path = '/ws';
+    }
+    
+    // Lista de combinações de protocolo e porta para testar
+    const variations = [
+      { protocol: 'wss', port: port || '8089' },
+      { protocol: 'ws', port: port || '8089' },
+      { protocol: 'wss', port: '8088' },
+      { protocol: 'ws', port: '8088' },
+      { protocol: 'wss', port: '443' },
+      { protocol: 'ws', port: '80' }
+    ];
+    
+    setIsTesting(true);
+    setTestResult({
+      success: false,
+      message: 'Iniciando testes automáticos de conectividade...',
+      details: `Testando ${variations.length} combinações diferentes de protocolo e porta.`
+    });
+    
+    let anySuccess = false;
+    let successMsg = '';
+    
+    for (const variation of variations) {
+      const testUri = `${variation.protocol}://${hostname}:${variation.port}${path}`;
+      
+      setTestResult({
+        success: false,
+        message: `Testando ${testUri}...`,
+        details: 'Aguarde enquanto tentamos conectar nesta configuração.'
+      });
+      
+      try {
+        const ws = new WebSocket(testUri);
+        
+        const result = await new Promise<boolean>((resolve) => {
+          const timeout = setTimeout(() => {
+            ws.close();
+            resolve(false);
+          }, 5000);
+          
+          ws.onopen = () => {
+            clearTimeout(timeout);
+            ws.close();
+            resolve(true);
+          };
+          
+          ws.onerror = () => {
+            clearTimeout(timeout);
+            ws.close();
+            resolve(false);
+          };
+        });
+        
+        if (result) {
+          anySuccess = true;
+          successMsg = testUri;
+          setWsUri(testUri);
+          break;
+        }
+      } catch (err) {
+        console.error(`Erro ao testar ${testUri}:`, err);
+      }
+    }
+    
+    if (anySuccess) {
+      setTestResult({
+        success: true,
+        message: 'Conexão bem-sucedida!',
+        details: `O URI funcionou: ${successMsg}`
+      });
+    } else {
+      setTestResult({
+        success: false,
+        message: 'Não foi possível conectar em nenhuma configuração.',
+        details: 'Tentamos diversas combinações de protocolo e porta, mas nenhuma teve sucesso.'
+      });
+    }
+    
+    setIsTesting(false);
   };
   
   return (
@@ -281,7 +378,31 @@ export function SoftphoneConnectionTest() {
                           <div className="font-medium mb-1">Endereços IPv4:</div>
                           <div className="flex flex-wrap gap-1">
                             {dnsResults.ipv4Addresses.map((ip: string, i: number) => (
-                              <code key={i} className="bg-muted p-1 rounded text-xs">{ip}</code>
+                              <div key={i} className="flex items-center">
+                                <code className="bg-muted p-1 rounded text-xs">{ip}</code>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-6 px-2 py-0 ml-1 text-xs"
+                                  onClick={() => {
+                                    // Extrair a porta e o caminho do URI atual
+                                    try {
+                                      const currentUrl = new URL(wsUri);
+                                      const port = currentUrl.port || (currentUrl.protocol === 'wss:' ? '443' : '80');
+                                      const path = currentUrl.pathname || '/ws';
+                                      const protocol = currentUrl.protocol === 'wss:' ? 'wss:' : 'ws:';
+                                      
+                                      // Criar novo URI usando o IP
+                                      const newUri = `${protocol}//${ip}:${port}${path}`;
+                                      setWsUri(newUri);
+                                    } catch (err) {
+                                      console.error('Erro ao construir URI com IP:', err);
+                                    }
+                                  }}
+                                >
+                                  Usar IP
+                                </Button>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -348,9 +469,15 @@ export function SoftphoneConnectionTest() {
                 variant="outline" 
                 onClick={testBothProtocols}
                 disabled={isTesting || !wsUri}
-                title="Testa wss:// e ws:// automaticamente"
+                title="Testa diversas combinações de protocolos e portas automaticamente"
+                className="gap-1"
               >
-                Teste Automático
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <path d="m18 16 4-4-4-4"></path>
+                  <path d="m6 8-4 4 4 4"></path>
+                  <path d="m14.5 4-5 16"></path>
+                </svg>
+                Teste Completo
               </Button>
             </div>
           </div>
@@ -376,19 +503,55 @@ export function SoftphoneConnectionTest() {
           )}
         </div>
         
-        <div className="mt-6 bg-muted p-4 rounded-md">
-          <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Dicas para solução de problemas
-          </h3>
-          <ul className="text-xs space-y-1 list-disc list-inside">
-            <li>O WebSocket URI deve usar o formato: <code>wss://dominio.com:porta/ws</code></li>
-            <li>Portas comuns para WebSocket SIP: 8088 ou 8089</li>
-            <li>Se <code>wss://</code> falhar, tente <code>ws://</code> para conexões não-seguras</li>
-            <li>Verifique se o módulo WebSocket está habilitado no Asterisk</li>
-            <li>Certifique-se que o firewall não está bloqueando a porta WebSocket</li>
-            <li>Para conexões <code>wss://</code>, o certificado SSL deve ser válido</li>
-          </ul>
+        <div className="mt-4 flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Problemas de conectividade?
+            </h3>
+            
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => {
+                localStorage.setItem('softphone_mock_mode', 'true');
+                
+                // Mostrar alerta
+                setTestResult({
+                  success: true,
+                  message: 'Modo de simulação ativado com sucesso!',
+                  details: 'O softphone agora funcionará em modo de simulação. Recarregue a página para que as alterações tenham efeito.'
+                });
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                <path d="M15 12h.01"></path>
+                <path d="M19 12h.01"></path>
+                <path d="M11 12h.01"></path>
+                <path d="M7 12h.01"></path>
+                <path d="M15 16h.01"></path>
+                <path d="M19 16h.01"></path>
+                <path d="M11 16h.01"></path>
+                <path d="M7 16h.01"></path>
+                <path d="M5 8h14"></path>
+              </svg>
+              Usar Modo de Simulação
+            </Button>
+          </div>
+          
+          <div className="bg-muted p-4 rounded-md">
+            <ul className="text-xs space-y-1 list-disc list-inside">
+              <li>O WebSocket URI deve usar o formato: <code>wss://dominio.com:porta/ws</code></li>
+              <li>Portas comuns para WebSocket SIP: 8088 ou 8089</li>
+              <li>Se <code>wss://</code> falhar, tente <code>ws://</code> para conexões não-seguras</li>
+              <li>Verifique se o módulo WebSocket está habilitado no Asterisk</li>
+              <li>Certifique-se que o firewall não está bloqueando a porta WebSocket</li>
+              <li>Para conexões <code>wss://</code>, o certificado SSL deve ser válido</li>
+              <li><strong>Se o servidor estiver inacessível</strong>, use o Modo de Simulação para testar a interface</li>
+            </ul>
+          </div>
         </div>
       </CardContent>
       <CardFooter className="border-t pt-3 text-xs text-muted-foreground">

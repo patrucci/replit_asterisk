@@ -720,8 +720,20 @@ export class SipClient extends EventEmitter implements ISipClient {
   // Atualizar o estado do registro
   private updateRegisterState(state: RegisterState): void {
     this.registerState = state;
-    console.log(`SIP Register State Changed: ${RegisterState[state]}`);
+    let stateName = "UNKNOWN";
+    switch(state) {
+      case RegisterState.UNREGISTERED: stateName = "UNREGISTERED"; break;
+      case RegisterState.REGISTERED: stateName = "REGISTERED"; break;
+      case RegisterState.REGISTERING: stateName = "REGISTERING"; break;
+      case RegisterState.FAILED: stateName = "FAILED"; break;
+    }
+    console.log(`SIP Register State Changed: ${state} (${stateName})`);
     this.emit('registerStateChanged', state);
+    
+    // Se o registro falhou e temos um modo de conexão automática, ativar modo de simulação
+    if (state === RegisterState.FAILED && !this.mockMode) {
+      console.warn('Registro SIP falhou. Considere ativar o modo de simulação para testes.');
+    }
   }
   
   // Limpar sessão após término da chamada
