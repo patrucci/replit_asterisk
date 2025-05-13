@@ -365,7 +365,9 @@ export function SoftPhone({
       console.log("Definindo configurações para o cliente SIP...", adjustedConfig);
       
       // Definir explicitamente se deve usar modo de simulação
+      // Garantir que o modo de simulação seja definido antes de qualquer configuração
       sipClient.setMockMode(simulationMode);
+      console.log(`SoftPhone: Definindo modo de simulação: ${simulationMode ? 'ATIVADO' : 'DESATIVADO'}`);
       
       if (simulationMode) {
         toast({
@@ -382,6 +384,9 @@ export function SoftPhone({
       // Configurar o cliente SIP com debug ativado para facilitar diagnóstico
       sipClient.setConfig(adjustedConfig);
       
+      // Verificar novamente se o modo de simulação foi mantido
+      console.log(`SoftPhone: Modo de simulação após setConfig: ${(sipClient as any).mockMode ? 'ATIVADO' : 'DESATIVADO'}`);
+      
       // Colocar timeout de 20 segundos para não ficar tentando para sempre
       const timeout = setTimeout(() => {
         if (registerState !== RegisterState.REGISTERED) {
@@ -396,10 +401,13 @@ export function SoftPhone({
       
       console.log("Iniciando registro SIP...");
       
+      console.log("Verificando modo de simulação antes do registro:", (sipClient as any).mockMode ? "ATIVADO" : "DESATIVADO");
+      
       // Registrar
       sipClient.register()
         .then(() => {
           console.log("Registro iniciado com sucesso");
+          console.log("Modo de simulação após registro:", (sipClient as any).mockMode ? "ATIVADO" : "DESATIVADO");
           // O estado será atualizado pelos eventos
         })
         .catch(error => {

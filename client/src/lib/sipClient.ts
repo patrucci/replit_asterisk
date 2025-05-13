@@ -98,8 +98,9 @@ export class SipClient extends EventEmitter implements ISipClient {
     console.log(`Usuário: ${this.config.authorizationUser}`);
     console.log(`Tempo de registro: ${this.config.registerExpires || 600} segundos`);
     
-    // Verificar se estamos em modo de simulação
-    console.log(`Modo de simulação está ${this.mockMode ? 'ATIVADO' : 'DESATIVADO'}.`);
+    // Verificar e logar o modo de simulação atual
+    const currentMockMode = this.mockMode;
+    console.log(`SipClient.register(): Modo de simulação está ${currentMockMode ? 'ATIVADO' : 'DESATIVADO'}`);
     
     // Se estamos em modo de simulação, simular um registro bem-sucedido
     if (this.mockMode) {
