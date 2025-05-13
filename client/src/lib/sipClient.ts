@@ -130,8 +130,27 @@ export class SipClient extends EventEmitter implements ISipClient {
       let socket;
       
       try {
+        console.log("Iniciando conexão WebSocket com: " + wsUri);
+        
         // @ts-ignore - JsSIP tem problema de tipagem, mas a propriedade existe
         socket = new JsSIP.WebSocketInterface(wsUri);
+        
+        // Adicionar logs detalhados para o socket
+        const wsSocket = (socket as any).socket;
+        if (wsSocket) {
+          wsSocket.addEventListener('open', () => {
+            console.log(`[SIP WebSocket] Conexão aberta com ${wsUri}`);
+          });
+          
+          wsSocket.addEventListener('error', (err: any) => {
+            console.error(`[SIP WebSocket] Erro na conexão com ${wsUri}:`, err);
+          });
+          
+          wsSocket.addEventListener('close', (evt: any) => {
+            console.warn(`[SIP WebSocket] Conexão fechada com ${wsUri}. Código: ${evt.code}, Razão: ${evt.reason}`);
+          });
+        }
+        
         console.log("WebSocket interface criado com sucesso usando: " + wsUri);
       } catch (wsError) {
         console.warn(`Erro ao conectar usando ${wsUri}`, wsError);
@@ -143,6 +162,23 @@ export class SipClient extends EventEmitter implements ISipClient {
           try {
             // @ts-ignore
             socket = new JsSIP.WebSocketInterface(alternativeUri);
+            
+            // Adicionar logs para a conexão alternativa também
+            const wsSocket = (socket as any).socket;
+            if (wsSocket) {
+              wsSocket.addEventListener('open', () => {
+                console.log(`[SIP WebSocket Alt] Conexão aberta com ${alternativeUri}`);
+              });
+              
+              wsSocket.addEventListener('error', (err: any) => {
+                console.error(`[SIP WebSocket Alt] Erro na conexão com ${alternativeUri}:`, err);
+              });
+              
+              wsSocket.addEventListener('close', (evt: any) => {
+                console.warn(`[SIP WebSocket Alt] Conexão fechada com ${alternativeUri}. Código: ${evt.code}, Razão: ${evt.reason}`);
+              });
+            }
+            
             console.log("WebSocket interface criado com sucesso usando versão não segura: " + alternativeUri);
           } catch (altError) {
             console.error(`Também falhou a conexão alternativa:`, altError);
@@ -243,7 +279,35 @@ export class SipClient extends EventEmitter implements ISipClient {
     });
     
     this.ua.on('registrationFailed', (e: any) => {
-      console.error("UA: Falha no registro SIP.", e?.cause || "", e?.response?.status_code || "");
+      const cause = e?.cause || "Causa desconhecida";
+      const statusCode = e?.response?.status_code || "Sem código de status";
+      const responseText = e?.response?.reason_phrase || "Sem detalhes adicionais";
+      
+      console.error(`UA: Falha no registro SIP. Causa: ${cause}, Código: ${statusCode}, Resposta: ${responseText}`);
+      
+      // Diagnóstico adicional baseado na causa da falha
+      if (cause === "Request Timeout") {
+        console.error("DIAGNÓSTICO: O servidor SIP não está respondendo. Verifique se o servidor está acessível e se a porta está correta.");
+      } else if (cause.includes("Rejected") || statusCode === 401 || statusCode === 403) {
+        console.error("DIAGNÓSTICO: Credenciais rejeitadas. Verifique se o usuário e senha estão corretos.");
+      } else if (cause.includes("Transport Error")) {
+        console.error("DIAGNÓSTICO: Erro de transporte. O servidor pode estar bloqueando conexões WebSocket.");
+      } else if (statusCode === 404) {
+        console.error("DIAGNÓSTICO: Extensão não encontrada. Verifique se o ramal existe no servidor Asterisk.");
+      }
+      
+      // Tentar exibir detalhes completos do erro
+      try {
+        console.error("Detalhes completos do erro:", JSON.stringify({
+          cause,
+          statusCode,
+          responseText,
+          response: e?.response,
+        }, null, 2));
+      } catch (err) {
+        console.error("Não foi possível exibir detalhes completos do erro.");
+      }
+      
       this.updateRegisterState(RegisterState.FAILED);
       this.emit('registrationFailed', e);
     });
