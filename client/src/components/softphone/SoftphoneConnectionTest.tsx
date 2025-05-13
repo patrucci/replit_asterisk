@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Wifi, CheckCircle, AlertTriangle, XCircle, Settings } from 'lucide-react';
+import { Loader2, Wifi, CheckCircle, AlertTriangle, XCircle, Settings, Globe, Server } from 'lucide-react';
 import { sipClient } from '@/lib/sipClient';
+import { apiRequest } from '@/lib/queryClient';
+import { Separator } from '@/components/ui/separator';
 
 interface TestResult {
   success: boolean;
@@ -16,8 +18,11 @@ interface TestResult {
 export function SoftphoneConnectionTest() {
   const [wsUri, setWsUri] = useState('wss://voip.lansolver.com:8089/ws');
   const [isTesting, setIsTesting] = useState(false);
+  const [isDnsLookup, setIsDnsLookup] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [savedConfig, setSavedConfig] = useState<any>(null);
+  const [dnsResults, setDnsResults] = useState<any>(null);
+  const [hostName, setHostName] = useState('voip.lansolver.com');
   
   // Carregar configurações salvas do softphone
   useEffect(() => {
@@ -30,12 +35,48 @@ export function SoftphoneConnectionTest() {
         // Definir o URI WebSocket da configuração se estiver disponível
         if (parsedConfig.wsUri) {
           setWsUri(parsedConfig.wsUri);
+          
+          // Extrair o hostname do wsUri
+          try {
+            const url = new URL(parsedConfig.wsUri);
+            setHostName(url.hostname);
+          } catch (error) {
+            console.error('Erro ao extrair hostname do URI:', error);
+          }
         }
       }
     } catch (error) {
       console.error('Erro ao carregar configurações salvas:', error);
     }
   }, []);
+  
+  // Função para realizar consulta DNS do hostname
+  const performDnsLookup = async () => {
+    if (!hostName) return;
+    
+    setIsDnsLookup(true);
+    setDnsResults(null);
+    
+    try {
+      console.log(`Realizando DNS lookup para ${hostName}...`);
+      
+      const response = await apiRequest('POST', '/api/asterisk/dns-lookup', { hostname: hostName });
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('Resultados DNS:', data.results);
+        setDnsResults(data.results);
+      } else {
+        console.error('Erro na consulta DNS:', data.message);
+        setDnsResults({ error: data.message });
+      }
+    } catch (error: any) {
+      console.error('Falha ao realizar consulta DNS:', error);
+      setDnsResults({ error: error.message || 'Erro desconhecido na consulta DNS' });
+    } finally {
+      setIsDnsLookup(false);
+    }
+  };
   
   // Função para testar a conexão WebSocket diretamente no navegador
   const testWebSocketConnection = async () => {
@@ -178,9 +219,115 @@ export function SoftphoneConnectionTest() {
           </Card>
         )}
       
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="ws-uri">URI do WebSocket SIP</Label>
+        <div className="space-y-5">
+          {/* Seção de DNS Lookup */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hostname" className="text-sm font-medium">Hostname do Servidor</Label>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Globe className="h-3 w-3" />
+                Diagnóstico DNS
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Input
+                id="hostname"
+                value={hostName}
+                onChange={(e) => setHostName(e.target.value)}
+                placeholder="voip.example.com"
+                className="flex-1"
+              />
+              <Button 
+                variant="outline" 
+                onClick={performDnsLookup}
+                disabled={isDnsLookup || !hostName}
+                className="gap-1"
+              >
+                {isDnsLookup ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Server className="h-4 w-4" />
+                )}
+                Verificar DNS
+              </Button>
+            </div>
+            
+            {dnsResults && (
+              <Card className="bg-muted/30 border-dashed">
+                <CardHeader className="py-2">
+                  <CardTitle className="text-sm">Resultados DNS para {dnsResults.hostname}</CardTitle>
+                </CardHeader>
+                <CardContent className="py-2 text-xs">
+                  {dnsResults.error ? (
+                    <Alert variant="destructive" className="p-2">
+                      <AlertTriangle className="h-3 w-3" />
+                      <AlertTitle className="text-xs ml-1">Erro na consulta DNS</AlertTitle>
+                      <AlertDescription className="text-xs">{dnsResults.error}</AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="space-y-2">
+                      {dnsResults.defaultAddress && (
+                        <div>
+                          <div className="font-medium mb-1">Endereço Padrão:</div>
+                          <code className="bg-muted p-1 rounded text-xs">
+                            {dnsResults.defaultAddress.address} (IPv{dnsResults.defaultAddress.family})
+                          </code>
+                        </div>
+                      )}
+                      
+                      {dnsResults.ipv4Addresses && dnsResults.ipv4Addresses.length > 0 && (
+                        <div>
+                          <div className="font-medium mb-1">Endereços IPv4:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {dnsResults.ipv4Addresses.map((ip: string, i: number) => (
+                              <code key={i} className="bg-muted p-1 rounded text-xs">{ip}</code>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {dnsResults.ipv6Addresses && dnsResults.ipv6Addresses.length > 0 && (
+                        <div>
+                          <div className="font-medium mb-1">Endereços IPv6:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {dnsResults.ipv6Addresses.map((ip: string, i: number) => (
+                              <code key={i} className="bg-muted p-1 rounded text-xs overflow-x-auto">{ip}</code>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {(!dnsResults.ipv4Addresses || dnsResults.ipv4Addresses.length === 0) && 
+                       (!dnsResults.ipv6Addresses || dnsResults.ipv6Addresses.length === 0) && (
+                        <Alert variant="destructive" className="p-2">
+                          <AlertTriangle className="h-3 w-3" />
+                          <AlertTitle className="text-xs ml-1">Nenhum endereço IP encontrado</AlertTitle>
+                          <AlertDescription className="text-xs">
+                            O hostname não foi resolvido para nenhum endereço IP.
+                            Verifique se o nome está correto ou tente usar um endereço IP diretamente.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+          
+          <Separator />
+          
+          {/* Seção de Teste WebSocket */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ws-uri">URI do WebSocket SIP</Label>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Wifi className="h-3 w-3" />
+                Teste de Conexão
+              </div>
+            </div>
+            
             <div className="flex gap-2">
               <Input
                 id="ws-uri"

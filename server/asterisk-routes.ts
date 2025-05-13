@@ -72,6 +72,84 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
     }
   });
   
+  // Rota para realizar consulta DNS e encontrar endereços IP alternativos
+  app.post("/api/asterisk/dns-lookup", requireAuth, async (req, res) => {
+    try {
+      const { hostname } = req.body;
+      
+      if (!hostname) {
+        return res.status(400).json({
+          success: false,
+          message: "Nome do host é obrigatório"
+        });
+      }
+      
+      console.log(`Realizando DNS lookup para ${hostname}...`);
+      
+      // Promisificar os métodos DNS para usar async/await
+      const lookup = promisify(dns.lookup);
+      const resolve4 = promisify(dns.resolve4);
+      const resolve6 = promisify(dns.resolve6);
+      const resolveMx = promisify(dns.resolveMx);
+      
+      // Resultados
+      const results: any = {
+        hostname,
+        ipv4Addresses: [],
+        ipv6Addresses: [],
+        mxRecords: [],
+        defaultAddress: null
+      };
+      
+      // Obter o endereço padrão (IPv4 ou IPv6)
+      try {
+        const defaultAddress = await lookup(hostname);
+        results.defaultAddress = defaultAddress;
+        console.log(`Endereço padrão: ${defaultAddress.address} (${defaultAddress.family})`);
+      } catch (err: any) {
+        console.error(`Erro ao resolver endereço padrão: ${err.message}`);
+      }
+      
+      // Obter todos os endereços IPv4
+      try {
+        const ipv4 = await resolve4(hostname);
+        results.ipv4Addresses = ipv4;
+        console.log(`Endereços IPv4: ${ipv4.join(', ')}`);
+      } catch (err: any) {
+        console.error(`Erro ao resolver IPv4: ${err.message}`);
+      }
+      
+      // Obter todos os endereços IPv6
+      try {
+        const ipv6 = await resolve6(hostname);
+        results.ipv6Addresses = ipv6;
+        console.log(`Endereços IPv6: ${ipv6.join(', ')}`);
+      } catch (err: any) {
+        console.error(`Erro ao resolver IPv6: ${err.message}`);
+      }
+      
+      // Obter registros MX
+      try {
+        const mx = await resolveMx(hostname);
+        results.mxRecords = mx;
+        console.log(`Registros MX: ${mx.map(r => r.exchange).join(', ')}`);
+      } catch (err: any) {
+        console.error(`Erro ao resolver MX: ${err.message}`);
+      }
+      
+      return res.json({
+        success: true,
+        results
+      });
+    } catch (error: any) {
+      console.error(`Erro ao realizar DNS lookup: ${error.message}`);
+      return res.status(500).json({
+        success: false,
+        message: `Erro ao realizar DNS lookup: ${error.message}`
+      });
+    }
+  });
+  
   // Rota para verificar o status da conexão Asterisk
   app.get("/api/asterisk/status", requireAuth, async (req, res) => {
     try {
