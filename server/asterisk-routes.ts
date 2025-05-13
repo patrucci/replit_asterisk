@@ -9,6 +9,65 @@ import { eq } from "drizzle-orm";
 const SIMULATION_MODE = false; // false = usar conexão real, true = usar simulação
 
 export function setupAsteriskRoutes(app: Express, requireAuth: any) {
+  // Rota para testar a conexão TCP com o servidor Asterisk
+  app.post("/api/asterisk/test-connection", requireAuth, async (req, res) => {
+    try {
+      const { host, port } = req.body;
+      
+      if (!host || !port) {
+        return res.status(400).json({
+          success: false,
+          message: "Host e porta são obrigatórios"
+        });
+      }
+      
+      console.log(`Testando conexão TCP com ${host}:${port}...`);
+      
+      // Usar o método de teste de conexão TCP do AMI Manager
+      const result = await asteriskAMIManager.testTCPConnection(host, Number(port));
+      
+      return res.json(result);
+    } catch (error: any) {
+      console.error("Erro ao testar conexão TCP:", error);
+      return res.status(500).json({
+        success: false,
+        message: `Erro ao testar conexão: ${error.message}`,
+        error: error.stack
+      });
+    }
+  });
+  
+  // Rota para executar diagnóstico detalhado de conexão
+  app.post("/api/asterisk/diagnose", requireAuth, async (req, res) => {
+    try {
+      const { host, port } = req.body;
+      
+      if (!host) {
+        return res.status(400).json({
+          success: false,
+          message: "Host é obrigatório"
+        });
+      }
+      
+      console.log(`Executando diagnóstico de conexão para ${host}...`);
+      
+      // Usar o método de diagnóstico do AMI Manager
+      const diagnosticInfo = await asteriskAMIManager.runConnectionDiagnostics(host, port ? Number(port) : undefined);
+      
+      return res.json({
+        success: true,
+        diagnosticInfo
+      });
+    } catch (error: any) {
+      console.error("Erro ao executar diagnóstico:", error);
+      return res.status(500).json({
+        success: false,
+        message: `Erro ao executar diagnóstico: ${error.message}`,
+        error: error.stack
+      });
+    }
+  });
+  
   // Rota para verificar o status da conexão Asterisk
   app.get("/api/asterisk/status", requireAuth, async (req, res) => {
     try {

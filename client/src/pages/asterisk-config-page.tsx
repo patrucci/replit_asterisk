@@ -17,6 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import AsteriskConnect from "@/components/asterisk/AsteriskConnect";
 import AsteriskDiagnostic from "@/components/asterisk/AsteriskDiagnostic";
+import { AsteriskConnectionTest } from "@/components/asterisk/AsteriskConnectionTest";
 
 import { 
   Plus, Save, X, PhoneOff, Phone, Mic, Volume2, ListFilter, 
