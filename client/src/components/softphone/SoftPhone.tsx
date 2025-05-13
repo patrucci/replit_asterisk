@@ -385,11 +385,18 @@ export function SoftPhone({
         });
       }
       
+      // Garantir que o modo de simulação seja configurado ANTES do setConfig
+      sipClient.setMockMode(simulationMode);
+      console.log(`SoftPhone: Modo de simulação antes de setConfig: ${simulationMode ? 'ATIVADO' : 'DESATIVADO'}`);
+      
       // Configurar o cliente SIP com debug ativado para facilitar diagnóstico
       sipClient.setConfig(adjustedConfig);
       
-      // Verificar novamente se o modo de simulação foi mantido
+      // Verificar novamente se o modo de simulação foi mantido após setConfig
       console.log(`SoftPhone: Modo de simulação após setConfig: ${(sipClient as any).mockMode ? 'ATIVADO' : 'DESATIVADO'}`);
+      
+      // Garantir que o modo está correto novamente após setConfig (algumas implementações podem resetar)
+      sipClient.setMockMode(simulationMode);
       
       // Colocar timeout de 20 segundos para não ficar tentando para sempre
       const timeout = setTimeout(() => {
