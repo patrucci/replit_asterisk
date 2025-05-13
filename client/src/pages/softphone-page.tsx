@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { SoftPhone } from "@/components/softphone/SoftPhone";
+import { SoftphoneConnectionTest } from "@/components/softphone/SoftphoneConnectionTest";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { CallState, RegisterState } from "@/lib/sipClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PhoneCall, Settings, PhoneForwarded, Volume2, HelpCircle } from "lucide-react";
+import { PhoneCall, Settings, PhoneForwarded, Volume2, HelpCircle, Wifi } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 export default function SoftphonePage() {
@@ -180,7 +181,7 @@ export default function SoftphonePage() {
           {/* Coluna de Configurações e Informações */}
           <div>
             <Tabs defaultValue="status" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="status">
                   <PhoneCall className="h-4 w-4 mr-2" />
                   Status
@@ -188,6 +189,10 @@ export default function SoftphonePage() {
                 <TabsTrigger value="settings">
                   <Settings className="h-4 w-4 mr-2" />
                   Config
+                </TabsTrigger>
+                <TabsTrigger value="diagnostico">
+                  <Wifi className="h-4 w-4 mr-2" />
+                  Diagnóstico
                 </TabsTrigger>
                 <TabsTrigger value="help">
                   <HelpCircle className="h-4 w-4 mr-2" />
