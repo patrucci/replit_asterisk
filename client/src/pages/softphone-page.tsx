@@ -161,17 +161,17 @@ export default function SoftphonePage() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-neutral-800">Softphone</h2>
-          <p className="text-sm text-neutral-500">
+      <div className="container mx-auto px-2 py-4 max-w-full sm:px-4 sm:py-6 md:max-w-screen-lg overflow-x-hidden">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-neutral-800">Softphone</h2>
+          <p className="text-xs sm:text-sm text-neutral-500">
             Realize e receba chamadas diretamente do navegador com suporte ao codec G.729
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-6">
           {/* Coluna do Softphone */}
-          <div className="md:col-span-2">
+          <div>
             <SoftPhone 
               onCallStateChange={handleCallStateChange}
               onRegisterStateChange={handleRegisterStateChange}
@@ -181,21 +181,21 @@ export default function SoftphonePage() {
           {/* Coluna de Configurações e Informações */}
           <div>
             <Tabs defaultValue="status" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-                <TabsTrigger value="status" className="text-xs sm:text-sm">
-                  <PhoneCall className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <TabsList className="grid w-full grid-cols-2 gap-1">
+                <TabsTrigger value="status" className="text-xs">
+                  <PhoneCall className="h-3 w-3 mr-1" />
                   <span className="truncate">Status</span>
                 </TabsTrigger>
-                <TabsTrigger value="settings" className="text-xs sm:text-sm">
-                  <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <TabsTrigger value="settings" className="text-xs">
+                  <Settings className="h-3 w-3 mr-1" />
                   <span className="truncate">Config</span>
                 </TabsTrigger>
-                <TabsTrigger value="diagnostico" className="text-xs sm:text-sm">
-                  <Wifi className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="truncate">Diagnóstico</span>
+                <TabsTrigger value="diagnostico" className="text-xs">
+                  <Wifi className="h-3 w-3 mr-1" />
+                  <span className="truncate">Diag</span>
                 </TabsTrigger>
-                <TabsTrigger value="help" className="text-xs sm:text-sm">
-                  <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <TabsTrigger value="help" className="text-xs">
+                  <HelpCircle className="h-3 w-3 mr-1" />
                   <span className="truncate">Ajuda</span>
                 </TabsTrigger>
               </TabsList>
@@ -256,13 +256,13 @@ export default function SoftphonePage() {
                     <div>
                       <p className="text-sm font-medium text-neutral-500 mb-2">Dispositivos de Áudio</p>
                       <div className="space-y-2">
-                        <div className="grid grid-cols-3 gap-2 items-center">
+                        <div className="flex flex-col gap-1">
                           <Label className="text-xs">Microfone</Label>
                           <Select 
                             value={selectedMic} 
                             onValueChange={setSelectedMic}
                           >
-                            <SelectTrigger className="col-span-2 h-8 text-xs">
+                            <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -278,13 +278,13 @@ export default function SoftphonePage() {
                           </Select>
                         </div>
                         
-                        <div className="grid grid-cols-3 gap-2 items-center">
+                        <div className="flex flex-col gap-1">
                           <Label className="text-xs">Alto-falante</Label>
                           <Select 
                             value={selectedSpeaker} 
                             onValueChange={setSelectedSpeaker}
                           >
-                            <SelectTrigger className="col-span-2 h-8 text-xs">
+                            <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Selecione..." />
                             </SelectTrigger>
                             <SelectContent>
