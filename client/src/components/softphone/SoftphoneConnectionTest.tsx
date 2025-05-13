@@ -327,7 +327,7 @@ export function SoftphoneConnectionTest() {
               </div>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 id="hostname"
                 value={hostName}
@@ -339,14 +339,14 @@ export function SoftphoneConnectionTest() {
                 variant="outline" 
                 onClick={performDnsLookup}
                 disabled={isDnsLookup || !hostName}
-                className="gap-1"
+                className="gap-1 whitespace-nowrap"
               >
                 {isDnsLookup ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Server className="h-4 w-4" />
                 )}
-                Verificar DNS
+                <span className="hidden xs:inline">Verificar</span> DNS
               </Button>
             </div>
             
@@ -449,7 +449,7 @@ export function SoftphoneConnectionTest() {
               </div>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 id="ws-uri"
                 value={wsUri}
@@ -457,28 +457,31 @@ export function SoftphoneConnectionTest() {
                 placeholder="wss://voip.example.com:8089/ws"
                 className="flex-1"
               />
-              <Button 
-                variant="default" 
-                onClick={testWebSocketConnection}
-                disabled={isTesting || !wsUri}
-              >
-                {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Testar
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={testBothProtocols}
-                disabled={isTesting || !wsUri}
-                title="Testa diversas combinações de protocolos e portas automaticamente"
-                className="gap-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                  <path d="m18 16 4-4-4-4"></path>
-                  <path d="m6 8-4 4 4 4"></path>
-                  <path d="m14.5 4-5 16"></path>
-                </svg>
-                Teste Completo
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="default" 
+                  onClick={testWebSocketConnection}
+                  disabled={isTesting || !wsUri}
+                  className="flex-1 sm:flex-none"
+                >
+                  {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Testar
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={testBothProtocols}
+                  disabled={isTesting || !wsUri}
+                  title="Testa diversas combinações de protocolos e portas automaticamente"
+                  className="gap-1 flex-1 sm:flex-none whitespace-nowrap"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <path d="m18 16 4-4-4-4"></path>
+                    <path d="m6 8-4 4 4 4"></path>
+                    <path d="m14.5 4-5 16"></path>
+                  </svg>
+                  <span className="hidden xs:inline">Teste</span> Completo
+                </Button>
+              </div>
             </div>
           </div>
           
@@ -504,7 +507,7 @@ export function SoftphoneConnectionTest() {
         </div>
         
         <div className="mt-4 flex flex-col gap-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
             <h3 className="text-sm font-medium flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               Problemas de conectividade?
@@ -513,7 +516,7 @@ export function SoftphoneConnectionTest() {
             <Button
               variant="destructive"
               size="sm"
-              className="h-7 text-xs gap-1"
+              className="w-full sm:w-auto h-8 sm:h-7 text-xs gap-1"
               onClick={() => {
                 localStorage.setItem('softphone_mock_mode', 'true');
                 
