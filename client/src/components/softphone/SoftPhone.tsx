@@ -1231,6 +1231,24 @@ export function SoftPhone({
             </div>
           </div>
           
+          {/* Opção para alternar entre modo real e simulação */}
+          <div className="space-y-2 mt-4 mb-4 p-4 bg-blue-50 rounded-md border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="simulationMode" className="font-medium text-blue-800">Modo de Simulação</Label>
+                <p className="text-xs text-blue-700">
+                  Quando ativado, simula a conexão com o servidor Asterisk sem precisar de um servidor real.
+                  Útil para testar e desenvolver sem um servidor Asterisk disponível.
+                </p>
+              </div>
+              <Switch
+                id="simulationMode"
+                checked={simulationMode}
+                onCheckedChange={setSimulationMode}
+              />
+            </div>
+          </div>
+          
           <div className="space-y-4 py-2 my-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
             <h4 className="text-sm font-medium text-yellow-800">Dicas de conexão</h4>
             <ul className="text-xs text-yellow-700 list-disc pl-4 space-y-1">
