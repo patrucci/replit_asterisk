@@ -95,7 +95,8 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   });
   
   // Rota para executar diagnóstico detalhado de conexão
-  app.post("/api/asterisk/diagnose", requireAuth, async (req, res) => {
+  // Não requer autenticação para facilitar diagnóstico mesmo sem estar logado
+  app.post("/api/asterisk/diagnose", async (req, res) => {
     try {
       const { host, port } = req.body;
       
@@ -222,7 +223,8 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   });
   
   // Rota para realizar consulta DNS e encontrar endereços IP alternativos
-  app.post("/api/asterisk/dns-lookup", requireAuth, async (req, res) => {
+  // Não requer autenticação para permitir testes de DNS sem login
+  app.post("/api/asterisk/dns-lookup", async (req, res) => {
     try {
       const { hostname } = req.body;
       

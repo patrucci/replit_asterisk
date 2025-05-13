@@ -172,6 +172,86 @@ export function SoftphoneConnectionTest() {
     }
   };
   
+  // Função para executar diagnóstico avançado
+  const runAdvancedDiagnostic = async () => {
+    if (!hostName) return;
+    
+    setIsDiagnosing(true);
+    setDiagnosticResult(null);
+    setTestResult({
+      success: false,
+      message: 'Executando diagnóstico avançado...',
+      details: 'Analisando configurações de rede e conectividade com o servidor Asterisk.'
+    });
+    
+    try {
+      console.log(`Iniciando diagnóstico avançado para ${hostName}...`);
+      
+      // Extrair a porta do URI atual, se disponível
+      let port = 5038; // Porta padrão AMI
+      try {
+        const url = new URL(wsUri);
+        if (url.port) {
+          const wsPort = parseInt(url.port);
+          // Se estiver usando uma porta WebSocket (8088, 8089), usar essa porta
+          if (wsPort === 8088 || wsPort === 8089) {
+            port = wsPort;
+          }
+        }
+      } catch (err) {
+        // Continuar com a porta padrão
+        console.error('Erro ao extrair porta do URI:', err);
+      }
+      
+      const response = await apiRequest('POST', '/api/asterisk/diagnose', {
+        host: hostName,
+        port: port
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Resultado do diagnóstico:', data);
+      
+      if (data.success && data.diagnosis) {
+        setDiagnosticResult(data.diagnosis);
+        
+        // Se encontrou portas abertas para WebSocket, sugerir automaticamente
+        if (data.diagnosis.openPorts?.includes(8088) || data.diagnosis.openPorts?.includes(8089)) {
+          const openWsPort = data.diagnosis.openPorts.includes(8088) ? 8088 : 8089;
+          // Construir um novo URI WebSocket usando a porta aberta
+          const newUri = `wss://${hostName}:${openWsPort}/ws`;
+          setWsUri(newUri);
+          
+          setTestResult({
+            success: true,
+            message: `Porta WebSocket ${openWsPort} encontrada aberta! URI atualizado.`,
+            details: `Recomendamos usar ${newUri} para conectar o softphone.`
+          });
+        } else {
+          setTestResult({
+            success: false,
+            message: "Problemas de conectividade detectados",
+            details: "Verifique os resultados detalhados do diagnóstico abaixo."
+          });
+        }
+      } else {
+        throw new Error(data.message || 'Erro desconhecido no diagnóstico');
+      }
+    } catch (error: any) {
+      console.error('Erro ao executar diagnóstico:', error);
+      setTestResult({
+        success: false,
+        message: `Falha ao executar diagnóstico: ${error.message || 'Erro desconhecido'}`,
+        details: 'Verifique a conexão com o servidor e tente novamente.'
+      });
+    } finally {
+      setIsDiagnosing(false);
+    }
+  };
+
   // Função para tentar tanto wss:// quanto ws://
   const testBothProtocols = async () => {
     if (!wsUri) return;
@@ -475,7 +555,7 @@ export function SoftphoneConnectionTest() {
                 <Button 
                   variant="default" 
                   onClick={testWebSocketConnection}
-                  disabled={isTesting || !wsUri}
+                  disabled={isTesting || isDiagnosing || !wsUri}
                   className="flex-1 sm:flex-none"
                 >
                   {isTesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -484,7 +564,7 @@ export function SoftphoneConnectionTest() {
                 <Button 
                   variant="outline" 
                   onClick={testBothProtocols}
-                  disabled={isTesting || !wsUri}
+                  disabled={isTesting || isDiagnosing || !wsUri}
                   title="Testa diversas combinações de protocolos e portas automaticamente"
                   className="gap-1 flex-1 sm:flex-none whitespace-nowrap"
                 >
@@ -494,6 +574,20 @@ export function SoftphoneConnectionTest() {
                     <path d="m14.5 4-5 16"></path>
                   </svg>
                   <span className="hidden xs:inline">Teste</span> Completo
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={runAdvancedDiagnostic}
+                  disabled={isTesting || isDiagnosing || !hostName}
+                  title="Executa uma análise completa de conectividade com o servidor"
+                  className="gap-1 flex-1 sm:flex-none whitespace-nowrap"
+                >
+                  {isDiagnosing ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <HelpCircle className="h-4 w-4 mr-1" />
+                  )}
+                  <span className="hidden xs:inline">Diagnóstico</span> Avançado
                 </Button>
               </div>
             </div>
@@ -517,6 +611,112 @@ export function SoftphoneConnectionTest() {
                 )}
               </AlertDescription>
             </Alert>
+          )}
+          
+          {/* Resultados do Diagnóstico Avançado */}
+          {diagnosticResult && (
+            <div className="mt-4 border rounded-md">
+              <div className="bg-muted py-2 px-4 rounded-t-md border-b flex items-center justify-between">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Diagnóstico avançado para {diagnosticResult.host}
+                </h3>
+                <div className="text-xs bg-primary/10 rounded-full px-2 py-0.5">
+                  IP: {diagnosticResult.ip}
+                </div>
+              </div>
+              
+              <div className="p-4">
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="status" className="border-b">
+                    <AccordionTrigger className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${diagnosticResult.mainPortOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        Status da Conexão Principal
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xs">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>Porta Principal:</span>
+                          <span className="font-mono">{diagnosticResult.mainPort}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>DNS Resolvido:</span>
+                          <span className={diagnosticResult.dnsResolved ? 'text-green-500' : 'text-red-500'}>
+                            {diagnosticResult.dnsResolved ? 'Sim' : 'Não'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Porta Principal Aberta:</span>
+                          <span className={diagnosticResult.mainPortOpen ? 'text-green-500' : 'text-red-500'}>
+                            {diagnosticResult.mainPortOpen ? 'Sim' : 'Não'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tipo de Erro:</span>
+                          <span className="font-mono">{diagnosticResult.errorType || 'Nenhum'}</span>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="ports" className="border-b">
+                    <AccordionTrigger className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${diagnosticResult.openPorts?.length > 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        Portas Abertas
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xs">
+                      {diagnosticResult.openPorts?.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-1">
+                            {diagnosticResult.openPorts.map((port) => (
+                              <span 
+                                key={port} 
+                                className={`bg-muted px-2 py-1 rounded font-mono ${
+                                  (port === 8088 || port === 8089) ? 'bg-green-100 border border-green-200' : ''
+                                }`}
+                              >
+                                {port}{(port === 8088 || port === 8089) && ' ✓'}
+                              </span>
+                            ))}
+                          </div>
+                          {(diagnosticResult.openPorts.includes(8088) || diagnosticResult.openPorts.includes(8089)) && (
+                            <p className="text-green-600 mt-2">
+                              Uma porta WebSocket SIP foi encontrada aberta! Isso é bom para a configuração do softphone.
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-red-500">Nenhuma porta alternativa está aberta.</p>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="recommendations">
+                    <AccordionTrigger className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        <HelpCircle className="h-4 w-4" />
+                        Recomendações
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xs">
+                      {diagnosticResult.recommendations?.length > 0 ? (
+                        <ul className="list-disc list-inside space-y-2">
+                          {diagnosticResult.recommendations.map((rec, i) => (
+                            <li key={i}>{rec}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-muted-foreground">Nenhuma recomendação disponível.</p>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+            </div>
           )}
         </div>
         
