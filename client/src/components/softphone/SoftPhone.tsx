@@ -1275,92 +1275,99 @@ export function SoftPhone({
             </ul>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="secondary"
-              onClick={() => {
-                // Validação básica
-                if (!config.wsUri) {
-                  toast({
-                    title: "URI WebSocket necessário",
-                    description: "Informe o URI do WebSocket para testar a conexão",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                
-                // Testar apenas o WebSocket
-                try {
-                  const ws = new WebSocket(config.wsUri);
-                  
-                  toast({
-                    title: "Testando conexão...",
-                    description: "Tentando conectar ao WebSocket. Verifique o console (F12) para detalhes.",
-                  });
-                  
-                  ws.onopen = () => {
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
+            <div className="w-full sm:w-auto order-3 sm:order-1">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setConfigDialogOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+            <div className="w-full sm:w-auto order-2">
+              <Button 
+                variant="secondary"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  // Validação básica
+                  if (!config.wsUri) {
                     toast({
-                      title: "Conexão WebSocket bem-sucedida",
-                      description: "WebSocket conectado com sucesso!",
-                    });
-                    ws.close();
-                  };
-                  
-                  ws.onerror = (error) => {
-                    console.error("Erro na conexão WebSocket:", error);
-                    toast({
-                      title: "Falha na conexão WebSocket",
-                      description: "Não foi possível conectar ao servidor. Verifique o URI e se o servidor está acessível.",
+                      title: "URI WebSocket necessário",
+                      description: "Informe o URI do WebSocket para testar a conexão",
                       variant: "destructive",
                     });
-                  };
-                } catch (error) {
-                  console.error("Erro ao iniciar websocket:", error);
+                    return;
+                  }
+                  
+                  // Testar apenas o WebSocket
+                  try {
+                    const ws = new WebSocket(config.wsUri);
+                    
+                    toast({
+                      title: "Testando conexão...",
+                      description: "Tentando conectar ao WebSocket. Verifique o console (F12) para detalhes.",
+                    });
+                    
+                    ws.onopen = () => {
+                      toast({
+                        title: "Conexão WebSocket bem-sucedida",
+                        description: "WebSocket conectado com sucesso!",
+                      });
+                      ws.close();
+                    };
+                    
+                    ws.onerror = (error) => {
+                      console.error("Erro na conexão WebSocket:", error);
+                      toast({
+                        title: "Falha na conexão WebSocket",
+                        description: "Não foi possível conectar ao servidor. Verifique o URI e se o servidor está acessível.",
+                        variant: "destructive",
+                      });
+                    };
+                  } catch (error) {
+                    console.error("Erro ao iniciar websocket:", error);
+                    toast({
+                      title: "Erro na conexão",
+                      description: "Formato de URI inválido ou erro ao inicializar a conexão WebSocket",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Testar Conexão
+              </Button>
+            </div>
+            <div className="w-full sm:w-auto order-1 sm:order-3">
+              <Button className="w-full sm:w-auto" onClick={() => {
+                setConfigDialogOpen(false);
+                
+                // Salvar configurações no localStorage para persistência
+                try {
+                  localStorage.setItem('softphone_config', JSON.stringify(config));
+                  
                   toast({
-                    title: "Erro na conexão",
-                    description: "Formato de URI inválido ou erro ao inicializar a conexão WebSocket",
-                    variant: "destructive",
+                    title: "Configurações salvas",
+                    description: "As configurações do softphone foram salvas com sucesso"
+                  });
+                  
+                  // Se já estiver registrado, desregistre primeiro para aplicar as novas configurações
+                  if (registerState === RegisterState.REGISTERED) {
+                    unregisterSip();
+                    
+                    // Registre novamente com as novas configurações após um breve atraso
+                    setTimeout(() => {
+                      registerSip();
+                    }, 1000);
+                  }
+                } catch (error) {
+                  console.error('Error saving softphone config:', error);
+                  toast({
+                    title: "Erro ao salvar",
+                    description: "Não foi possível salvar as configurações",
+                    variant: "destructive"
                   });
                 }
-              }}
-            >
-              Testar Conexão
-            </Button>
-            <Button onClick={() => {
-              setConfigDialogOpen(false);
-              
-              // Salvar configurações no localStorage para persistência
-              try {
-                localStorage.setItem('softphone_config', JSON.stringify(config));
-                
-                toast({
-                  title: "Configurações salvas",
-                  description: "As configurações do softphone foram salvas com sucesso"
-                });
-                
-                // Se já estiver registrado, desregistre primeiro para aplicar as novas configurações
-                if (registerState === RegisterState.REGISTERED) {
-                  unregisterSip();
-                  
-                  // Registre novamente com as novas configurações após um breve atraso
-                  setTimeout(() => {
-                    registerSip();
-                  }, 1000);
-                }
-              } catch (error) {
-                console.error('Error saving softphone config:', error);
-                toast({
-                  title: "Erro ao salvar",
-                  description: "Não foi possível salvar as configurações",
-                  variant: "destructive"
-                });
-              }
-            }}>
-              Salvar configurações
-            </Button>
+              }}>
+                Salvar configurações
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
