@@ -1636,23 +1636,50 @@ Verifique as configurações do Asterisk no arquivo 'manager.conf':
     let diagnosticInfo = "## DIAGNÓSTICO DETALHADO DE CONEXÃO ASTERISK\n\n";
     diagnosticInfo += `Data/Hora: ${new Date().toISOString()}\n`;
     diagnosticInfo += `Servidor alvo: ${host}:${port}\n\n`;
+    diagnosticInfo += `===== INFORMAÇÕES DO SISTEMA =====\n`;
+    diagnosticInfo += `Ambiente: ${process.env.NODE_ENV || 'não definido'}\n`;
+    diagnosticInfo += `Plataforma: ${process.platform}\n`;
+    diagnosticInfo += `Node.js: ${process.version}\n\n`;
+    
+    diagnosticInfo += `===== TESTES REALIZADOS =====\n`;
     
     try {
+      // Usar estas variáveis ao longo do método
+      const utilModule = require('util');
+      const dnsModule = require('dns');
+      const promisifyFn = utilModule.promisify;
+      const lookupFn = promisifyFn(dnsModule.lookup);
+      
+      // Verificar resolução DNS primeiro
+      diagnosticInfo += `1. RESOLUÇÃO DNS\n`;
+      try {
+        const address = await lookupFn(host);
+        diagnosticInfo += `   ✅ DNS resolvido com sucesso: ${host} => ${address.address}\n`;
+        diagnosticInfo += `   IP encontrado: ${address.address}\n`;
+        // Salvar o endereço IP para usar mais tarde
+        const resolvedIp = address.address;
+      } catch (dnsErr: any) {
+        diagnosticInfo += `   ❌ Falha na resolução DNS: ${dnsErr.message}\n`;
+        diagnosticInfo += `   O nome de host '${host}' não pode ser resolvido.\n`;
+        diagnosticInfo += `   Sugestão: Verifique se o nome está correto ou tente usar o IP diretamente.\n\n`;
+        // Se DNS falhou, seria bom sugerir alternativas
+        diagnosticInfo += `   Possíveis alternativas:\n`;
+        diagnosticInfo += `   - Use o endereço IP do servidor ao invés do nome\n`;
+        diagnosticInfo += `   - Verifique se o DNS está configurado corretamente\n`;
+        diagnosticInfo += `   - Talvez o servidor não exista mais ou mudou de endereço\n`;
+      }
+      diagnosticInfo += `\n`;
+      
       // Verificar portas alternativas comuns para Asterisk AMI
+      diagnosticInfo += `2. TESTE DE PORTAS ALTERNATIVAS\n`;
       const portasAlternativas = [5039, 5037, 8088, 8089];
       let portaAlternativaEncontrada = false;
       let portaSugerida = 0;
       
-      // Verificar resolução DNS
+      // Já verificamos o DNS acima, vamos pular direto para o ping
       try {
-        // Usar NodeJS DNS para resolver o hostname
-        const dns = require('dns');
-        const { promisify } = require('util');
-        const lookup = promisify(dns.lookup);
-        
-        const resultado = await lookup(host);
-        diagnosticInfo += `* Resolução DNS: ${host} => ${resultado.address}\n`;
-        diagnosticInfo += `* Ping para o servidor: `;
+        // Assumimos que o DNS já foi resolvido na seção anterior
+        diagnosticInfo += `* Teste de conectividade básica do servidor: `;
         
         // Tentar fazer ping no servidor (usando um socket TCP na porta 80 para verificar se o servidor está online)
         const pingResult = await new Promise<boolean>((resolve) => {

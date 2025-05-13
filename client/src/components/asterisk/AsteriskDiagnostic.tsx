@@ -236,13 +236,48 @@ export default function AsteriskDiagnostic() {
               Tipo de teste: {testResult.type === "tcp" ? "Conectividade TCP" : "Autenticação AMI"}
             </div>
             
+            {!testResult.success && testResult.message?.includes("ECONNREFUSED") && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm">
+                <p className="font-medium text-amber-800 mb-1">Conexão Recusada - Diagnóstico:</p>
+                <ul className="list-disc pl-5 space-y-1 text-amber-700">
+                  <li>O servidor <strong>{host}</strong> está <strong>ativo</strong>, mas a <strong>porta {port} está fechada</strong></li>
+                  <li>O serviço Asterisk pode não estar rodando ou está em uma porta diferente</li>
+                  <li>O firewall pode estar bloqueando conexões na porta {port}</li>
+                </ul>
+                <p className="mt-2 text-xs">Confirme com o administrador do servidor se o Asterisk AMI está configurado para a porta {port} e se está habilitado para conexões externas.</p>
+              </div>
+            )}
+            
+            {!testResult.success && testResult.message?.includes("ENOTFOUND") && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm">
+                <p className="font-medium text-amber-800 mb-1">Servidor Não Encontrado - Diagnóstico:</p>
+                <ul className="list-disc pl-5 space-y-1 text-amber-700">
+                  <li>O nome do servidor <strong>{host}</strong> não pode ser resolvido pelo DNS</li>
+                  <li>O servidor pode não existir ou o nome pode estar incorreto</li>
+                </ul>
+                <p className="mt-2 text-xs">Tente usar o endereço IP do servidor ao invés do nome.</p>
+              </div>
+            )}
+            
+            {!testResult.success && testResult.message?.includes("ETIMEDOUT") && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm">
+                <p className="font-medium text-amber-800 mb-1">Timeout de Conexão - Diagnóstico:</p>
+                <ul className="list-disc pl-5 space-y-1 text-amber-700">
+                  <li>O servidor <strong>{host}</strong> não está respondendo</li>
+                  <li>Um firewall pode estar filtrando as tentativas de conexão</li>
+                  <li>O servidor pode estar offline ou inacessível da sua rede</li>
+                </ul>
+                <p className="mt-2 text-xs">Verifique se o servidor está online e se sua rede permite acessá-lo.</p>
+              </div>
+            )}
+            
             {!testResult.success && testResult.diagnosticInfo && (
               <div className="mt-3">
                 <details className="cursor-pointer">
                   <summary className="font-medium text-sm">
-                    Exibir diagnóstico detalhado
+                    Exibir diagnóstico técnico detalhado
                   </summary>
-                  <div className="mt-2 p-3 bg-slate-100 dark:bg-slate-900 rounded text-xs font-mono whitespace-pre-wrap">
+                  <div className="mt-2 p-3 bg-slate-100 dark:bg-slate-900 rounded text-xs font-mono whitespace-pre-wrap overflow-auto max-h-60">
                     {testResult.diagnosticInfo}
                   </div>
                 </details>
