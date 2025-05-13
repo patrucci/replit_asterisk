@@ -54,7 +54,7 @@ export function SoftPhone({
   extension,
   displayName,
   domain = 'voip.lansolver.com',
-  wsUri = 'wss://voip.lansolver.com:8089/ws',
+  wsUri = 'ws://voip.lansolver.com:8088/ws',
   password = '',
   autoRegister = false,
   className = '',
@@ -332,33 +332,51 @@ export function SoftPhone({
       
       setIsRegistering(true);
       
-      // Salvar configurações antes de registrar para garantir persistência
-      localStorage.setItem('softphone_config', JSON.stringify(config));
+      // Tentar primeira conexão com a versão não segura (ws://) 
+      // já que muitos servidores Asterisk não têm SSL configurado corretamente
+      let connectionUri = config.wsUri;
+      if (connectionUri.startsWith('wss://')) {
+        connectionUri = connectionUri.replace('wss://', 'ws://');
+        toast({
+          title: "Usando conexão não segura",
+          description: "Tentando conexão não segura (ws://) primeiro para compatibilidade com Asterisk",
+        });
+      }
       
-      console.log("Definindo configurações para o cliente SIP...");
-      
-      // Configurar o cliente SIP com debug ativado para facilitar diagnóstico
-      sipClient.setConfig({
+      // Preparar configuração ajustada
+      const adjustedConfig = {
         domain: config.domain,
-        wsUri: config.wsUri,
+        wsUri: connectionUri,
         authorizationUser: config.authorizationUser,
         password: config.password,
         displayName: config.displayName,
         registerExpires: config.registerExpires,
         debug: true, // Forçar modo debug para melhor diagnóstico
+      };
+      
+      // Salvar configurações antes de registrar para garantir persistência
+      localStorage.setItem('softphone_config', JSON.stringify(adjustedConfig));
+      
+      console.log("Definindo configurações para o cliente SIP...", adjustedConfig);
+      toast({
+        title: "Conectando",
+        description: `Tentando conectar a ${connectionUri} como ${config.authorizationUser}`,
       });
       
-      // Colocar timeout de 15 segundos para não ficar tentando para sempre
+      // Configurar o cliente SIP com debug ativado para facilitar diagnóstico
+      sipClient.setConfig(adjustedConfig);
+      
+      // Colocar timeout de 20 segundos para não ficar tentando para sempre
       const timeout = setTimeout(() => {
         if (registerState !== RegisterState.REGISTERED) {
           setIsRegistering(false);
           toast({
             title: "Tempo esgotado",
-            description: "Não foi possível conectar ao servidor SIP após 15 segundos. Verifique os dados e a conectividade.",
+            description: "Não foi possível conectar ao servidor SIP após 20 segundos. Verifique os dados e a conectividade.",
             variant: "destructive",
           });
         }
-      }, 15000);
+      }, 20000);
       
       console.log("Iniciando registro SIP...");
       
@@ -378,6 +396,30 @@ export function SoftPhone({
           if (typeof errorMsg === 'string') {
             if (errorMsg.includes('WebSocket')) {
               errorMsg = "Erro de conexão WebSocket. Verifique se o URI do WebSocket está correto e acessível.";
+              
+              // Se foi erro de websocket, tente a alternativa
+              if (connectionUri.startsWith('ws://')) {
+                const secureUri = connectionUri.replace('ws://', 'wss://');
+                toast({
+                  title: "Tentando conexão alternativa",
+                  description: `Não foi possível conectar via ${connectionUri}. Tentando ${secureUri}...`,
+                });
+                
+                // Atualizar configuração e tentar novamente
+                adjustedConfig.wsUri = secureUri;
+                sipClient.setConfig(adjustedConfig);
+                sipClient.register()
+                  .then(() => console.log("Segundo método de conexão iniciado"))
+                  .catch(altError => {
+                    console.error("Segunda tentativa também falhou:", altError);
+                    toast({
+                      title: "Falha na conexão",
+                      description: "Tentamos ws:// e wss:// e ambos falharam. Verifique se o servidor está online.",
+                      variant: "destructive",
+                    });
+                  });
+                return;
+              }
             } else if (errorMsg.includes('authentication')) {
               errorMsg = "Falha de autenticação. Verifique seu ramal e senha.";
             } else if (errorMsg.includes('media')) {
