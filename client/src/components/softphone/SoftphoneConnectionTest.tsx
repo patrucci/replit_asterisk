@@ -152,6 +152,32 @@ export function SoftphoneConnectionTest() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 pt-6">
+        {savedConfig && (
+          <Card className="bg-muted/40 border-dashed">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Configuração Atual do Softphone
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="py-2 text-xs font-mono">
+              <div className="grid grid-cols-2 gap-1">
+                <div className="text-muted-foreground">Domain:</div>
+                <div>{savedConfig.domain}</div>
+                
+                <div className="text-muted-foreground">WebSocket URI:</div>
+                <div>{savedConfig.wsUri}</div>
+                
+                <div className="text-muted-foreground">Ramal:</div>
+                <div>{savedConfig.authorizationUser}</div>
+                
+                <div className="text-muted-foreground">Modo Simulação:</div>
+                <div>{localStorage.getItem('softphone_mock_mode') === 'true' ? 'Ativado' : 'Desativado'}</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      
         <div className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="ws-uri">URI do WebSocket SIP</Label>

@@ -3,6 +3,8 @@ import { asteriskAMIManager } from "./asterisk-ami";
 import { db } from "./db";
 import { asteriskSettings } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import dns from "dns";
+import { promisify } from "util";
 
 // Desativar modo de simulação para usar conexão real com Asterisk
 // Somente use o modo de simulação em situações onde não há servidor Asterisk disponível
