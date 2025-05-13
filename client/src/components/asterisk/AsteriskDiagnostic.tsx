@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, CheckCircle, Circle, AlertTriangle, Network, Activity, PlusCircle, Server, Database, Wifi } from "lucide-react";
+import { AlertCircle, CheckCircle, AlertTriangle, Network, Activity, PlusCircle, Server, Database, Wifi, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -130,7 +130,7 @@ export default function AsteriskDiagnostic() {
       setIsTestingCustom(false);
     }
   };
-  
+
   // Função para testar conexão TCP
   const handleTestTcp = async () => {
     if (!host || !port) {
@@ -205,7 +205,6 @@ export default function AsteriskDiagnostic() {
         port: parseInt(port),
         username,
         password,
-        testTcpOnly: false,
       });
 
       const responseData = await res.json();
@@ -213,8 +212,8 @@ export default function AsteriskDiagnostic() {
       if (!res.ok) {
         setTestResult({
           success: false,
-          message: responseData.message || "Falha no teste AMI",
-          details: responseData.details || "Não foi possível autenticar no servidor Asterisk",
+          message: responseData.message || "Falha na autenticação AMI",
+          details: responseData.details || "Não foi possível autenticar com o servidor AMI",
           diagnosticInfo: responseData.diagnosticInfo || "",
           type: "ami",
         });
@@ -223,11 +222,12 @@ export default function AsteriskDiagnostic() {
 
       setTestResult({
         success: true,
-        message: responseData.message || "Teste AMI bem-sucedido",
-        details: "A conexão AMI foi estabelecida com sucesso",
+        message: responseData.message || "Conexão AMI bem-sucedida",
+        details: "As credenciais foram autenticadas com sucesso",
         diagnosticInfo: responseData.diagnosticInfo || "",
         type: "ami",
       });
+
     } catch (error) {
       console.error("Erro ao testar AMI:", error);
       setTestResult({
@@ -246,76 +246,206 @@ export default function AsteriskDiagnostic() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Network className="h-5 w-5" />
-          Diagnóstico de Conexão Asterisk
+          Diagnóstico Avançado Asterisk
         </CardTitle>
         <CardDescription>
-          Ferramentas para diagnóstico da conexão com o servidor Asterisk
+          Ferramentas avançadas para diagnóstico da conexão com o servidor Asterisk
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="host">Host do Servidor</Label>
-          <Input
-            id="host"
-            value={host}
-            onChange={(e) => setHost(e.target.value)}
-            placeholder="Endereço IP ou domínio"
-          />
-        </div>
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="port">Porta AMI</Label>
-          <Input
-            id="port"
-            value={port}
-            onChange={(e) => setPort(e.target.value)}
-            placeholder="5038"
-          />
-        </div>
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="username">Usuário AMI</Label>
-          <Input
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Usuário do Asterisk Manager Interface"
-          />
-        </div>
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="password">Senha AMI</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Senha do AMI"
-          />
-        </div>
-
-        {/* Status do Servidor */}
-        <div className="bg-muted p-3 rounded-md">
-          <div className="font-medium mb-2">Status Atual da Conexão</div>
-          <div className="flex items-center gap-2">
-            {isStatusLoading ? (
-              <Circle className="h-4 w-4 animate-pulse text-muted-foreground" />
-            ) : statusData?.connected ? (
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            ) : (
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-            )}
-            <span>
-              {isStatusLoading
-                ? "Verificando status..."
-                : statusData?.connected
-                ? "Conectado ao servidor Asterisk"
-                : "Desconectado do servidor Asterisk"}
-            </span>
-          </div>
-        </div>
-
-        {/* Resultado do Teste */}
-        {testResult && (
+      <CardContent>
+        <Tabs defaultValue="basic" value={activeTab} onValueChange={setActiveTab} className="mb-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="basic" className="flex items-center gap-1">
+              <Server className="h-4 w-4" /> Teste Básico
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="flex items-center gap-1">
+              <Activity className="h-4 w-4" /> Portscan Avançado
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="basic" className="pt-4">
+            <div className="grid gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="host">Servidor</Label>
+                  <Input
+                    id="host"
+                    placeholder="exemplo: asterisk.seudominio.com"
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="port">Porta</Label>
+                  <Input
+                    id="port"
+                    placeholder="5038"
+                    value={port}
+                    onChange={(e) => setPort(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Usuário</Label>
+                  <Input
+                    id="username"
+                    placeholder="usuário AMI"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="senha AMI"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2 justify-between mt-2">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto flex items-center gap-1"
+                  onClick={handleTestTcp}
+                  disabled={isTestingTcp || !host || !port}
+                >
+                  {isTestingTcp ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" /> Testando...
+                    </>
+                  ) : (
+                    <>
+                      <Wifi className="h-4 w-4" /> Testar Conectividade TCP
+                    </>
+                  )}
+                </Button>
+                <Button
+                  className="w-full sm:w-auto flex items-center gap-1"
+                  onClick={handleTestAmi}
+                  disabled={isTesting || !host || !port || !username || !password}
+                >
+                  {isTesting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" /> Autenticando...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="h-4 w-4" /> Testar Conexão AMI
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="advanced" className="pt-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="host-adv">Servidor</Label>
+                  <Input
+                    id="host-adv"
+                    placeholder="exemplo: asterisk.seudominio.com"
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-900">
+                <h3 className="text-sm font-medium mb-2 flex items-center gap-1">
+                  <Wifi className="h-4 w-4" /> Teste de portas personalizadas
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Adicione portas específicas para verificar se estão abertas no servidor.
+                </p>
+                
+                <div className="flex gap-2 mb-3">
+                  <Input
+                    placeholder="Digite um número de porta"
+                    value={customPort}
+                    onChange={(e) => setCustomPort(e.target.value)}
+                    className="w-full sm:w-48"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddCustomPort()}
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleAddCustomPort}
+                    disabled={!customPort}
+                    className="flex items-center gap-1 whitespace-nowrap"
+                  >
+                    <PlusCircle className="h-4 w-4" /> Adicionar
+                  </Button>
+                </div>
+                
+                {customPorts.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {customPorts.map(port => (
+                      <Badge key={port} variant="secondary" className="py-1 px-2">
+                        {port}
+                        <button 
+                          className="ml-1 text-xs opacity-70 hover:opacity-100"
+                          onClick={() => handleRemoveCustomPort(port)}
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleTestCustomPorts}
+                  disabled={isTestingCustom || !host || customPorts.length === 0}
+                  className="w-full"
+                >
+                  {isTestingCustom ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin mr-1" /> Testando portas...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="h-4 w-4 mr-1" /> Verificar Portas ({customPorts.length})
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {testResult?.openPorts && testResult.openPorts.length > 0 && (
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                  <h3 className="font-medium flex items-center gap-1 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> 
+                    Portas Abertas Encontradas
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {testResult.openPorts.map(port => (
+                      <Badge key={port} className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
+                        {port}
+                      </Badge>
+                    ))}
+                  </div>
+                  {testResult.openPorts.includes(5038) && (
+                    <p className="text-sm mt-2 text-green-700">
+                      A porta padrão do Asterisk AMI (5038) está aberta! Tente conectar usando esta porta.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+        
+        {testResult && activeTab === "basic" && (
           <div
-            className={`p-3 rounded-md ${
+            className={`p-3 rounded-md mt-4 ${
               testResult.success ? "bg-green-100 dark:bg-green-900/20" : "bg-red-100 dark:bg-red-900/20"
             }`}
           >
@@ -367,23 +497,22 @@ export default function AsteriskDiagnostic() {
               </div>
             )}
             
-            {!testResult.success && testResult.diagnosticInfo && (
-              <div className="mt-3">
-                <details className="cursor-pointer">
-                  <summary className="font-medium text-sm">
-                    Exibir diagnóstico técnico detalhado
-                  </summary>
-                  <div className="mt-2 p-3 bg-slate-100 dark:bg-slate-900 rounded text-xs font-mono whitespace-pre-wrap overflow-auto max-h-60">
-                    {testResult.diagnosticInfo}
-                  </div>
-                </details>
+            {testResult && testResult.message?.includes("Authentication") && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm">
+                <p className="font-medium text-amber-800 mb-1">Erro de Autenticação - Diagnóstico:</p>
+                <ul className="list-disc pl-5 space-y-1 text-amber-700">
+                  <li>A conexão TCP com o servidor <strong>{host}:{port}</strong> foi estabelecida com sucesso</li>
+                  <li>O servidor Asterisk recusou as credenciais fornecidas</li>
+                  <li>As credenciais do usuário "<strong>{username}</strong>" estão incorretas ou este usuário não tem permissão AMI</li>
+                </ul>
+                <p className="mt-2 text-xs">Verifique o arquivo manager.conf no servidor Asterisk para confirmar as credenciais corretas. O arquivo está normalmente em /etc/asterisk/manager.conf.</p>
               </div>
             )}
             
             {!testResult.success && !testResult.message?.includes("ECONNREFUSED") &&
               !testResult.message?.includes("ENOTFOUND") &&
               !testResult.message?.includes("ETIMEDOUT") && 
-              !testResult.diagnosticInfo && (
+              !testResult.diagnosticInfo && !testResult.message?.includes("Authentication") && (
               <div className="mt-3 text-sm">
                 <strong>Recomendações:</strong>
                 <ul className="list-disc pl-5 space-y-1 mt-1">
@@ -406,37 +535,25 @@ export default function AsteriskDiagnostic() {
               </div>
             )}
             
-            {testResult && testResult.message?.includes("Authentication") && (
-              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm">
-                <p className="font-medium text-amber-800 mb-1">Erro de Autenticação - Diagnóstico:</p>
-                <ul className="list-disc pl-5 space-y-1 text-amber-700">
-                  <li>A conexão TCP com o servidor <strong>{host}:{port}</strong> foi estabelecida com sucesso</li>
-                  <li>O servidor Asterisk recusou as credenciais fornecidas</li>
-                  <li>As credenciais do usuário "<strong>{username}</strong>" estão incorretas ou este usuário não tem permissão AMI</li>
-                </ul>
-                <p className="mt-2 text-xs">Verifique o arquivo manager.conf no servidor Asterisk para confirmar as credenciais corretas. O arquivo está normalmente em /etc/asterisk/manager.conf.</p>
+            {!testResult.success && testResult.diagnosticInfo && (
+              <div className="mt-3">
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="diagnostics">
+                    <AccordionTrigger className="text-sm font-medium">
+                      Exibir diagnóstico técnico detalhado
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="p-3 bg-slate-100 dark:bg-slate-900 rounded text-xs font-mono whitespace-pre-wrap overflow-auto max-h-80">
+                        {testResult.diagnosticInfo}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             )}
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between">
-        <Button
-          variant="outline"
-          className="w-full sm:w-auto"
-          onClick={handleTestTcp}
-          disabled={isTestingTcp || !host || !port}
-        >
-          {isTestingTcp ? "Testando..." : "Testar Conectividade TCP"}
-        </Button>
-        <Button
-          className="w-full sm:w-auto"
-          onClick={handleTestAmi}
-          disabled={isTesting || !host || !port || !username || !password}
-        >
-          {isTesting ? "Testando..." : "Testar Conexão AMI"}
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

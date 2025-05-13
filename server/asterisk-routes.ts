@@ -14,6 +14,52 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   asteriskAMIManager.simulationMode = SIMULATION_MODE;
   console.log(`Asterisk Manager modo de simulação: ${SIMULATION_MODE ? 'ATIVADO' : 'DESATIVADO'}`);
   
+  // Rota para testar portas específicas em um servidor
+  app.post("/api/asterisk/test-ports", requireAuth, async (req, res) => {
+    try {
+      const { host, ports } = req.body;
+      
+      if (!host || !ports || !Array.isArray(ports) || ports.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Host e lista de portas são obrigatórios"
+        });
+      }
+      
+      console.log(`Testando portas em ${host}: ${ports.join(', ')}...`);
+      
+      // Array para armazenar portas abertas
+      const openPorts: number[] = [];
+      
+      // Testar cada porta individualmente
+      for (const port of ports) {
+        try {
+          // Usar o método já existente para testar conexão TCP
+          const result = await asteriskAMIManager.testTCPConnection(host, port);
+          if (result.success) {
+            openPorts.push(port);
+          }
+        } catch (err) {
+          console.error(`Erro ao testar porta ${port}:`, err);
+          // Continuar mesmo se uma porta falhar
+        }
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: `Teste de portas concluído. ${openPorts.length} porta(s) aberta(s) encontrada(s).`,
+        openPorts
+      });
+    } catch (error) {
+      console.error("Erro ao testar portas:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno ao testar portas",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Rota para testar a conexão TCP com o servidor Asterisk
   app.post("/api/asterisk/test-connection", requireAuth, async (req, res) => {
     try {
