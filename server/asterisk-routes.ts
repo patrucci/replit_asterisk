@@ -364,8 +364,8 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
     }
   });
   
-  // Rota para teste de conexão Asterisk
-  app.post("/api/asterisk/test-connection", requireAuth, async (req, res) => {
+  // Rota para teste de conexão Asterisk - sem autenticação para permitir diagnósticos
+  app.post("/api/asterisk/test-connection", async (req, res) => {
     try {
       const { host, port, username, password, testTcpOnly } = req.body;
       

@@ -209,6 +209,15 @@ export default function AuthPage() {
                       >
                         {loginMutation.isPending ? "Entrando..." : "Entrar"}
                       </Button>
+
+                      <div className="mt-4 text-center">
+                        <Link href="/diagnostico">
+                          <Button variant="ghost" size="sm" className="flex items-center gap-1 mx-auto">
+                            <SettingsIcon className="h-4 w-4" />
+                            <span>Diagnóstico de Conectividade</span>
+                          </Button>
+                        </Link>
+                      </div>
                     </form>
                   </Form>
                 </CardContent>
