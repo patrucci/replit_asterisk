@@ -4,9 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, CheckCircle, Circle, AlertTriangle, Network } from "lucide-react";
+import { AlertCircle, CheckCircle, Circle, AlertTriangle, Network, Activity, PlusCircle, Server, Database, Wifi } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AsteriskDiagnostic() {
   const { toast } = useToast();
@@ -14,14 +18,19 @@ export default function AsteriskDiagnostic() {
   const [port, setPort] = useState<string>("5038");
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [customPort, setCustomPort] = useState<string>("");
+  const [customPorts, setCustomPorts] = useState<string[]>([]);
   const [isTestingTcp, setIsTestingTcp] = useState<boolean>(false);
   const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [isTestingCustom, setIsTestingCustom] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>("basic");
   const [testResult, setTestResult] = useState<{
     success?: boolean;
     message?: string;
     details?: string;
     diagnosticInfo?: string;
     type?: "tcp" | "ami";
+    openPorts?: number[];
   } | null>(null);
 
   // Status da conexão AMI
@@ -35,6 +44,93 @@ export default function AsteriskDiagnostic() {
     refetchInterval: 5000, // Atualiza a cada 5 segundos
   });
 
+  // Função para adicionar porta personalizada para teste
+  const handleAddCustomPort = () => {
+    if (!customPort || customPorts.includes(customPort)) return;
+    
+    // Validar se é um número de porta válido (1-65535)
+    const portNumber = parseInt(customPort);
+    if (isNaN(portNumber) || portNumber < 1 || portNumber > 65535) {
+      toast({
+        title: "Erro",
+        description: "Digite um número de porta válido (1-65535)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setCustomPorts([...customPorts, customPort]);
+    setCustomPort("");
+  };
+  
+  // Função para remover porta personalizada
+  const handleRemoveCustomPort = (port: string) => {
+    setCustomPorts(customPorts.filter(p => p !== port));
+  };
+  
+  // Função para testar portas personalizadas
+  const handleTestCustomPorts = async () => {
+    if (!host || customPorts.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Preencha o host e adicione pelo menos uma porta para testar",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setIsTestingCustom(true);
+      
+      // Para cada porta, fazemos um teste TCP básico
+      const openPorts: number[] = [];
+      
+      for (const portStr of customPorts) {
+        const portNum = parseInt(portStr);
+        
+        try {
+          const res = await apiRequest("POST", "/api/asterisk/test-connection", {
+            host,
+            port: portNum,
+            testTcpOnly: true,
+          });
+          
+          if (res.ok) {
+            openPorts.push(portNum);
+          }
+        } catch (error) {
+          console.error(`Erro ao testar porta ${portNum}:`, error);
+        }
+      }
+      
+      // Atualizar o resultado com as portas abertas encontradas
+      setTestResult(prev => ({
+        ...prev,
+        openPorts,
+        details: `${openPorts.length} porta(s) aberta(s) encontrada(s)`,
+        message: openPorts.length > 0 
+          ? `Portas abertas encontradas: ${openPorts.join(', ')}` 
+          : "Nenhuma porta aberta encontrada",
+        type: "tcp",
+      }));
+      
+      toast({
+        title: "Teste de portas concluído",
+        description: `${openPorts.length} porta(s) aberta(s) encontrada(s)`,
+        variant: openPorts.length > 0 ? "default" : "destructive",
+      });
+    } catch (error) {
+      console.error("Erro ao testar portas:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao executar teste de portas personalizadas",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingCustom(false);
+    }
+  };
+  
   // Função para testar conexão TCP
   const handleTestTcp = async () => {
     if (!host || !port) {
