@@ -49,6 +49,7 @@ export interface ISipClient {
   getCallState(): CallState;
   getRegisterState(): RegisterState;
   setConfig(config: SipConfig): void;
+  setMockMode(enabled: boolean): void;
   isRegistered(): boolean;
   addEventHandler(event: string, callback: (...args: any[]) => void): void;
 }
@@ -68,6 +69,12 @@ export class SipClient extends EventEmitter implements ISipClient {
   public mockMode: boolean = false; // Modo de simulação para testes - SEMPRE FALSO PARA CONEXÃO REAL
   private mockRegisterTimer: any = null;
   private mockCallTimer: any = null;
+  
+  // Método para definir o modo de simulação
+  setMockMode(enabled: boolean): void {
+    this.mockMode = enabled;
+    console.log(`[SipClient] Modo de simulação ${enabled ? 'ATIVADO' : 'DESATIVADO'}`);
+  }
   
   // Método para configurar o cliente SIP
   setConfig(config: SipConfig): void {
@@ -91,10 +98,8 @@ export class SipClient extends EventEmitter implements ISipClient {
     console.log(`Usuário: ${this.config.authorizationUser}`);
     console.log(`Tempo de registro: ${this.config.registerExpires || 600} segundos`);
     
-    // Desativar completamente o modo de simulação para garantir tentativa de conexão real
-    this.mockMode = false;
-    
-    console.log("Modo de simulação está DESATIVADO. Tentando conexão real com servidor SIP.");
+    // Verificar se estamos em modo de simulação
+    console.log(`Modo de simulação está ${this.mockMode ? 'ATIVADO' : 'DESATIVADO'}.`);
     
     // Se estamos em modo de simulação, simular um registro bem-sucedido
     if (this.mockMode) {

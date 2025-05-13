@@ -94,7 +94,11 @@ export function SoftPhone({
   const [activeTab, setActiveTab] = useState('dial');
   const [micVolume, setMicVolume] = useState(100);
   const [speakerVolume, setSpeakerVolume] = useState(100);
-  const [simulationMode, setSimulationMode] = useState(true); // Ativado por padrão
+  const [simulationMode, setSimulationMode] = useState(() => {
+    // Carregar preferência de modo de simulação do localStorage
+    const savedMode = localStorage.getItem('softphone_simulation_mode');
+    return savedMode !== null ? savedMode === 'true' : true; // Ativado por padrão
+  });
   const [isMinimized, setIsMinimized] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
@@ -361,7 +365,7 @@ export function SoftPhone({
       console.log("Definindo configurações para o cliente SIP...", adjustedConfig);
       
       // Definir explicitamente se deve usar modo de simulação
-      (sipClient as any).mockMode = simulationMode;
+      sipClient.setMockMode(simulationMode);
       
       if (simulationMode) {
         toast({
@@ -1244,7 +1248,10 @@ export function SoftPhone({
               <Switch
                 id="simulationMode"
                 checked={simulationMode}
-                onCheckedChange={setSimulationMode}
+                onCheckedChange={(checked) => {
+                  setSimulationMode(checked);
+                  localStorage.setItem('softphone_simulation_mode', checked.toString());
+                }}
               />
             </div>
           </div>
