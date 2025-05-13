@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ export function SoftphoneConnectionTest() {
   const [activeTab, setActiveTab] = useState("tcp");
   
   // Executar testes automaticamente ao montar o componente
-  React.useEffect(() => {
+  useEffect(() => {
     // Pequeno atraso para não sobrecarregar a página durante o carregamento
     const timer = setTimeout(() => {
       runDnsTest();

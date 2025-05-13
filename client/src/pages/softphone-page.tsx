@@ -3,6 +3,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { SoftPhone } from "@/components/softphone/SoftPhone";
 import { SoftphoneConnectionTest } from "@/components/softphone/SoftphoneConnectionTest";
 import { AsteriskConnectionStatus } from "@/components/asterisk/AsteriskConnectionStatus";
+import { SoftphoneAutoConfig } from "@/components/softphone/SoftphoneAutoConfig";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -321,15 +322,29 @@ export default function SoftphonePage() {
               <TabsContent value="diagnostico">
                 <div className="space-y-4">
                   <AsteriskConnectionStatus host="voip.lansolver.com" />
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Teste de Conectividade SIP</CardTitle>
-                      <CardDescription>Teste avançado de conectividade SIP/WebSocket</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <SoftphoneConnectionTest />
-                    </CardContent>
-                  </Card>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <SoftphoneAutoConfig 
+                      host="voip.lansolver.com" 
+                      onConfigGenerated={(config) => {
+                        // Exibir toast com a configuração gerada
+                        toast({
+                          title: "Configuração automática gerada",
+                          description: `WebSocket: ${config.wsUri}`,
+                        });
+                      }}
+                    />
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Teste de Conectividade SIP</CardTitle>
+                        <CardDescription>Teste avançado de conectividade SIP/WebSocket</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <SoftphoneConnectionTest />
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </TabsContent>
               
