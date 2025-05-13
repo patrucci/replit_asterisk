@@ -94,6 +94,7 @@ export function SoftPhone({
   const [activeTab, setActiveTab] = useState('dial');
   const [micVolume, setMicVolume] = useState(100);
   const [speakerVolume, setSpeakerVolume] = useState(100);
+  const [simulationMode, setSimulationMode] = useState(true); // Ativado por padrão
   const [isMinimized, setIsMinimized] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
@@ -358,10 +359,21 @@ export function SoftPhone({
       localStorage.setItem('softphone_config', JSON.stringify(adjustedConfig));
       
       console.log("Definindo configurações para o cliente SIP...", adjustedConfig);
-      toast({
-        title: "Conectando",
-        description: `Tentando conectar a ${connectionUri} como ${config.authorizationUser}`,
-      });
+      
+      // Definir explicitamente se deve usar modo de simulação
+      (sipClient as any).mockMode = simulationMode;
+      
+      if (simulationMode) {
+        toast({
+          title: "Modo de Simulação Ativo",
+          description: "Usando modo de simulação para demonstração sem servidor real.",
+        });
+      } else {
+        toast({
+          title: "Conectando ao Servidor Real",
+          description: `Tentando conectar a ${connectionUri} como ${config.authorizationUser}`,
+        });
+      }
       
       // Configurar o cliente SIP com debug ativado para facilitar diagnóstico
       sipClient.setConfig(adjustedConfig);
@@ -848,7 +860,15 @@ export function SoftPhone({
         </CardDescription>
       </CardHeader>
       
-      {/* O aviso de modo de simulação foi removido, pois agora estamos sempre tentando uma conexão real */}
+      {/* Aviso de modo de simulação */}
+      {registerState === RegisterState.REGISTERED && simulationMode && (
+        <div className="mx-4 my-2 p-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded">
+          <p className="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <strong>Modo de Simulação Ativo</strong>: O softphone está operando em modo de simulação para demonstração.
+          </p>
+        </div>
+      )}
       
       <CardContent className="pt-0">
         {/* Mostrar chamada em andamento */}
