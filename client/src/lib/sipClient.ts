@@ -91,8 +91,34 @@ export class SipClient extends EventEmitter implements ISipClient {
     try {
       // Configuração do JsSIP
       console.log("Criando WebSocket interface...");
-      // @ts-ignore - JsSIP tem problema de tipagem, mas a propriedade existe
-      const socket = new JsSIP.WebSocketInterface(this.config.wsUri);
+      
+      // Tentar criar o WebSocket interface com suporte a fallback para ws://
+      let wsUri = this.config.wsUri;
+      let socket;
+      
+      try {
+        // @ts-ignore - JsSIP tem problema de tipagem, mas a propriedade existe
+        socket = new JsSIP.WebSocketInterface(wsUri);
+        console.log("WebSocket interface criado com sucesso usando: " + wsUri);
+      } catch (wsError) {
+        console.warn(`Erro ao conectar usando ${wsUri}`, wsError);
+        
+        // Se falhou usando wss://, tentar com ws://
+        if (wsUri.startsWith('wss://')) {
+          const alternativeUri = wsUri.replace('wss://', 'ws://');
+          console.log(`Tentando conexão alternativa com: ${alternativeUri}`);
+          try {
+            // @ts-ignore
+            socket = new JsSIP.WebSocketInterface(alternativeUri);
+            console.log("WebSocket interface criado com sucesso usando versão não segura: " + alternativeUri);
+          } catch (altError) {
+            console.error(`Também falhou a conexão alternativa:`, altError);
+            throw new Error(`Falha ao conectar com WebSocket: Original=${wsUri}, Alternativo=${alternativeUri}`);
+          }
+        } else {
+          throw wsError;
+        }
+      }
       
       // Obter acesso ao microfone/câmera
       console.log("Solicitando permissão para acesso ao microfone...");
