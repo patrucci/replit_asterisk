@@ -316,6 +316,11 @@ export default function SoftphonePage() {
                 </Card>
               </TabsContent>
               
+              {/* Aba de Diagnóstico */}
+              <TabsContent value="diagnostico">
+                <SoftphoneConnectionTest />
+              </TabsContent>
+              
               {/* Aba de Configurações */}
               <TabsContent value="settings">
                 <Card>

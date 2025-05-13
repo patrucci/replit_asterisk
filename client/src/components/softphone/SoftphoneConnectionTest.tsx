@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Wifi, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Loader2, Wifi, CheckCircle, AlertTriangle, XCircle, Settings } from 'lucide-react';
+import { sipClient } from '@/lib/sipClient';
 
 interface TestResult {
   success: boolean;
@@ -13,9 +14,28 @@ interface TestResult {
 }
 
 export function SoftphoneConnectionTest() {
-  const [wsUri, setWsUri] = useState('wss://voip.example.com:8089/ws');
+  const [wsUri, setWsUri] = useState('wss://voip.lansolver.com:8089/ws');
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [savedConfig, setSavedConfig] = useState<any>(null);
+  
+  // Carregar configurações salvas do softphone
+  useEffect(() => {
+    try {
+      const config = localStorage.getItem('softphone_config');
+      if (config) {
+        const parsedConfig = JSON.parse(config);
+        setSavedConfig(parsedConfig);
+        
+        // Definir o URI WebSocket da configuração se estiver disponível
+        if (parsedConfig.wsUri) {
+          setWsUri(parsedConfig.wsUri);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações salvas:', error);
+    }
+  }, []);
   
   // Função para testar a conexão WebSocket diretamente no navegador
   const testWebSocketConnection = async () => {
