@@ -91,13 +91,17 @@ export class SipClient extends EventEmitter implements ISipClient {
     console.log(`Usuário: ${this.config.authorizationUser}`);
     console.log(`Tempo de registro: ${this.config.registerExpires || 600} segundos`);
     
-    // Verificar se o domínio contém "lansolver" e o servidor não responde - usar modo de simulação
-    if (this.config.domain.includes('lansolver') || this.config.wsUri.includes('lansolver')) {
+    // Detectar automaticamente se devemos tentar modo de simulação
+    // (remova esta condição se você quiser sempre tentar conectar ao servidor real)
+    if (false && (this.config.domain.includes('lansolver') || this.config.wsUri.includes('lansolver'))) {
       // Detectamos que estamos tentando conectar ao servidor lansolver que não está respondendo
       // Ativar automaticamente o modo de simulação
       console.log("Ativando modo de simulação para o softphone devido a problemas de conectividade com o servidor real");
       this.mockMode = true;
     }
+    
+    // Ativar manualmente o modo de simulação - defina como true para testar sem servidor real
+    // this.mockMode = false;
     
     // Se estamos em modo de simulação, simular um registro bem-sucedido
     if (this.mockMode) {

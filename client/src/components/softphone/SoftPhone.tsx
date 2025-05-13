@@ -53,8 +53,8 @@ interface SoftPhoneProps {
 export function SoftPhone({
   extension,
   displayName,
-  domain = 'voip.lansolver.com',
-  wsUri = 'ws://voip.lansolver.com:8088/ws',
+  domain = 'sipserver.seudominio.com.br',
+  wsUri = 'ws://sipserver.seudominio.com.br:8088/ws',
   password = '',
   autoRegister = false,
   className = '',
