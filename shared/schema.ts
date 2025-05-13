@@ -105,7 +105,6 @@ export const asteriskSettings = pgTable("asterisk_settings", {
   sipDomain: text("sip_domain"),
   wsUri: text("ws_uri"),
   enabled: boolean("enabled").default(true),
-  simulation: boolean("simulation").default(false), // Indica se é uma conexão simulada
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

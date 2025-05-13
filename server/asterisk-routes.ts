@@ -11,6 +11,10 @@ import { promisify } from "util";
 const SIMULATION_MODE = true; // false = usar conexão real, true = usar simulação
 
 export function setupAsteriskRoutes(app: Express, requireAuth: any) {
+  // Definir modo de simulação do manager
+  asteriskAMIManager.simulationMode = SIMULATION_MODE;
+  console.log(`Asterisk Manager modo de simulação: ${SIMULATION_MODE ? 'ATIVADO' : 'DESATIVADO'}`);
+  
   // Rota para testar a conexão TCP com o servidor Asterisk
   app.post("/api/asterisk/test-connection", requireAuth, async (req, res) => {
     try {
@@ -330,7 +334,7 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
                 username,
                 password,
                 enabled: true,
-                simulation: true,
+                // Não definimos simulation: true pois a coluna pode não existir
                 updatedAt: new Date()
               })
               .where(eq(asteriskSettings.organizationId, organizationId));
@@ -344,7 +348,7 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
                 username,
                 password,
                 enabled: true,
-                simulation: true,
+                // Não definimos simulation: true pois a coluna pode não existir
                 createdAt: new Date(),
                 updatedAt: new Date()
               });

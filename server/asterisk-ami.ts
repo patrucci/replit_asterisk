@@ -386,7 +386,7 @@ class AsteriskAMIManager extends EventEmitter {
   
   // Configurar WebSocket server para comunicação em tempo real
   private simulationTimer: NodeJS.Timeout | null = null;
-  private simulationMode = true; // Ativar modo de simulação temporariamente enquanto resolvemos os problemas de conexão
+  public simulationMode = true; // Ativar modo de simulação temporariamente enquanto resolvemos os problemas de conexão
   
   setupWebsocket(server: Server, path: string = '/queue-events') {
     this.wss = new WebSocketServer({ server, path });
