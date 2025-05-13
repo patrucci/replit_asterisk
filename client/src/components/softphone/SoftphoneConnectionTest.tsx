@@ -98,13 +98,25 @@ export function SoftphoneConnectionTest() {
       return;
     }
     
+    // Garantir que estamos usando protocolo wss:// se a página estiver em HTTPS
+    let testedUri = wsUri;
+    if (window.location.protocol === 'https:' && testedUri.startsWith('ws://')) {
+      testedUri = testedUri.replace('ws://', 'wss://');
+      
+      // Avisar sobre a alteração
+      console.log(`Página HTTPS detectada. Modificando URI de ${wsUri} para ${testedUri}`);
+      
+      // Atualizar o campo para o usuário
+      setWsUri(testedUri);
+    }
+    
     setIsTesting(true);
     setTestResult(null);
     
     try {
-      console.log(`Testando conexão WebSocket com ${wsUri}...`);
+      console.log(`Testando conexão WebSocket com ${testedUri}...`);
       
-      const ws = new WebSocket(wsUri);
+      const ws = new WebSocket(testedUri);
       
       // Definir timeout para fechar após 10 segundos se não conectar
       const timeout = setTimeout(() => {
@@ -252,7 +264,7 @@ export function SoftphoneConnectionTest() {
     }
   };
 
-  // Função para tentar tanto wss:// quanto ws://
+  // Função para tentar várias portas, mas apenas com protocolo seguro (wss://)
   const testBothProtocols = async () => {
     if (!wsUri) return;
     
@@ -293,14 +305,11 @@ export function SoftphoneConnectionTest() {
       path = '/ws';
     }
     
-    // Lista de combinações de protocolo e porta para testar
+    // Lista de portas para testar (apenas com protocolo seguro wss://)
     const variations = [
       { protocol: 'wss', port: port || '8089' },
-      { protocol: 'ws', port: port || '8089' },
       { protocol: 'wss', port: '8088' },
-      { protocol: 'ws', port: '8088' },
-      { protocol: 'wss', port: '443' },
-      { protocol: 'ws', port: '80' }
+      { protocol: 'wss', port: '443' }
     ];
     
     setIsTesting(true);
@@ -547,7 +556,23 @@ export function SoftphoneConnectionTest() {
               <Input
                 id="ws-uri"
                 value={wsUri}
-                onChange={(e) => setWsUri(e.target.value)}
+                onChange={(e) => {
+                  let newValue = e.target.value;
+                  
+                  // Se a página estiver em HTTPS e o usuário digitar ws://, converter para wss://
+                  if (window.location.protocol === 'https:' && newValue.startsWith('ws://')) {
+                    newValue = newValue.replace('ws://', 'wss://');
+                    
+                    // Atualizamos o valor mas também mostramos o alerta
+                    setTestResult({
+                      success: false,
+                      message: "Protocolo inseguro detectado e corrigido",
+                      details: "Em páginas HTTPS, apenas conexões seguras (wss://) são permitidas. O URI foi convertido automaticamente."
+                    });
+                  }
+                  
+                  setWsUri(newValue);
+                }}
                 placeholder="wss://voip.example.com:8089/ws"
                 className="flex-1"
               />
@@ -762,7 +787,7 @@ export function SoftphoneConnectionTest() {
             <ul className="text-xs space-y-1 list-disc list-inside">
               <li>O WebSocket URI deve usar o formato: <code>wss://dominio.com:porta/ws</code></li>
               <li>Portas comuns para WebSocket SIP: 8088 ou 8089</li>
-              <li>Se <code>wss://</code> falhar, tente <code>ws://</code> para conexões não-seguras</li>
+              <li className="text-amber-600 font-medium">⚠️ Em páginas HTTPS, apenas conexões seguras <code>wss://</code> são permitidas</li>
               <li>Verifique se o módulo WebSocket está habilitado no Asterisk</li>
               <li>Certifique-se que o firewall não está bloqueando a porta WebSocket</li>
               <li>Para conexões <code>wss://</code>, o certificado SSL deve ser válido</li>

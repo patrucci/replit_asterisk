@@ -125,8 +125,19 @@ export class SipClient extends EventEmitter implements ISipClient {
       // Configuração do JsSIP
       console.log("Criando WebSocket interface...");
       
-      // Tentar criar o WebSocket interface com suporte a fallback para ws://
+      // Verificar e ajustar o URI do WebSocket para compatibilidade com páginas HTTPS
       let wsUri = this.config.wsUri;
+      
+      // Em páginas HTTPS, precisamos usar WebSocket seguro (wss://)
+      if (window.location.protocol === 'https:' && wsUri.startsWith('ws://')) {
+        console.warn('Página HTTPS detectada mas URI WebSocket está usando protocolo inseguro ws://');
+        console.warn('Convertendo automaticamente de ws:// para wss:// para evitar bloqueio de mixed-content');
+        wsUri = wsUri.replace('ws://', 'wss://');
+        
+        // Atualizar a configuração para referências futuras
+        this.config.wsUri = wsUri;
+      }
+      
       let socket;
       
       try {
