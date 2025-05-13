@@ -14,8 +14,8 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
   asteriskAMIManager.simulationMode = SIMULATION_MODE;
   console.log(`Asterisk Manager modo de simulação: ${SIMULATION_MODE ? 'ATIVADO' : 'DESATIVADO'}`);
   
-  // Rota para testar portas específicas em um servidor
-  app.post("/api/asterisk/test-ports", requireAuth, async (req, res) => {
+  // Rota para testar portas específicas em um servidor - sem autenticação para diagnósticos
+  app.post("/api/asterisk/test-ports", async (req, res) => {
     try {
       const { host, ports } = req.body;
       
@@ -66,8 +66,8 @@ export function setupAsteriskRoutes(app: Express, requireAuth: any) {
     }
   });
 
-  // Rota para testar a conexão TCP com o servidor Asterisk
-  app.post("/api/asterisk/test-connection", requireAuth, async (req, res) => {
+  // Rota para testar a conexão TCP com o servidor Asterisk - sem autenticação para diagnósticos
+  app.post("/api/asterisk/test-connection", async (req, res) => {
     try {
       const { host, port } = req.body;
       
