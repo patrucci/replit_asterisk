@@ -181,22 +181,22 @@ export default function SoftphonePage() {
           {/* Coluna de Configurações e Informações */}
           <div>
             <Tabs defaultValue="status" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="status">
-                  <PhoneCall className="h-4 w-4 mr-2" />
-                  Status
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+                <TabsTrigger value="status" className="text-xs sm:text-sm">
+                  <PhoneCall className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="truncate">Status</span>
                 </TabsTrigger>
-                <TabsTrigger value="settings">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Config
+                <TabsTrigger value="settings" className="text-xs sm:text-sm">
+                  <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="truncate">Config</span>
                 </TabsTrigger>
-                <TabsTrigger value="diagnostico">
-                  <Wifi className="h-4 w-4 mr-2" />
-                  Diagnóstico
+                <TabsTrigger value="diagnostico" className="text-xs sm:text-sm">
+                  <Wifi className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="truncate">Diagnóstico</span>
                 </TabsTrigger>
-                <TabsTrigger value="help">
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  Ajuda
+                <TabsTrigger value="help" className="text-xs sm:text-sm">
+                  <HelpCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="truncate">Ajuda</span>
                 </TabsTrigger>
               </TabsList>
               

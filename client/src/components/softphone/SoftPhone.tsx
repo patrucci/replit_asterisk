@@ -728,15 +728,15 @@ export function SoftPhone({
     ];
     
     return (
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1 md:gap-2">
         {dialpadButtons.map((row, rowIndex) => (
           <React.Fragment key={rowIndex}>
             {row.map(button => (
               <Button
                 key={button}
                 variant="outline"
-                size="lg"
-                className="h-12 font-semibold text-lg"
+                size="sm"
+                className="h-9 sm:h-10 md:h-12 text-base sm:text-lg font-medium sm:font-semibold p-0"
                 onClick={() => sendDTMF(button)}
                 disabled={callState !== CallState.NONE && callState !== CallState.ESTABLISHED}
               >
@@ -1037,11 +1037,11 @@ export function SoftPhone({
             <div className="mt-4 flex justify-center">
               <Button
                 size="lg"
-                className="rounded-full h-16 w-16 p-0"
+                className="rounded-full h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 p-0"
                 disabled={callState !== CallState.NONE || !phoneNumber || registerState !== RegisterState.REGISTERED}
                 onClick={makeCall}
               >
-                <Phone className="h-6 w-6" />
+                <Phone className="h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
             </div>
           </TabsContent>
