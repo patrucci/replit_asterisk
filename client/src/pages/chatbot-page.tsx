@@ -998,9 +998,12 @@ export default function ChatbotPage() {
           </DialogHeader>
           
           <Form {...channelForm}>
-            <form onSubmit={channelForm.handleSubmit((data) => {
-              createChannelMutation.mutate(data);
-            })} className="space-y-4">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              channelForm.handleSubmit((data) => {
+                createChannelMutation.mutate(data);
+              })();
+            }} className="space-y-4">
               <FormField
                 control={channelForm.control}
                 name="name"
@@ -1344,12 +1347,14 @@ export default function ChatbotPage() {
                         placeholder="Ex: Suporte"
                         onChange={(e) => {
                           const credentials = channelForm.getValues("credentials") || {};
-                          channelForm.setValue("credentials", {
+                          const updatedCredentials = {
                             ...credentials,
                             widgetName: e.target.value
-                          });
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.widgetName || ""}
+                        defaultValue=""
+                        key={`widget-name-input-${Date.now()}`}
                       />
                     </FormControl>
                     <FormDescription>
