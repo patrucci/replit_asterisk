@@ -1522,15 +1522,14 @@ export default function ChatbotPage() {
                       <Input 
                         placeholder="Ex: +5511999999999"
                         onChange={(e) => {
-                          const credentials = channelForm.getValues("credentials") || {};
                           const updatedCredentials = {
-                            ...credentials,
+                            ...channelCredentials,
                             phoneNumber: e.target.value
                           };
+                          setChannelCredentials(updatedCredentials);
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.phoneNumber || ""}
-                        key={`phone-edit-${Date.now()}`}
+                        value={channelCredentials.phoneNumber || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1544,14 +1543,14 @@ export default function ChatbotPage() {
                       <Input 
                         type="password"
                         onChange={(e) => {
-                          const credentials = channelForm.getValues("credentials") || {};
                           const updatedCredentials = {
-                            ...credentials,
+                            ...channelCredentials,
                             accessToken: e.target.value
                           };
+                          setChannelCredentials(updatedCredentials);
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.accessToken || ""}
+                        value={channelCredentials.accessToken || ""}
 
                       />
                     </FormControl>
@@ -1653,15 +1652,14 @@ export default function ChatbotPage() {
                       <Input 
                         placeholder="Ex: Suporte"
                         onChange={(e) => {
-                          const credentials = channelForm.getValues("credentials") || {};
                           const updatedCredentials = {
-                            ...credentials,
+                            ...channelCredentials,
                             widgetName: e.target.value
                           };
+                          setChannelCredentials(updatedCredentials);
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.widgetName || ""}
-                        key={`widget-name-edit-${Date.now()}`}
+                        value={channelCredentials.widgetName || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1675,14 +1673,14 @@ export default function ChatbotPage() {
                       <Input 
                         type="color"
                         onChange={(e) => {
-                          const credentials = channelForm.getValues("credentials") || {};
                           const updatedCredentials = {
-                            ...credentials,
+                            ...channelCredentials,
                             primaryColor: e.target.value
                           };
+                          setChannelCredentials(updatedCredentials);
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.primaryColor || "#4F46E5"}
+                        value={channelCredentials.primaryColor || "#4F46E5"}
 
                         className="h-10 w-full"
                       />
