@@ -200,12 +200,14 @@ export default function ChatbotPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chatbots", selectedChatbot?.id, "channels"] });
       setIsNewChannelDialogOpen(false);
+      setIsSubmitting(false);
       toast({
         title: "Canal criado",
         description: "O canal foi criado com sucesso!",
       });
     },
     onError: (error) => {
+      setIsSubmitting(false);
       toast({
         title: "Erro ao criar canal",
         description: error.message,
@@ -1015,6 +1017,7 @@ export default function ChatbotPage() {
             <form onSubmit={(e) => {
               e.preventDefault();
               channelForm.handleSubmit((data) => {
+                setIsSubmitting(true);
                 createChannelMutation.mutate(data);
               })();
             }} className="space-y-4">
@@ -1431,8 +1434,8 @@ export default function ChatbotPage() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Criar canal
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Criando...' : 'Criar canal'}
                 </Button>
               </DialogFooter>
             </form>
