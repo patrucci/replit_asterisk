@@ -928,25 +928,45 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     [setEdges, createEdgeMutation, flow.id]
   );
 
+  // Solução alternativa: usar uma abordagem manual sem diálogos
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     // Impedir a propagação do evento para evitar interações indesejadas
+    event.preventDefault();
     event.stopPropagation();
     
-    // Apenas abrir o diálogo se o nó já não estiver selecionado
-    if (!selectedNode || selectedNode.id !== node.id) {
-      setSelectedNode(node);
-      setIsEditNodeDialogOpen(true);
+    // Exibir um prompt nativo do navegador para editar o nó
+    const newLabel = prompt("Digite o nome do nó:", node.data.label || "");
+    if (newLabel !== null) {
+      // Atualizar o nó se o usuário não cancelou
+      updateNodeMutation.mutate({
+        id: node.data.originalId,
+        data: {
+          name: newLabel,
+          data: {
+            ...node.data,
+            label: newLabel,
+          },
+        },
+      });
     }
   };
 
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
     // Impedir a propagação do evento para evitar interações indesejadas
+    event.preventDefault();
     event.stopPropagation();
     
-    // Apenas abrir o diálogo se a aresta já não estiver selecionada
-    if (!selectedEdge || selectedEdge.id !== edge.id) {
-      setSelectedEdge(edge);
-      setIsEditEdgeDialogOpen(true);
+    // Exibir um prompt nativo do navegador para editar a aresta
+    const newLabel = prompt("Digite o rótulo da conexão:", edge.label ? String(edge.label) : "");
+    if (newLabel !== null) {
+      // Atualizar a aresta se o usuário não cancelou
+      updateEdgeMutation.mutate({
+        id: edge.data?.originalId,
+        data: {
+          label: newLabel,
+          condition: edge.data?.condition || null,
+        },
+      });
     }
   };
 
@@ -1082,123 +1102,7 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
         </ReactFlowProvider>
       </div>
       
-      {/* Diálogo para editar nó */}
-      {selectedNode && (
-        <Dialog 
-          open={isEditNodeDialogOpen} 
-          onOpenChange={(open) => {
-            // Só permite fechamento quando for explicitamente solicitado
-            if (!open) {
-              // Tenta evitar fechamento acidental durante edição
-              if (confirm('Deseja fechar o editor? Alterações não salvas serão perdidas.')) {
-                setIsEditNodeDialogOpen(false);
-              }
-            } else {
-              setIsEditNodeDialogOpen(true);
-            }
-          }}
-        >
-          <DialogContent 
-            className="sm:max-w-[500px]"
-            onInteractOutside={(e) => {
-              // Impede fechamento ao clicar fora
-              e.preventDefault();
-            }}
-            onEscapeKeyDown={(e) => {
-              // Impede fechamento ao pressionar ESC
-              e.preventDefault();
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>Editar {getNodeTypeLabel(selectedNode.type || 'message')}</DialogTitle>
-              <DialogDescription>
-                Configure as propriedades do nó.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="py-4">
-              <NodeEditor 
-                node={selectedNode} 
-                onSave={(data) => {
-                  updateNodeMutation.mutate({
-                    id: selectedNode.data.originalId,
-                    data: {
-                      name: data.label,
-                      data,
-                    },
-                  });
-                  setIsDirty(true);
-                }}
-                onDelete={() => {
-                  if (confirm('Tem certeza que deseja excluir este nó?')) {
-                    deleteNodeMutation.mutate(selectedNode.data.originalId);
-                    setIsEditNodeDialogOpen(false);
-                  }
-                }}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {/* Diálogo para editar aresta */}
-      {selectedEdge && (
-        <Dialog 
-          open={isEditEdgeDialogOpen} 
-          onOpenChange={(open) => {
-            // Só permite fechamento quando for explicitamente solicitado
-            if (!open) {
-              // Tenta evitar fechamento acidental durante edição
-              if (confirm('Deseja fechar o editor? Alterações não salvas serão perdidas.')) {
-                setIsEditEdgeDialogOpen(false);
-              }
-            } else {
-              setIsEditEdgeDialogOpen(true);
-            }
-          }}
-        >
-          <DialogContent 
-            className="sm:max-w-[500px]"
-            onInteractOutside={(e) => {
-              // Impede fechamento ao clicar fora
-              e.preventDefault();
-            }}
-            onEscapeKeyDown={(e) => {
-              // Impede fechamento ao pressionar ESC
-              e.preventDefault();
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>Editar conexão</DialogTitle>
-              <DialogDescription>
-                Configure as propriedades da conexão entre os nós.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="py-4">
-              <EdgeEditor 
-                edge={selectedEdge} 
-                onSave={(data) => {
-                  updateEdgeMutation.mutate({
-                    id: selectedEdge.data?.originalId,
-                    data: {
-                      label: data.label,
-                      condition: data.condition,
-                    },
-                  });
-                  setIsDirty(true);
-                }}
-                onDelete={() => {
-                  if (confirm('Tem certeza que deseja excluir esta conexão?')) {
-                    deleteEdgeMutation.mutate(selectedEdge.data?.originalId);
-                    setIsEditEdgeDialogOpen(false);
-                  }
-                }}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Removido diálogos de edição em favor de prompts nativos do navegador */}
       
       {/* Diálogo para adicionar nó */}
       <Dialog open={isAddNodeDialogOpen} onOpenChange={setIsAddNodeDialogOpen}>
