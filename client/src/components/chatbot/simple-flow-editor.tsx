@@ -240,7 +240,7 @@ function NodeEditor({ node, onClose, onSave }: NodeEditorProps) {
   const type = node.type || 'message';
 
   const handleChange = (field: string, value: any) => {
-    setFormState(prev => ({
+    setFormState((prev: any) => ({
       ...prev,
       [field]: value
     }));
@@ -702,7 +702,7 @@ export function SimpleFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack: 
               onNodeClick={handleNodeClick}
               fitView
             >
-              <Background variant="dots" gap={12} size={1} />
+              <Background color="#f8f8f8" gap={12} size={1} />
               <Controls />
               <MiniMap nodeStrokeWidth={3} zoomable pannable />
               
