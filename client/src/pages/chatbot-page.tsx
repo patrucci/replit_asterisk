@@ -1589,7 +1589,7 @@ export default function ChatbotPage() {
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
                         value={channelForm.getValues("credentials")?.botToken || ""}
-                        key={`bot-token-edit-${Date.now()}`}
+
                       />
                     </FormControl>
                     <FormDescription>
@@ -1611,7 +1611,7 @@ export default function ChatbotPage() {
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
                         value={channelForm.getValues("credentials")?.botName || ""}
-                        key={`bot-name-edit-${Date.now()}`}
+
                       />
                     </FormControl>
                     <FormDescription>
@@ -1676,7 +1676,7 @@ export default function ChatbotPage() {
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
                         value={channelForm.getValues("credentials")?.primaryColor || "#4F46E5"}
-                        key={`color-edit-${Date.now()}`}
+
                         className="h-10 w-full"
                       />
                     </FormControl>
