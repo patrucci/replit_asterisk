@@ -221,12 +221,15 @@ export default function ChatbotPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chatbots", selectedChatbot?.id, "channels"] });
+      setIsEditChannelDialogOpen(false);
+      setIsSubmitting(false);
       toast({
         title: "Canal atualizado",
         description: "O canal foi atualizado com sucesso!",
       });
     },
     onError: (error) => {
+      setIsSubmitting(false);
       toast({
         title: "Erro ao atualizar canal",
         description: error.message,
@@ -1452,8 +1455,9 @@ export default function ChatbotPage() {
               e.preventDefault();
               channelForm.handleSubmit((data) => {
                 if (selectedChannel) {
+                  setIsSubmitting(true);
                   updateChannelMutation.mutate({ id: selectedChannel.id, data });
-                  setIsEditChannelDialogOpen(false);
+                  // A fechar do diálogo é tratada no onSuccess do mutation
                 }
               })();
             }} className="space-y-4">
@@ -1702,8 +1706,8 @@ export default function ChatbotPage() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Salvar alterações
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Salvando...' : 'Salvar alterações'}
                 </Button>
               </DialogFooter>
             </form>
