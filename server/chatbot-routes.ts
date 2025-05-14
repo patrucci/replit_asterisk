@@ -137,8 +137,9 @@ export function setupChatbotRoutes(app: Express, requireAuth: any) {
       } else {
         res.status(500).json({ error: "Erro ao excluir chatbot" });
       }
-    } catch (error) {
-      res.status(500).json({ error: "Erro ao excluir chatbot" });
+    } catch (error: any) {
+      console.error("Erro ao excluir chatbot:", error);
+      res.status(500).json({ error: "Erro ao excluir chatbot", details: error.message });
     }
   });
 

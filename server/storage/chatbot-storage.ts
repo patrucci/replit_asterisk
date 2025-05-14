@@ -85,55 +85,76 @@ export class ChatbotStorage implements IChatbotStorage {
 
   async deleteChatbot(id: number): Promise<boolean> {
     try {
+      console.log(`Iniciando exclusão do chatbot ID ${id}`);
+      
       // Primeiro obtemos todos os fluxos associados a este chatbot
       const flows = await this.getFlows(id);
+      console.log(`Encontrados ${flows.length} fluxos para exclusão`);
       
       // Para cada fluxo, precisamos excluir todos os nós e arestas
       for (const flow of flows) {
         // Excluir todas as arestas do fluxo
-        await db
+        console.log(`Excluindo arestas do fluxo ID ${flow.id}`);
+        const edgesResult = await db
           .delete(chatbotSchema.chatbotEdges)
           .where(eq(chatbotSchema.chatbotEdges.flowId, flow.id));
+        console.log(`Arestas excluídas: ${edgesResult.rowCount || 0}`);
         
         // Excluir todos os nós do fluxo
-        await db
+        console.log(`Excluindo nós do fluxo ID ${flow.id}`);
+        const nodesResult = await db
           .delete(chatbotSchema.chatbotNodes)
           .where(eq(chatbotSchema.chatbotNodes.flowId, flow.id));
+        console.log(`Nós excluídos: ${nodesResult.rowCount || 0}`);
         
         // Excluir o fluxo
-        await db
+        console.log(`Excluindo fluxo ID ${flow.id}`);
+        const flowResult = await db
           .delete(chatbotSchema.chatbotFlows)
           .where(eq(chatbotSchema.chatbotFlows.id, flow.id));
+        console.log(`Fluxo excluído: ${flowResult.rowCount || 0}`);
       }
       
       // Excluir todos os canais do chatbot
-      await db
+      console.log(`Excluindo canais do chatbot ID ${id}`);
+      const channelsResult = await db
         .delete(chatbotSchema.chatbotChannels)
         .where(eq(chatbotSchema.chatbotChannels.chatbotId, id));
+      console.log(`Canais excluídos: ${channelsResult.rowCount || 0}`);
       
       // Excluir todas as conversas e mensagens associadas
       const conversations = await this.getConversations(id);
+      console.log(`Encontradas ${conversations.length} conversas para exclusão`);
+      
       for (const conversation of conversations) {
         // Excluir todas as mensagens da conversa
-        await db
+        console.log(`Excluindo mensagens da conversa ID ${conversation.id}`);
+        const messagesResult = await db
           .delete(chatbotSchema.chatbotMessages)
           .where(eq(chatbotSchema.chatbotMessages.conversationId, conversation.id));
+        console.log(`Mensagens excluídas: ${messagesResult.rowCount || 0}`);
       }
       
       // Excluir todas as conversas
-      await db
+      console.log(`Excluindo conversas do chatbot ID ${id}`);
+      const conversationsResult = await db
         .delete(chatbotSchema.chatbotConversations)
         .where(eq(chatbotSchema.chatbotConversations.chatbotId, id));
+      console.log(`Conversas excluídas: ${conversationsResult.rowCount || 0}`);
       
       // Finalmente, excluir o chatbot
+      console.log(`Excluindo chatbot ID ${id}`);
       const result = await db
         .delete(chatbotSchema.chatbots)
         .where(eq(chatbotSchema.chatbots.id, id));
       
-      return (result.rowCount || 0) > 0;
+      const success = (result.rowCount || 0) > 0;
+      console.log(`Chatbot excluído: ${success ? 'Sim' : 'Não'}`);
+      
+      return success;
     } catch (error) {
       console.error("Erro ao excluir chatbot:", error);
-      return false;
+      throw error; // Repassar o erro para que possamos ver os detalhes na rota
     }
   }
 
