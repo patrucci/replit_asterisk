@@ -84,10 +84,57 @@ export class ChatbotStorage implements IChatbotStorage {
   }
 
   async deleteChatbot(id: number): Promise<boolean> {
-    const result = await db
-      .delete(chatbotSchema.chatbots)
-      .where(eq(chatbotSchema.chatbots.id, id));
-    return (result.rowCount || 0) > 0;
+    try {
+      // Primeiro obtemos todos os fluxos associados a este chatbot
+      const flows = await this.getFlows(id);
+      
+      // Para cada fluxo, precisamos excluir todos os nós e arestas
+      for (const flow of flows) {
+        // Excluir todas as arestas do fluxo
+        await db
+          .delete(chatbotSchema.chatbotEdges)
+          .where(eq(chatbotSchema.chatbotEdges.flowId, flow.id));
+        
+        // Excluir todos os nós do fluxo
+        await db
+          .delete(chatbotSchema.chatbotNodes)
+          .where(eq(chatbotSchema.chatbotNodes.flowId, flow.id));
+        
+        // Excluir o fluxo
+        await db
+          .delete(chatbotSchema.chatbotFlows)
+          .where(eq(chatbotSchema.chatbotFlows.id, flow.id));
+      }
+      
+      // Excluir todos os canais do chatbot
+      await db
+        .delete(chatbotSchema.chatbotChannels)
+        .where(eq(chatbotSchema.chatbotChannels.chatbotId, id));
+      
+      // Excluir todas as conversas e mensagens associadas
+      const conversations = await this.getConversations(id);
+      for (const conversation of conversations) {
+        // Excluir todas as mensagens da conversa
+        await db
+          .delete(chatbotSchema.chatbotMessages)
+          .where(eq(chatbotSchema.chatbotMessages.conversationId, conversation.id));
+      }
+      
+      // Excluir todas as conversas
+      await db
+        .delete(chatbotSchema.chatbotConversations)
+        .where(eq(chatbotSchema.chatbotConversations.chatbotId, id));
+      
+      // Finalmente, excluir o chatbot
+      const result = await db
+        .delete(chatbotSchema.chatbots)
+        .where(eq(chatbotSchema.chatbots.id, id));
+      
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error("Erro ao excluir chatbot:", error);
+      return false;
+    }
   }
 
   // Implementação dos canais

@@ -172,17 +172,23 @@ export default function ChatbotPage() {
 
   const deleteChatbotMutation = useMutation({
     mutationFn: async (id: number) => {
+      toast({
+        title: "Excluindo chatbot",
+        description: "Esta operação pode levar alguns segundos...",
+      });
       await apiRequest("DELETE", `/api/chatbots/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chatbots"] });
       setSelectedChatbot(null);
+      setIsSubmitting(false);
       toast({
         title: "Chatbot excluído",
         description: "O chatbot foi excluído com sucesso!",
       });
     },
     onError: (error) => {
+      setIsSubmitting(false);
       toast({
         title: "Erro ao excluir chatbot",
         description: error.message,
@@ -388,7 +394,7 @@ export default function ChatbotPage() {
       chatbotForm.reset({
         name: selectedChatbot.name,
         description: selectedChatbot.description || "",
-        active: selectedChatbot.active,
+        active: selectedChatbot.active === null ? undefined : selectedChatbot.active,
       });
     } else {
       chatbotForm.reset({
@@ -406,7 +412,7 @@ export default function ChatbotPage() {
         channelType: selectedChannel.channelType,
         credentials: selectedChannel.credentials as Record<string, string>,
         webhookUrl: selectedChannel.webhookUrl || "",
-        active: selectedChannel.active,
+        active: selectedChannel.active === null ? undefined : selectedChannel.active,
       });
     } else if (isNewChannelDialogOpen) {
       channelForm.reset({
@@ -555,10 +561,12 @@ export default function ChatbotPage() {
                       size="icon"
                       className="text-red-500"
                       onClick={() => {
-                        if (confirm("Tem certeza que deseja excluir este chatbot?")) {
+                        if (!isSubmitting && confirm("Tem certeza que deseja excluir este chatbot? Esta ação não pode ser desfeita e excluirá todos os fluxos, canais e conversas associados.")) {
+                          setIsSubmitting(true);
                           deleteChatbotMutation.mutate(selectedChatbot.id);
                         }
                       }}
+                      disabled={isSubmitting}
                     >
                       <Trash className="h-4 w-4" />
                     </Button>
