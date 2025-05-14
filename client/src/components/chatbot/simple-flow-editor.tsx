@@ -31,6 +31,7 @@ import {
   X,
   Plus,
   Loader2,
+  Trash,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -233,10 +234,12 @@ interface NodeEditorProps {
   node: Node;
   onClose: () => void;
   onSave: (nodeId: string, data: any) => void;
+  onDelete: (nodeId: string) => void;
 }
 
-function NodeEditor({ node, onClose, onSave }: NodeEditorProps) {
+function NodeEditor({ node, onClose, onSave, onDelete }: NodeEditorProps) {
   const [formState, setFormState] = useState({ ...node.data });
+  const [isDeleteConfirm, setIsDeleteConfirm] = useState(false);
   const type = node.type || 'message';
 
   const handleChange = (field: string, value: any) => {
@@ -250,6 +253,10 @@ function NodeEditor({ node, onClose, onSave }: NodeEditorProps) {
     e.preventDefault();
     onSave(node.id, formState);
     onClose();
+  };
+  
+  const handleRequestDelete = () => {
+    setIsDeleteConfirm(true);
   };
 
   return (
@@ -419,14 +426,49 @@ function NodeEditor({ node, onClose, onSave }: NodeEditorProps) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit">
-            Salvar
-          </Button>
-        </div>
+        {isDeleteConfirm ? (
+          <div className="bg-red-50 p-3 rounded-md border border-red-200 mb-4">
+            <p className="text-sm text-red-800 mb-2">Tem certeza que deseja excluir este nó?</p>
+            <div className="flex gap-2">
+              <Button 
+                type="button" 
+                variant="destructive" 
+                size="sm"
+                onClick={() => onDelete(node.id)}
+              >
+                Sim, excluir
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsDeleteConfirm(false)}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-between gap-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleRequestDelete}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash className="h-4 w-4 mr-1" />
+              Excluir
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Salvar
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </form>
   );
@@ -472,6 +514,29 @@ export function SimpleFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack: 
     onError: (error: any) => {
       toast({
         title: 'Erro ao atualizar nó',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const { mutate: deleteNode } = useMutation({
+    mutationFn: async (nodeId: string) => {
+      const response = await apiRequest('DELETE', `/api/nodes/${nodeId}`);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'nodes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'edges'] });
+      setSelectedNode(null);
+      toast({
+        title: 'Nó excluído',
+        description: 'O nó foi excluído com sucesso.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao excluir nó',
         description: error.message,
         variant: 'destructive',
       });
@@ -735,6 +800,7 @@ export function SimpleFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack: 
               node={selectedNode} 
               onClose={() => setSelectedNode(null)} 
               onSave={handleSaveNode}
+              onDelete={(nodeId) => deleteNode(nodeId)}
             />
           </div>
         )}
