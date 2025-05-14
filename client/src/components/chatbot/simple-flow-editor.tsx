@@ -235,9 +235,10 @@ interface NodeEditorProps {
   onClose: () => void;
   onSave: (nodeId: string, data: any) => void;
   onDelete: (nodeId: string) => void;
+  isDeleting: boolean;
 }
 
-function NodeEditor({ node, onClose, onSave, onDelete }: NodeEditorProps) {
+function NodeEditor({ node, onClose, onSave, onDelete, isDeleting }: NodeEditorProps) {
   const [formState, setFormState] = useState({ ...node.data });
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false);
   const type = node.type || 'message';
@@ -434,9 +435,20 @@ function NodeEditor({ node, onClose, onSave, onDelete }: NodeEditorProps) {
                 type="button" 
                 variant="destructive" 
                 size="sm"
-                onClick={() => onDelete(node.id)}
+                disabled={isDeleting}
+                onClick={() => {
+                  onDelete(node.id);
+                  // O painel será fechado pelo callback onSuccess
+                }}
               >
-                Sim, excluir
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  'Sim, excluir'
+                )}
               </Button>
               <Button 
                 type="button" 
@@ -520,10 +532,19 @@ export function SimpleFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack: 
     }
   });
 
-  const { mutate: deleteNode } = useMutation({
+  const { mutate: deleteNode, isPending: isDeleting } = useMutation({
     mutationFn: async (nodeId: string) => {
-      const response = await apiRequest('DELETE', `/api/nodes/${nodeId}`);
-      return await response.json();
+      try {
+        const response = await apiRequest('DELETE', `/api/nodes/${nodeId}`);
+        if (response.status === 204) {
+          return { success: true };
+        } else {
+          const data = await response.json();
+          return data;
+        }
+      } catch (error) {
+        throw new Error('Erro ao excluir nó');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'nodes'] });
@@ -801,6 +822,7 @@ export function SimpleFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack: 
               onClose={() => setSelectedNode(null)} 
               onSave={handleSaveNode}
               onDelete={(nodeId) => deleteNode(nodeId)}
+              isDeleting={isDeleting}
             />
           </div>
         )}
