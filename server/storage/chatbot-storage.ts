@@ -232,10 +232,27 @@ export class ChatbotStorage implements IChatbotStorage {
   }
 
   async deleteFlow(id: number): Promise<boolean> {
-    const result = await db
-      .delete(chatbotSchema.chatbotFlows)
-      .where(eq(chatbotSchema.chatbotFlows.id, id));
-    return result.rowCount > 0;
+    try {
+      // Primeiro, excluir todos os nós do fluxo
+      await db
+        .delete(chatbotSchema.chatbotNodes)
+        .where(eq(chatbotSchema.chatbotNodes.flowId, id));
+      
+      // Depois, excluir todas as arestas do fluxo
+      await db
+        .delete(chatbotSchema.chatbotEdges)
+        .where(eq(chatbotSchema.chatbotEdges.flowId, id));
+      
+      // Finalmente, excluir o próprio fluxo
+      const result = await db
+        .delete(chatbotSchema.chatbotFlows)
+        .where(eq(chatbotSchema.chatbotFlows.id, id));
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Erro ao excluir fluxo:", error);
+      return false;
+    }
   }
 
   // Implementação dos nós
