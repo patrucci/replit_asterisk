@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { NodeEditorDialog } from './node-editor-dialog';
+import { EdgeEditorDialog } from './edge-editor-dialog';
 import ReactFlow, {
   Background,
   Controls,
