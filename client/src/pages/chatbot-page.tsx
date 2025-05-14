@@ -129,15 +129,18 @@ export default function ChatbotPage() {
       const res = await apiRequest("POST", "/api/chatbots", data);
       return await res.json() as Chatbot;
     },
-    onSuccess: () => {
+    onSuccess: (newChatbot) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chatbots"] });
       setIsNewChatbotDialogOpen(false);
+      setSelectedChatbot(newChatbot);
+      setIsSubmitting(false);
       toast({
         title: "Chatbot criado",
         description: "O chatbot foi criado com sucesso!",
       });
     },
     onError: (error) => {
+      setIsSubmitting(false);
       toast({
         title: "Erro ao criar chatbot",
         description: error.message,
@@ -986,8 +989,8 @@ export default function ChatbotPage() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Criar chatbot
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Criando...' : 'Criar chatbot'}
                 </Button>
               </DialogFooter>
             </form>
@@ -1570,7 +1573,7 @@ export default function ChatbotPage() {
                           };
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        defaultValue={channelForm.getValues("credentials")?.botToken || ""}
+                        value={channelForm.getValues("credentials")?.botToken || ""}
                         key={`bot-token-edit-${Date.now()}`}
                       />
                     </FormControl>
@@ -1592,7 +1595,7 @@ export default function ChatbotPage() {
                           };
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        defaultValue={channelForm.getValues("credentials")?.botName || ""}
+                        value={channelForm.getValues("credentials")?.botName || ""}
                         key={`bot-name-edit-${Date.now()}`}
                       />
                     </FormControl>
