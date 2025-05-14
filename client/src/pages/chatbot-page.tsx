@@ -1369,12 +1369,14 @@ export default function ChatbotPage() {
                         type="color"
                         onChange={(e) => {
                           const credentials = channelForm.getValues("credentials") || {};
-                          channelForm.setValue("credentials", {
+                          const updatedCredentials = {
                             ...credentials,
                             primaryColor: e.target.value
-                          });
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.primaryColor || "#4F46E5"}
+                        defaultValue="#4F46E5"
+                        key={`color-input-${Date.now()}`}
                         className="h-10 w-full"
                       />
                     </FormControl>
