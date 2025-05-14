@@ -36,7 +36,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { ChatbotFlowEditor } from "@/components/chatbot/chatbot-flow-editor";
+import { SimpleFlowEditor } from "@/components/chatbot/simple-flow-editor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { 
@@ -451,7 +451,7 @@ export default function ChatbotPage() {
   // Renderização condicional: editor de fluxo ou página principal
   if (isFlowEditor && selectedFlow) {
     return (
-      <ChatbotFlowEditor 
+      <SimpleFlowEditor 
         flow={selectedFlow} 
         onBack={() => setIsFlowEditor(false)} 
       />

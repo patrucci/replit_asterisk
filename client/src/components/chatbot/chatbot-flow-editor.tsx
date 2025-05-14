@@ -772,19 +772,20 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
         </div>
       </div>
       
-      {/* Painel lateral de edição */}
+      {/* Painel lateral de edição com formulário manual */}
       {sidebarVisible && selectedNode && (
-        <div className="h-full w-1/3 bg-background border-l border-border overflow-y-auto p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium">Editar {getNodeTypeLabel(selectedNode.type || 'message')}</h3>
-            <Button variant="ghost" size="sm" onClick={() => setSidebarVisible(false)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="h-full w-1/3 bg-background border-l border-border overflow-y-auto">
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Editar {getNodeTypeLabel(selectedNode.type || 'message')}</h3>
+              <Button variant="ghost" size="sm" onClick={() => setSidebarVisible(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="node-label">Nome do nó</Label>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="node-label">Nome do nó</Label>
               <Input 
                 id="node-label" 
                 value={selectedNode.data.label || ''} 
