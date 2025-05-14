@@ -391,7 +391,7 @@ export default function ChatbotPage() {
   }, [selectedChatbot, chatbotForm]);
 
   useEffect(() => {
-    if (selectedChannel) {
+    if (selectedChannel && isEditChannelDialogOpen) {
       channelForm.reset({
         name: selectedChannel.name,
         channelType: selectedChannel.channelType,
@@ -399,7 +399,7 @@ export default function ChatbotPage() {
         webhookUrl: selectedChannel.webhookUrl || "",
         active: selectedChannel.active,
       });
-    } else {
+    } else if (isNewChannelDialogOpen) {
       channelForm.reset({
         name: "",
         channelType: "webchat",
@@ -408,7 +408,7 @@ export default function ChatbotPage() {
         active: true,
       });
     }
-  }, [selectedChannel, channelForm]);
+  }, [selectedChannel, isEditChannelDialogOpen, isNewChannelDialogOpen, channelForm]);
 
   useEffect(() => {
     if (selectedFlow) {
