@@ -82,6 +82,7 @@ export default function ChatbotPage() {
   const [isNewChannelDialogOpen, setIsNewChannelDialogOpen] = useState(false);
   const [isEditChannelDialogOpen, setIsEditChannelDialogOpen] = useState(false);
   const [isNewFlowDialogOpen, setIsNewFlowDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Queries para buscar dados
   const { data: chatbots = [], isLoading: isLoadingChatbots } = useQuery({
@@ -916,7 +917,10 @@ export default function ChatbotPage() {
           
           <Form {...chatbotForm}>
             <form onSubmit={chatbotForm.handleSubmit((data) => {
-              createChatbotMutation.mutate(data);
+              if (!isSubmitting) {
+                setIsSubmitting(true);
+                createChatbotMutation.mutate(data);
+              }
             })} className="space-y-4">
               <FormField
                 control={chatbotForm.control}
