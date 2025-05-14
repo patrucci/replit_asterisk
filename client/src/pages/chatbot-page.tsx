@@ -1507,7 +1507,7 @@ export default function ChatbotPage() {
                           };
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        defaultValue={channelForm.getValues("credentials")?.phoneNumber || ""}
+                        value={channelForm.getValues("credentials")?.phoneNumber || ""}
                         key={`phone-edit-${Date.now()}`}
                       />
                     </FormControl>
@@ -1529,7 +1529,7 @@ export default function ChatbotPage() {
                           };
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        defaultValue={channelForm.getValues("credentials")?.accessToken || ""}
+                        value={channelForm.getValues("credentials")?.accessToken || ""}
                         key={`token-edit-${Date.now()}`}
                       />
                     </FormControl>
@@ -1638,7 +1638,7 @@ export default function ChatbotPage() {
                           };
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        defaultValue={channelForm.getValues("credentials")?.widgetName || ""}
+                        value={channelForm.getValues("credentials")?.widgetName || ""}
                         key={`widget-name-edit-${Date.now()}`}
                       />
                     </FormControl>
@@ -1660,7 +1660,7 @@ export default function ChatbotPage() {
                           };
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        defaultValue={channelForm.getValues("credentials")?.primaryColor || "#4F46E5"}
+                        value={channelForm.getValues("credentials")?.primaryColor || "#4F46E5"}
                         key={`color-edit-${Date.now()}`}
                         className="h-10 w-full"
                       />
