@@ -16,6 +16,7 @@ import SchedulePage from "@/pages/schedule-page";
 import PaymentsPage from "@/pages/payments-page";
 import MessagesPage from "@/pages/messages-page";
 import SettingsPage from "@/pages/settings-page";
+import ApiSettingsPage from "@/pages/api-settings-page";
 import AsteriskConfigPage from "@/pages/asterisk-config-page";
 import AsteriskAIPage from "@/pages/asterisk-ai-page";
 import QueuesPage from "@/pages/queues-page";
@@ -36,6 +37,7 @@ function Router() {
       <ProtectedRoute path="/payments" component={PaymentsPage} />
       <ProtectedRoute path="/messages" component={MessagesPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/settings/api" component={ApiSettingsPage} />
       <ProtectedRoute path="/asterisk-config" component={AsteriskConfigPage} />
       <ProtectedRoute path="/asterisk-ai" component={AsteriskAIPage} />
       <ProtectedRoute path="/queues" component={QueuesPage} />

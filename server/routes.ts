@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { setupAsteriskRoutes } from "./asterisk-routes";
 import { setupQueueRoutes } from "./queue-routes";
+import { setupApiRoutes } from "./api-routes";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -92,6 +93,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup Queue routes
   setupQueueRoutes(app, requireAuth);
+  
+  // Setup API settings routes
+  setupApiRoutes(app, requireAuth);
 
   // Client routes
   app.get("/api/clients", requireAuth, async (req, res) => {
