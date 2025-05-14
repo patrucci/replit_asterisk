@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { MainLayout } from "@/components/layout/main-layout";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -171,8 +172,11 @@ export default function ApiSettingsPage() {
   }
 
   return (
-    <div className="container py-6">
-      <h1 className="text-3xl font-bold mb-6">Configurações de API</h1>
+    <MainLayout>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-neutral-800">Configurações de IA</h2>
+        <p className="text-sm text-neutral-500">Configure as chaves de API para acessar os serviços de inteligência artificial.</p>
+      </div>
       
       <Card className="mb-8">
         <CardHeader>
@@ -414,6 +418,6 @@ export default function ApiSettingsPage() {
           </form>
         </Form>
       </Card>
-    </div>
+    </MainLayout>
   );
 }

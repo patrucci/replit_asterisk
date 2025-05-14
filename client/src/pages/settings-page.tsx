@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, BellRing, Key, User } from "lucide-react";
+import { AlertTriangle, BellRing, Key, User, Brain, ExternalLink } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 
 // Profile form schema
@@ -222,11 +222,20 @@ export default function SettingsPage() {
                 <Button 
                   variant={activeTab === "theme" ? "default" : "ghost"}
                   onClick={() => setActiveTab("theme")}
-                  className="justify-start rounded-none text-left px-4 py-3"
+                  className="justify-start rounded-none text-left px-4 py-3 border-b"
                 >
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Tema
                 </Button>
+                <a href="/settings/api">
+                  <Button 
+                    variant="ghost"
+                    className="justify-start rounded-none text-left px-4 py-3 w-full"
+                  >
+                    <Brain className="h-4 w-4 mr-2" />
+                    Configuração de IA <ExternalLink className="ml-2 h-3 w-3" />
+                  </Button>
+                </a>
               </div>
             </CardContent>
           </Card>
