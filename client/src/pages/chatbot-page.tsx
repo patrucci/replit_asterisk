@@ -430,7 +430,7 @@ export default function ChatbotPage() {
       flowForm.reset({
         name: selectedFlow.name,
         description: selectedFlow.description || "",
-        isDefault: selectedFlow.isDefault,
+        isDefault: selectedFlow.isDefault === null ? undefined : selectedFlow.isDefault,
       });
     } else {
       flowForm.reset({
