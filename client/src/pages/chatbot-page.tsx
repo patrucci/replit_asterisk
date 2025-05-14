@@ -1545,7 +1545,7 @@ export default function ChatbotPage() {
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
                         value={channelForm.getValues("credentials")?.accessToken || ""}
-                        key={`token-edit-${Date.now()}`}
+
                       />
                     </FormControl>
                     <FormDescription>
