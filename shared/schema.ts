@@ -109,6 +109,20 @@ export const asteriskSettings = pgTable("asterisk_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Tabela para configurações de APIs externas
+export const apiSettings = pgTable("api_settings", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull().references(() => organizations.id).unique(),
+  openaiApiKey: text("openai_api_key"),
+  anthropicApiKey: text("anthropic_api_key"),
+  useOpenAI: boolean("use_openai").default(true),
+  useAnthropic: boolean("use_anthropic").default(false),
+  openaiModel: text("openai_model").default("gpt-4o"),
+  anthropicModel: text("anthropic_model").default("claude-3-7-sonnet-20250219"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Tabela de filas de atendimento
 export const queues = pgTable("queues", {
   id: serial("id").primaryKey(),
@@ -151,9 +165,18 @@ export const insertCallSchema = createInsertSchema(calls).omit({
   id: true
 });
 
+export const insertApiSettingsSchema = createInsertSchema(apiSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
 // Export Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertApiSettings = z.infer<typeof insertApiSettingsSchema>;
+export type ApiSettings = typeof apiSettings.$inferSelect;
 
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
