@@ -49,15 +49,10 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 // Componentes de tipo de nó
+// Versão simplificada do nó de mensagem
 function MessageNode({ data, id }: { data: any, id: string }) {
-  const [isHovered, setIsHovered] = useState(false);
-  
   return (
-    <div 
-      className="p-3 border-2 rounded-md bg-blue-50 border-blue-200 w-56 relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="p-3 border-2 rounded-md bg-blue-50 border-blue-200 w-56">
       <div className="font-medium text-xs mb-1 text-blue-800 flex items-center">
         <MessageSquare className="h-3 w-3 mr-1" />
         {data.label}
@@ -65,35 +60,14 @@ function MessageNode({ data, id }: { data: any, id: string }) {
       <div className="text-xs line-clamp-3 text-neutral-600">
         {data.content || "Sem conteúdo"}
       </div>
-      
-      {/* Botão de edição que aparece ao passar o mouse */}
-      {isHovered && (
-        <button 
-          className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-1 shadow-md"
-          onClick={(e) => {
-            e.stopPropagation();
-            alert(`Editando nó ${id}: ${data.label}`);
-            // Implementar funcionalidade de edição aqui
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }
 
+// Versão simplificada do nó de entrada
 function InputNode({ data, id }: { data: any, id: string }) {
-  const [isHovered, setIsHovered] = useState(false);
-  
   return (
-    <div 
-      className="p-3 border-2 rounded-md bg-green-50 border-green-200 w-56 relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="p-3 border-2 rounded-md bg-green-50 border-green-200 w-56">
       <div className="font-medium text-xs mb-1 text-green-800 flex items-center">
         <Keyboard className="h-3 w-3 mr-1" />
         {data.label}
@@ -104,35 +78,14 @@ function InputNode({ data, id }: { data: any, id: string }) {
       <div className="text-xs mt-1 text-green-600">
         Variável: {data.variableName || "não definida"}
       </div>
-      
-      {/* Botão de edição que aparece ao passar o mouse */}
-      {isHovered && (
-        <button 
-          className="absolute -top-2 -right-2 bg-green-600 text-white rounded-full p-1 shadow-md"
-          onClick={(e) => {
-            e.stopPropagation();
-            alert(`Editando nó ${id}: ${data.label}`);
-            // Implementar funcionalidade de edição aqui
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }
 
+// Versão simplificada do nó de condição
 function ConditionNode({ data, id }: { data: any, id: string }) {
-  const [isHovered, setIsHovered] = useState(false);
-  
   return (
-    <div 
-      className="p-3 border-2 rounded-md bg-yellow-50 border-yellow-200 w-56 relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="p-3 border-2 rounded-md bg-yellow-50 border-yellow-200 w-56">
       <div className="font-medium text-xs mb-1 text-yellow-800 flex items-center">
         <GitBranch className="h-3 w-3 mr-1" />
         {data.label}
@@ -140,35 +93,14 @@ function ConditionNode({ data, id }: { data: any, id: string }) {
       <div className="text-xs line-clamp-3 text-neutral-600">
         {data.condition || "Condição não definida"}
       </div>
-      
-      {/* Botão de edição que aparece ao passar o mouse */}
-      {isHovered && (
-        <button 
-          className="absolute -top-2 -right-2 bg-yellow-600 text-white rounded-full p-1 shadow-md"
-          onClick={(e) => {
-            e.stopPropagation();
-            alert(`Editando nó ${id}: ${data.label}`);
-            // Implementar funcionalidade de edição aqui
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }
 
+// Versão simplificada do nó de requisição API
 function ApiRequestNode({ data, id }: { data: any, id: string }) {
-  const [isHovered, setIsHovered] = useState(false);
-  
   return (
-    <div 
-      className="p-3 border-2 rounded-md bg-purple-50 border-purple-200 w-56 relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="p-3 border-2 rounded-md bg-purple-50 border-purple-200 w-56">
       <div className="font-medium text-xs mb-1 text-purple-800 flex items-center">
         <Server className="h-3 w-3 mr-1" />
         {data.label}
@@ -179,27 +111,12 @@ function ApiRequestNode({ data, id }: { data: any, id: string }) {
       <div className="text-xs mt-1 text-purple-600">
         Resultado: {data.resultVariable || "não definido"}
       </div>
-      
-      {/* Botão de edição que aparece ao passar o mouse */}
-      {isHovered && (
-        <button 
-          className="absolute -top-2 -right-2 bg-purple-600 text-white rounded-full p-1 shadow-md"
-          onClick={(e) => {
-            e.stopPropagation();
-            alert(`Editando nó ${id}: ${data.label}`);
-            // Implementar funcionalidade de edição aqui
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }
 
-function MenuNode({ data }: { data: any }) {
+// Versão simplificada do nó de menu
+function MenuNode({ data, id }: { data: any, id?: string }) {
   return (
     <div className="p-3 border-2 rounded-md bg-indigo-50 border-indigo-200 w-56">
       <div className="font-medium text-xs mb-1 text-indigo-800 flex items-center">
@@ -791,11 +708,7 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
   const { toast } = useToast();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [isAddNodeDialogOpen, setIsAddNodeDialogOpen] = useState(false);
-  // Variável para controlar se o editor lateral está sendo exibido
-  const [sidebarEditorVisible, setSidebarEditorVisible] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
