@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { setupAsteriskRoutes } from "./asterisk-routes";
 import { setupQueueRoutes } from "./queue-routes";
+import { setupChatbotRoutes } from "./chatbot-routes";
 import { setupApiRoutes } from "./api-routes";
 import { z } from "zod";
 import multer from "multer";
@@ -96,6 +97,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup API settings routes
   setupApiRoutes(app, requireAuth);
+  
+  // Setup Chatbot routes
+  setupChatbotRoutes(app, requireAuth);
 
   // Client routes
   app.get("/api/clients", requireAuth, async (req, res) => {
