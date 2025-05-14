@@ -195,7 +195,10 @@ function getNodeDefaults(type: string) {
     },
     condition: {
       label: 'Nova Condição',
-      condition: '{{variavel}} == "valor"',
+      variableName: 'resposta',
+      operator: '==',
+      value: 'valor',
+      condition: '{{resposta}} == "valor"',
     },
     api_request: {
       label: 'Nova Requisição API',
@@ -289,6 +292,62 @@ function NodeEditor({ node, onClose, onSave, onDelete, isDeleting }: NodeEditorP
               rows={5}
             />
           </div>
+        )}
+
+        {type === 'condition' && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="variableName">Nome da variável</Label>
+              <Input
+                id="variableName"
+                value={formState.variableName || ''}
+                onChange={(e) => handleChange('variableName', e.target.value)}
+                placeholder="Ex: resposta, resultado, etc."
+              />
+            </div>
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="operator">Operador</Label>
+              <Select
+                value={formState.operator || '=='}
+                onValueChange={(value) => handleChange('operator', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o operador" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="==">Igual a (==)</SelectItem>
+                  <SelectItem value="!=">Diferente de (!=)</SelectItem>
+                  <SelectItem value="greater">Maior que (&gt;)</SelectItem>
+                  <SelectItem value="less">Menor que (&lt;)</SelectItem>
+                  <SelectItem value="greaterEqual">Maior ou igual a (&gt;=)</SelectItem>
+                  <SelectItem value="lessEqual">Menor ou igual a (&lt;=)</SelectItem>
+                  <SelectItem value="contains">Contém</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="value">Valor de comparação</Label>
+              <Input
+                id="value"
+                value={formState.value || ''}
+                onChange={(e) => handleChange('value', e.target.value)}
+                placeholder="Ex: sim, 10, verdadeiro"
+              />
+            </div>
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="condition">Condição completa (gerada automaticamente)</Label>
+              <Textarea
+                id="condition"
+                value={getFormattedCondition(formState)}
+                readOnly
+                className="bg-gray-50"
+                rows={2}
+              />
+              <p className="text-xs text-gray-500">
+                Esta condição é gerada automaticamente com base nos campos acima.
+              </p>
+            </div>
+          </>
         )}
 
         {type === 'input' && (
