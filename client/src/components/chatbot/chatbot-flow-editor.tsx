@@ -705,9 +705,9 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
-  const [isEditNodeDialogOpen, setIsEditNodeDialogOpen] = useState(false);
-  const [isEditEdgeDialogOpen, setIsEditEdgeDialogOpen] = useState(false);
   const [isAddNodeDialogOpen, setIsAddNodeDialogOpen] = useState(false);
+  // Variável para controlar se o editor lateral está sendo exibido
+  const [sidebarEditorVisible, setSidebarEditorVisible] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -759,7 +759,7 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'nodes'] });
-      setIsEditNodeDialogOpen(false);
+      // Não fechamos o painel lateral após salvar
       toast({
         title: 'Nó atualizado',
         description: 'O nó foi atualizado com sucesso!',
@@ -928,26 +928,28 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     [setEdges, createEdgeMutation, flow.id]
   );
 
-  // Tratamento de clique em nós - versão com diálogo fixo
+  // Tratamento de clique em nós - versão com editor lateral 
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     // Impedir a propagação do evento para evitar interações indesejadas
     event.stopPropagation();
     event.preventDefault();
     
-    // Atualizar o nó selecionado e abrir o diálogo
+    // Atualizar o nó selecionado e mostrar o painel lateral
     setSelectedNode(node);
-    setIsEditNodeDialogOpen(true);
+    setSelectedEdge(null); // Limpar seleção de aresta
+    setSidebarEditorVisible(true);
   };
 
-  // Tratamento de clique em arestas - versão com diálogo fixo
+  // Tratamento de clique em arestas - versão com editor lateral
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
     // Impedir a propagação do evento para evitar interações indesejadas
     event.stopPropagation();
     event.preventDefault();
     
-    // Atualizar a aresta selecionada e abrir o diálogo
+    // Atualizar a aresta selecionada e mostrar o painel lateral
     setSelectedEdge(edge);
-    setIsEditEdgeDialogOpen(true);
+    setSelectedNode(null); // Limpar seleção de nó
+    setSidebarEditorVisible(true);
   };
 
   const onNodeDragStop = (_: React.MouseEvent, node: Node) => {
@@ -1082,126 +1084,98 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
         </ReactFlowProvider>
       </div>
       
-      {/* Diálogo para editar nó - VERSÃO FIXA */}
-      {selectedNode && (
-        <Dialog 
-          open={isEditNodeDialogOpen} 
-          onOpenChange={(open) => {
-            if (!open) {
-              setIsEditNodeDialogOpen(false);
-            }
+      {/* Editor lateral fixo em vez de diálogos */}
+      {sidebarEditorVisible && (
+        <div 
+          className="absolute right-0 top-0 h-full w-96 bg-white border-l shadow-lg z-10 overflow-y-auto"
+          onClick={(e) => {
+            // Impedir que cliques dentro do editor propaguem
+            e.stopPropagation();
           }}
         >
-          <DialogContent 
-            className="sm:max-w-[500px]"
-            onClick={(e) => {
-              // Impedir que cliques dentro do diálogo propaguem
-              e.stopPropagation();
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>Editar {getNodeTypeLabel(selectedNode.type || 'message')}</DialogTitle>
-              <DialogDescription>
-                Configure as propriedades do nó.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="py-4">
-              <NodeEditor 
-                node={selectedNode} 
-                onSave={(data) => {
-                  updateNodeMutation.mutate({
-                    id: selectedNode.data.originalId,
-                    data: {
-                      name: data.label,
-                      data,
-                    },
-                  });
-                  setIsDirty(true);
-                  // Manter o diálogo aberto após salvar
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">
+                {selectedNode && `Editar ${getNodeTypeLabel(selectedNode.type || 'message')}`}
+                {selectedEdge && 'Editar conexão'}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSidebarEditorVisible(false);
+                  setSelectedNode(null);
+                  setSelectedEdge(null);
                 }}
-                onDelete={() => {
-                  if (confirm('Tem certeza que deseja excluir este nó?')) {
-                    deleteNodeMutation.mutate(selectedNode.data.originalId);
-                    setIsEditNodeDialogOpen(false);
-                  }
-                }}
-              />
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
             
-            <DialogFooter>
+            {selectedNode && (
+              <div>
+                <NodeEditor 
+                  node={selectedNode} 
+                  onSave={(data) => {
+                    updateNodeMutation.mutate({
+                      id: selectedNode.data.originalId,
+                      data: {
+                        name: data.label,
+                        data,
+                      },
+                    });
+                    setIsDirty(true);
+                    // Não fechamos o editor após salvar
+                  }}
+                  onDelete={() => {
+                    if (confirm('Tem certeza que deseja excluir este nó?')) {
+                      deleteNodeMutation.mutate(selectedNode.data.originalId);
+                      setSidebarEditorVisible(false);
+                    }
+                  }}
+                />
+              </div>
+            )}
+            
+            {selectedEdge && (
+              <div>
+                <EdgeEditor 
+                  edge={selectedEdge} 
+                  onSave={(data) => {
+                    updateEdgeMutation.mutate({
+                      id: selectedEdge.data?.originalId,
+                      data: {
+                        label: data.label,
+                        condition: data.condition,
+                      },
+                    });
+                    setIsDirty(true);
+                    // Não fechamos o editor após salvar
+                  }}
+                  onDelete={() => {
+                    if (confirm('Tem certeza que deseja excluir esta conexão?')) {
+                      deleteEdgeMutation.mutate(selectedEdge.data?.originalId);
+                      setSidebarEditorVisible(false);
+                    }
+                  }}
+                />
+              </div>
+            )}
+            
+            <div className="mt-4 pt-4 border-t flex justify-end">
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setIsEditNodeDialogOpen(false);
+                  setSidebarEditorVisible(false);
+                  setSelectedNode(null);
+                  setSelectedEdge(null);
                 }}
               >
                 Fechar
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {/* Diálogo para editar aresta - VERSÃO FIXA */}
-      {selectedEdge && (
-        <Dialog 
-          open={isEditEdgeDialogOpen} 
-          onOpenChange={(open) => {
-            if (!open) {
-              setIsEditEdgeDialogOpen(false);
-            }
-          }}
-        >
-          <DialogContent 
-            className="sm:max-w-[500px]"
-            onClick={(e) => {
-              // Impedir que cliques dentro do diálogo propaguem
-              e.stopPropagation();
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>Editar conexão</DialogTitle>
-              <DialogDescription>
-                Configure as propriedades da conexão entre os nós.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="py-4">
-              <EdgeEditor 
-                edge={selectedEdge} 
-                onSave={(data) => {
-                  updateEdgeMutation.mutate({
-                    id: selectedEdge.data?.originalId,
-                    data: {
-                      label: data.label,
-                      condition: data.condition,
-                    },
-                  });
-                  setIsDirty(true);
-                  // Manter o diálogo aberto após salvar
-                }}
-                onDelete={() => {
-                  if (confirm('Tem certeza que deseja excluir esta conexão?')) {
-                    deleteEdgeMutation.mutate(selectedEdge.data?.originalId);
-                    setIsEditEdgeDialogOpen(false);
-                  }
-                }}
-              />
             </div>
-            
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsEditEdgeDialogOpen(false);
-                }}
-              >
-                Fechar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
       
       {/* Diálogo para adicionar nó */}
