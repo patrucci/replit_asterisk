@@ -598,8 +598,13 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     setIsDirty(true);
   }, [setNodes]);
   
-  // Função para atualização de dados do nó
+  // Estado para armazenar alterações pendentes
+  const [pendingChanges, setPendingChanges] = useState<Record<string, any>>({});
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Função para atualização de dados do nó com debounce
   const handleUpdateNodeData = (nodeId: string, newData: any) => {
+    // Atualiza o nó visualmente imediatamente
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === nodeId) {
@@ -617,14 +622,55 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     
     setIsDirty(true);
     
-    // Atualizar o nó no banco de dados
+    // Armazena as alterações pendentes
+    setPendingChanges(prev => ({
+      ...prev,
+      [nodeId]: {
+        ...(prev[nodeId] || {}),
+        ...newData
+      }
+    }));
+    
+    // Cancela o timeout anterior se existir
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    
+    // Define um novo timeout para salvar após 1 segundo de inatividade
+    const timeout = setTimeout(() => {
+      saveNodeChanges(nodeId);
+    }, 1000);
+    
+    setSaveTimeout(timeout);
+  };
+  
+  // Função para salvar as alterações pendentes
+  const saveNodeChanges = (nodeId: string) => {
+    const changes = pendingChanges[nodeId];
+    if (!changes) return;
+    
+    // Busca o nó atualizado
     const node = nodes.find((n) => n.id === nodeId);
     if (node) {
+      // Salva no banco de dados
       updateNode(nodeId, {
         data: {
           ...node.data,
-          ...newData,
         },
+      });
+      
+      // Limpa as alterações pendentes para este nó
+      setPendingChanges(prev => {
+        const newPending = { ...prev };
+        delete newPending[nodeId];
+        return newPending;
+      });
+      
+      // Exibe feedback de salvamento
+      toast({
+        title: "Alterações salvas",
+        description: "As configurações do nó foram salvas com sucesso.",
+        duration: 2000,
       });
     }
   };
