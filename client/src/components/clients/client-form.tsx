@@ -27,7 +27,7 @@ const clientFormSchema = insertClientSchema.extend({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
   email: z.string().email("Email inválido"),
   phone: z.string().min(8, "O telefone deve ter pelo menos 8 caracteres"),
-}).omit({ userId: true });
+}).omit({ userId: true, organizationId: true });
 
 type ClientFormValues = z.infer<typeof clientFormSchema>;
 
@@ -62,7 +62,9 @@ export function ClientForm({ client, onSave, onCancel }: ClientFormProps) {
       const clientData = {
         ...data,
         userId: user?.id,
+        organizationId: user?.organizationId
       };
+      console.log("Enviando dados do cliente:", clientData);
       const res = await apiRequest("POST", "/api/clients", clientData);
       return await res.json();
     },
@@ -87,7 +89,13 @@ export function ClientForm({ client, onSave, onCancel }: ClientFormProps) {
   // Update client mutation
   const updateMutation = useMutation({
     mutationFn: async (data: ClientFormValues) => {
-      const res = await apiRequest("PUT", `/api/clients/${client?.id}`, data);
+      const clientData = {
+        ...data,
+        userId: user?.id,
+        organizationId: user?.organizationId
+      };
+      console.log("Atualizando dados do cliente:", clientData);
+      const res = await apiRequest("PUT", `/api/clients/${client?.id}`, clientData);
       return await res.json();
     },
     onSuccess: (updatedClient: Client) => {
