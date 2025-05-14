@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -214,16 +214,23 @@ function NodeEditor({ node, onSave, onDelete }: {
   onDelete: () => void
 }) {
   const nodeType = node.type || 'message';
+  // Não precisamos mais de uma chave para o formulário
+  
+  // Usar useMemo para criar valores padrão e evitar recriação a cada renderização
+  const defaultValues = useMemo(() => ({
+    label: node.data.label || '',
+    ...node.data,
+  }), [node.id]); // Usar node.id como dependência para manter estável
+  
+  // Usar uma única instância do formulário por nó
   const nodeForm = useForm({
-    defaultValues: {
-      label: node.data.label || '',
-      ...node.data,
-    },
+    defaultValues,
   });
 
-  const onSubmit = (data: any) => {
+  // Função estável para submissão
+  const onSubmit = useCallback((data: any) => {
     onSave(data);
-  };
+  }, [onSave]);
 
   return (
     <div>
@@ -518,16 +525,22 @@ function EdgeEditor({ edge, onSave, onDelete }: {
   onSave: (data: any) => void,
   onDelete: () => void
 }) {
+  // Não precisamos mais de uma chave para o formulário
+  
+  // Usar useMemo para criar valores padrão e evitar recriação a cada renderização
+  const defaultValues = useMemo(() => ({
+    label: edge.label || '',
+    condition: edge.data?.condition || null,
+  }), [edge.id]); // Usar edge.id como dependência para manter estável
+  
   const edgeForm = useForm({
-    defaultValues: {
-      label: edge.label || '',
-      condition: edge.data?.condition || null,
-    },
+    defaultValues,
   });
 
-  const onSubmit = (data: any) => {
+  // Função estável para submissão
+  const onSubmit = useCallback((data: any) => {
     onSave(data);
-  };
+  }, [onSave]);
 
   return (
     <div>
