@@ -913,14 +913,26 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     [setEdges, createEdgeMutation, flow.id]
   );
 
-  const onNodeClick = (_: React.MouseEvent, node: Node) => {
-    setSelectedNode(node);
-    setIsEditNodeDialogOpen(true);
+  const onNodeClick = (event: React.MouseEvent, node: Node) => {
+    // Impedir a propagação do evento para evitar interações indesejadas
+    event.stopPropagation();
+    
+    // Apenas abrir o diálogo se o nó já não estiver selecionado
+    if (!selectedNode || selectedNode.id !== node.id) {
+      setSelectedNode(node);
+      setIsEditNodeDialogOpen(true);
+    }
   };
 
-  const onEdgeClick = (_: React.MouseEvent, edge: Edge) => {
-    setSelectedEdge(edge);
-    setIsEditEdgeDialogOpen(true);
+  const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
+    // Impedir a propagação do evento para evitar interações indesejadas
+    event.stopPropagation();
+    
+    // Apenas abrir o diálogo se a aresta já não estiver selecionada
+    if (!selectedEdge || selectedEdge.id !== edge.id) {
+      setSelectedEdge(edge);
+      setIsEditEdgeDialogOpen(true);
+    }
   };
 
   const onNodeDragStop = (_: React.MouseEvent, node: Node) => {
