@@ -24,6 +24,7 @@ import QueueDashboardPage from "@/pages/queue-dashboard-page";
 import QueueRealtimePage from "@/pages/queue-realtime-page";
 import QueueConfigPage from "@/pages/queue-config-page";
 import SoftphonePage from "@/pages/softphone-page";
+import ChatbotPage from "@/pages/chatbot-page";
 import DiagnosticoPage from "@/pages/diagnostico-page";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
       <ProtectedRoute path="/queue-realtime" component={QueueRealtimePage} />
       <ProtectedRoute path="/queue-config" component={QueueConfigPage} />
       <ProtectedRoute path="/softphone" component={SoftphonePage} />
+      <ProtectedRoute path="/chatbot" component={ChatbotPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -303,10 +303,10 @@ function NodeEditor({ node, onSave, onDelete }: {
                 id="condition"
                 rows={3}
                 {...nodeForm.register('condition')}
-                placeholder="Ex: {{nome}} != null || {{idade}} > 18"
+                placeholder="Ex: nome != null || idade > 18"
               />
               <p className="text-xs text-neutral-500">
-                Use chaves duplas {{'{{'}} e {{'}}'}} para acessar variáveis
+                Use chaves duplas {'{{'} e {'}}'} para acessar variáveis
               </p>
             </div>
           )}
@@ -548,10 +548,10 @@ function EdgeEditor({ edge, onSave, onDelete }: {
               id="condition"
               rows={3}
               {...edgeForm.register('condition')}
-              placeholder="Ex: {{resposta}} === 'sim'"
+              placeholder="Ex: resposta === 'sim'"
             />
             <p className="text-xs text-neutral-500">
-              Use chaves duplas {{'{{'}} e {{'}}'}} para acessar variáveis. Deixe em branco para uma conexão sem condição.
+              Use chaves duplas {'{{'} e {'}}'} para acessar variáveis. Deixe em branco para uma conexão sem condição.
             </p>
           </div>
           
@@ -851,7 +851,7 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
           type: node.nodeType,
           position: node.position as { x: number, y: number },
           data: {
-            ...node.data,
+            ...(node.data as object),
             label: node.name,
             originalId: node.id, 
           },
