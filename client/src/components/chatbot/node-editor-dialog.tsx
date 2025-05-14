@@ -208,7 +208,7 @@ export function NodeEditorDialog({
                   id="headers"
                   rows={3}
                   {...form.register('headers')}
-                  placeholder={"{\n  \"Content-Type\": \"application/json\"\n}"}
+                  placeholder="Content-Type: application/json"
                 />
               </div>
               <div className="grid gap-2">
@@ -217,7 +217,7 @@ export function NodeEditorDialog({
                   id="body"
                   rows={3}
                   {...form.register('body')}
-                  placeholder={"{\n  \"chave\": \"valor\"\n}"}
+                  placeholder="chave: valor"
                 />
               </div>
               <div className="grid gap-2">
