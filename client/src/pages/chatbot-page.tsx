@@ -1110,6 +1110,230 @@ export default function ChatbotPage() {
                   />
                 </>
               )}
+
+              {channelForm.watch("channelType") === "telegram" && (
+                <>
+                  <FormItem>
+                    <FormLabel>Token do Bot</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: 123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            botToken: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.botToken || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token obtido do BotFather no Telegram
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Nome do Bot</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: MeuEmpresaBot"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            botName: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.botName || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Nome do seu bot no Telegram
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormField
+                    control={channelForm.control}
+                    name="webhookUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL de webhook</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          URL para receber notificações do Telegram (configurada automaticamente)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+              
+              {channelForm.watch("channelType") === "sms" && (
+                <>
+                  <FormItem>
+                    <FormLabel>Provedor de SMS</FormLabel>
+                    <Select 
+                      value={channelForm.getValues("credentials")?.provider || "twilio"}
+                      onValueChange={(value) => {
+                        const credentials = channelForm.getValues("credentials") || {};
+                        channelForm.setValue("credentials", {
+                          ...credentials,
+                          provider: value
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o provedor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="twilio">Twilio</SelectItem>
+                        <SelectItem value="zenvia">Zenvia</SelectItem>
+                        <SelectItem value="totalvoice">TotalVoice</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Selecione o provedor de SMS
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>ID da Conta (SID)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            accountSid: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.accountSid || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      ID da sua conta no provedor de SMS
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Token de autenticação</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Token de autenticação"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            authToken: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.authToken || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token de autenticação para a API de SMS
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Número de origem</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: +5511999999999"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            fromNumber: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.fromNumber || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Número que será exibido como remetente das mensagens
+                    </FormDescription>
+                  </FormItem>
+                </>
+              )}
+              
+              {channelForm.watch("channelType") === "api" && (
+                <>
+                  <FormItem>
+                    <FormLabel>Token de API</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Token para autenticação na API"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            apiToken: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.apiToken || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token que será utilizado para autenticar requisições externas
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Formato de resposta</FormLabel>
+                    <Select 
+                      value={channelForm.getValues("credentials")?.responseFormat || "json"}
+                      onValueChange={(value) => {
+                        const credentials = channelForm.getValues("credentials") || {};
+                        channelForm.setValue("credentials", {
+                          ...credentials,
+                          responseFormat: value
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Formato de resposta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="xml">XML</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Formato de resposta da API
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>URL de callback</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="URL para receber respostas assíncronas"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            callbackUrl: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.callbackUrl || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      URL onde o sistema irá enviar atualizações assíncronas
+                    </FormDescription>
+                  </FormItem>
+                </>
+              )}
               
               {channelForm.watch("channelType") === "webchat" && (
                 <>
