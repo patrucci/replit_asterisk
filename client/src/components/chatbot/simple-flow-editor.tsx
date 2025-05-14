@@ -246,11 +246,38 @@ function NodeEditor({ node, onClose, onSave, onDelete, isDeleting }: NodeEditorP
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false);
   const type = node.type || 'message';
 
+  const getFormattedCondition = (data: any) => {
+    const varName = data.variableName || 'variavel';
+    const operator = data.operator || '==';
+    const value = data.value || 'valor';
+    
+    let formattedOperator = operator;
+    switch (operator) {
+      case 'greater': formattedOperator = '>'; break;
+      case 'less': formattedOperator = '<'; break;
+      case 'greaterEqual': formattedOperator = '>='; break;
+      case 'lessEqual': formattedOperator = '<='; break;
+      case 'contains': return `{{${varName}}}.includes("${value}")`;
+    }
+    
+    return `{{${varName}}} ${formattedOperator} "${value}"`;
+  };
+
   const handleChange = (field: string, value: any) => {
-    setFormState((prev: any) => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormState((prev: any) => {
+      const newState = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Atualiza o campo condition para nós do tipo 'condition'
+      if (type === 'condition' && 
+          (field === 'variableName' || field === 'operator' || field === 'value')) {
+        newState.condition = getFormattedCondition(newState);
+      }
+      
+      return newState;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
