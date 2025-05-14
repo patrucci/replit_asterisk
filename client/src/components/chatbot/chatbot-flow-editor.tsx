@@ -1082,8 +1082,31 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
       
       {/* Diálogo para editar nó */}
       {selectedNode && (
-        <Dialog open={isEditNodeDialogOpen} onOpenChange={setIsEditNodeDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+        <Dialog 
+          open={isEditNodeDialogOpen} 
+          onOpenChange={(open) => {
+            // Só permite fechamento quando for explicitamente solicitado
+            if (!open) {
+              // Tenta evitar fechamento acidental durante edição
+              if (confirm('Deseja fechar o editor? Alterações não salvas serão perdidas.')) {
+                setIsEditNodeDialogOpen(false);
+              }
+            } else {
+              setIsEditNodeDialogOpen(true);
+            }
+          }}
+        >
+          <DialogContent 
+            className="sm:max-w-[500px]"
+            onInteractOutside={(e) => {
+              // Impede fechamento ao clicar fora
+              e.preventDefault();
+            }}
+            onEscapeKeyDown={(e) => {
+              // Impede fechamento ao pressionar ESC
+              e.preventDefault();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Editar {getNodeTypeLabel(selectedNode.type || 'message')}</DialogTitle>
               <DialogDescription>
@@ -1118,8 +1141,31 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
       
       {/* Diálogo para editar aresta */}
       {selectedEdge && (
-        <Dialog open={isEditEdgeDialogOpen} onOpenChange={setIsEditEdgeDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+        <Dialog 
+          open={isEditEdgeDialogOpen} 
+          onOpenChange={(open) => {
+            // Só permite fechamento quando for explicitamente solicitado
+            if (!open) {
+              // Tenta evitar fechamento acidental durante edição
+              if (confirm('Deseja fechar o editor? Alterações não salvas serão perdidas.')) {
+                setIsEditEdgeDialogOpen(false);
+              }
+            } else {
+              setIsEditEdgeDialogOpen(true);
+            }
+          }}
+        >
+          <DialogContent 
+            className="sm:max-w-[500px]"
+            onInteractOutside={(e) => {
+              // Impede fechamento ao clicar fora
+              e.preventDefault();
+            }}
+            onEscapeKeyDown={(e) => {
+              // Impede fechamento ao pressionar ESC
+              e.preventDefault();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Editar conexão</DialogTitle>
               <DialogDescription>
