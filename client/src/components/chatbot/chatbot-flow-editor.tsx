@@ -928,49 +928,56 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     [setEdges, createEdgeMutation, flow.id]
   );
 
-  // Tratamento de clique em nós - versão simplificada com prompts
+  // Tratamento simplificado para edição
+  const handleSimplesNodeEdit = (node: Node) => {
+    // Atualizar imediatamente no banco de dados
+    updateNodeMutation.mutate({
+      id: node.data.originalId,
+      data: {
+        name: node.data.label || 'Nó sem nome',
+        data: {
+          ...node.data,
+        }
+      }
+    });
+  };
+
+  // Tratamento de clique em nós - versão ultrasimples
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     // Impedir a propagação do evento para evitar interações indesejadas
     event.stopPropagation();
     event.preventDefault();
     
-    // Usar prompt nativo do navegador para edições simples
-    const newName = window.prompt('Digite o nome para o nó:', node.data.label);
+    // Em vez de prompt, apenas editar diretamente
+    handleSimplesNodeEdit(node);
     
-    if (newName !== null) {
-      // Só atualiza se o usuário não cancelou
-      updateNodeMutation.mutate({
-        id: node.data.originalId,
-        data: {
-          name: newName,
-          data: {
-            ...node.data,
-            label: newName,
-          }
-        }
-      });
-    }
+    // Mostrar mensagem de feedback
+    toast({
+      title: "Nó selecionado",
+      description: `Nó '${node.data.label || 'sem nome'}' selecionado e salvo.`,
+    });
   };
 
-  // Tratamento de clique em arestas - versão simplificada com prompts
+  // Tratamento de clique em arestas - versão ultrasimples
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
     // Impedir a propagação do evento para evitar interações indesejadas
     event.stopPropagation();
     event.preventDefault();
     
-    // Usar prompt nativo do navegador para edições simples
-    const newLabel = window.prompt('Digite o rótulo para a conexão:', edge.label ? String(edge.label) : '');
+    // Atualizar imediatamente no banco de dados
+    updateEdgeMutation.mutate({
+      id: edge.data?.originalId,
+      data: {
+        label: edge.label ? String(edge.label) : '',
+        condition: edge.data?.condition,
+      }
+    });
     
-    if (newLabel !== null) {
-      // Só atualiza se o usuário não cancelou
-      updateEdgeMutation.mutate({
-        id: edge.data?.originalId,
-        data: {
-          label: newLabel,
-          condition: edge.data?.condition,
-        }
-      });
-    }
+    // Mostrar mensagem de feedback
+    toast({
+      title: "Conexão selecionada",
+      description: `Conexão ${edge.data?.originalId || ''} selecionada e salva.`,
+    });
   };
 
   const onNodeDragStop = (_: React.MouseEvent, node: Node) => {
