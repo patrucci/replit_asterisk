@@ -83,6 +83,7 @@ export default function ChatbotPage() {
   const [isEditChannelDialogOpen, setIsEditChannelDialogOpen] = useState(false);
   const [isNewFlowDialogOpen, setIsNewFlowDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [channelCredentials, setChannelCredentials] = useState<Record<string, string>>({}); // Para gerenciar as credenciais de forma independente
   
   // Queries para buscar dados
   const { data: chatbots = [], isLoading: isLoadingChatbots } = useQuery({
@@ -407,6 +408,9 @@ export default function ChatbotPage() {
 
   useEffect(() => {
     if (selectedChannel && isEditChannelDialogOpen) {
+      // Salvar as credenciais em um estado separado para facilitar a edição
+      setChannelCredentials(selectedChannel.credentials as Record<string, string> || {});
+      
       channelForm.reset({
         name: selectedChannel.name,
         channelType: selectedChannel.channelType,
@@ -415,6 +419,9 @@ export default function ChatbotPage() {
         active: selectedChannel.active === null ? undefined : selectedChannel.active,
       });
     } else if (isNewChannelDialogOpen) {
+      // Limpar as credenciais para o novo canal
+      setChannelCredentials({});
+      
       channelForm.reset({
         name: "",
         channelType: "webchat",
@@ -1581,14 +1588,14 @@ export default function ChatbotPage() {
                         placeholder="Ex: 123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                         type="password"
                         onChange={(e) => {
-                          const credentials = channelForm.getValues("credentials") || {};
                           const updatedCredentials = {
-                            ...credentials,
+                            ...channelCredentials,
                             botToken: e.target.value
                           };
+                          setChannelCredentials(updatedCredentials);
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.botToken || ""}
+                        value={channelCredentials.botToken || ""}
 
                       />
                     </FormControl>
@@ -1603,14 +1610,14 @@ export default function ChatbotPage() {
                       <Input 
                         placeholder="Ex: MeuEmpresaBot"
                         onChange={(e) => {
-                          const credentials = channelForm.getValues("credentials") || {};
                           const updatedCredentials = {
-                            ...credentials,
+                            ...channelCredentials,
                             botName: e.target.value
                           };
+                          setChannelCredentials(updatedCredentials);
                           channelForm.setValue("credentials", updatedCredentials);
                         }}
-                        value={channelForm.getValues("credentials")?.botName || ""}
+                        value={channelCredentials.botName || ""}
 
                       />
                     </FormControl>
