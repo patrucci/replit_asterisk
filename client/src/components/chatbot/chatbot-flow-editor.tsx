@@ -822,7 +822,7 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'edges'] });
-      setIsEditEdgeDialogOpen(false);
+      // Não fechamos o painel lateral após salvar
       toast({
         title: 'Conexão atualizada',
         description: 'A conexão foi atualizada com sucesso!',
@@ -928,28 +928,49 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
     [setEdges, createEdgeMutation, flow.id]
   );
 
-  // Tratamento de clique em nós - versão com editor lateral 
+  // Tratamento de clique em nós - versão simplificada com prompts
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     // Impedir a propagação do evento para evitar interações indesejadas
     event.stopPropagation();
     event.preventDefault();
     
-    // Atualizar o nó selecionado e mostrar o painel lateral
-    setSelectedNode(node);
-    setSelectedEdge(null); // Limpar seleção de aresta
-    setSidebarEditorVisible(true);
+    // Usar prompt nativo do navegador para edições simples
+    const newName = window.prompt('Digite o nome para o nó:', node.data.label);
+    
+    if (newName !== null) {
+      // Só atualiza se o usuário não cancelou
+      updateNodeMutation.mutate({
+        id: node.data.originalId,
+        data: {
+          name: newName,
+          data: {
+            ...node.data,
+            label: newName,
+          }
+        }
+      });
+    }
   };
 
-  // Tratamento de clique em arestas - versão com editor lateral
+  // Tratamento de clique em arestas - versão simplificada com prompts
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
     // Impedir a propagação do evento para evitar interações indesejadas
     event.stopPropagation();
     event.preventDefault();
     
-    // Atualizar a aresta selecionada e mostrar o painel lateral
-    setSelectedEdge(edge);
-    setSelectedNode(null); // Limpar seleção de nó
-    setSidebarEditorVisible(true);
+    // Usar prompt nativo do navegador para edições simples
+    const newLabel = window.prompt('Digite o rótulo para a conexão:', edge.label ? String(edge.label) : '');
+    
+    if (newLabel !== null) {
+      // Só atualiza se o usuário não cancelou
+      updateEdgeMutation.mutate({
+        id: edge.data?.originalId,
+        data: {
+          label: newLabel,
+          condition: edge.data?.condition,
+        }
+      });
+    }
   };
 
   const onNodeDragStop = (_: React.MouseEvent, node: Node) => {
@@ -1084,99 +1105,7 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
         </ReactFlowProvider>
       </div>
       
-      {/* Editor lateral fixo em vez de diálogos */}
-      {sidebarEditorVisible && (
-        <div 
-          className="absolute right-0 top-0 h-full w-96 bg-white border-l shadow-lg z-10 overflow-y-auto"
-          onClick={(e) => {
-            // Impedir que cliques dentro do editor propaguem
-            e.stopPropagation();
-          }}
-        >
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">
-                {selectedNode && `Editar ${getNodeTypeLabel(selectedNode.type || 'message')}`}
-                {selectedEdge && 'Editar conexão'}
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSidebarEditorVisible(false);
-                  setSelectedNode(null);
-                  setSelectedEdge(null);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {selectedNode && (
-              <div>
-                <NodeEditor 
-                  node={selectedNode} 
-                  onSave={(data) => {
-                    updateNodeMutation.mutate({
-                      id: selectedNode.data.originalId,
-                      data: {
-                        name: data.label,
-                        data,
-                      },
-                    });
-                    setIsDirty(true);
-                    // Não fechamos o editor após salvar
-                  }}
-                  onDelete={() => {
-                    if (confirm('Tem certeza que deseja excluir este nó?')) {
-                      deleteNodeMutation.mutate(selectedNode.data.originalId);
-                      setSidebarEditorVisible(false);
-                    }
-                  }}
-                />
-              </div>
-            )}
-            
-            {selectedEdge && (
-              <div>
-                <EdgeEditor 
-                  edge={selectedEdge} 
-                  onSave={(data) => {
-                    updateEdgeMutation.mutate({
-                      id: selectedEdge.data?.originalId,
-                      data: {
-                        label: data.label,
-                        condition: data.condition,
-                      },
-                    });
-                    setIsDirty(true);
-                    // Não fechamos o editor após salvar
-                  }}
-                  onDelete={() => {
-                    if (confirm('Tem certeza que deseja excluir esta conexão?')) {
-                      deleteEdgeMutation.mutate(selectedEdge.data?.originalId);
-                      setSidebarEditorVisible(false);
-                    }
-                  }}
-                />
-              </div>
-            )}
-            
-            <div className="mt-4 pt-4 border-t flex justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSidebarEditorVisible(false);
-                  setSelectedNode(null);
-                  setSelectedEdge(null);
-                }}
-              >
-                Fechar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Removido editor lateral em favor de prompts nativos do navegador */}
       
       {/* Diálogo para adicionar nó */}
       <Dialog open={isAddNodeDialogOpen} onOpenChange={setIsAddNodeDialogOpen}>
