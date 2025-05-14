@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { NodeEditorDialog } from './node-editor-dialog';
-import { EdgeEditorDialog } from './edge-editor-dialog';
 import ReactFlow, {
   Background,
   Controls,
@@ -14,6 +12,7 @@ import ReactFlow, {
   Edge,
   Connection,
   MarkerType,
+  updateEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useToast } from '@/hooks/use-toast';
@@ -33,24 +32,17 @@ import {
   ImagePlus,
   X,
   Plus,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 
 // Componentes de tipo de nó
-// Versão simplificada do nó de mensagem
-function MessageNode({ data, id }: { data: any, id: string }) {
+function MessageNode({ data }: { data: any }) {
   return (
     <div className="p-3 border-2 rounded-md bg-blue-50 border-blue-200 w-56">
       <div className="font-medium text-xs mb-1 text-blue-800 flex items-center">
@@ -64,8 +56,7 @@ function MessageNode({ data, id }: { data: any, id: string }) {
   );
 }
 
-// Versão simplificada do nó de entrada
-function InputNode({ data, id }: { data: any, id: string }) {
+function InputNode({ data }: { data: any }) {
   return (
     <div className="p-3 border-2 rounded-md bg-green-50 border-green-200 w-56">
       <div className="font-medium text-xs mb-1 text-green-800 flex items-center">
@@ -82,8 +73,7 @@ function InputNode({ data, id }: { data: any, id: string }) {
   );
 }
 
-// Versão simplificada do nó de condição
-function ConditionNode({ data, id }: { data: any, id: string }) {
+function ConditionNode({ data }: { data: any }) {
   return (
     <div className="p-3 border-2 rounded-md bg-yellow-50 border-yellow-200 w-56">
       <div className="font-medium text-xs mb-1 text-yellow-800 flex items-center">
@@ -97,8 +87,7 @@ function ConditionNode({ data, id }: { data: any, id: string }) {
   );
 }
 
-// Versão simplificada do nó de requisição API
-function ApiRequestNode({ data, id }: { data: any, id: string }) {
+function ApiRequestNode({ data }: { data: any }) {
   return (
     <div className="p-3 border-2 rounded-md bg-purple-50 border-purple-200 w-56">
       <div className="font-medium text-xs mb-1 text-purple-800 flex items-center">
@@ -115,8 +104,7 @@ function ApiRequestNode({ data, id }: { data: any, id: string }) {
   );
 }
 
-// Versão simplificada do nó de menu
-function MenuNode({ data, id }: { data: any, id?: string }) {
+function MenuNode({ data }: { data: any }) {
   return (
     <div className="p-3 border-2 rounded-md bg-indigo-50 border-indigo-200 w-56">
       <div className="font-medium text-xs mb-1 text-indigo-800 flex items-center">
@@ -214,424 +202,49 @@ const nodeTypes = {
   end: EndNode,
 };
 
-// Componente NodeEditor para editar propriedades de nós
-function NodeEditor({ node, onSave, onDelete }: { 
-  node: Node, 
-  onSave: (data: any) => void,
-  onDelete: () => void
-}) {
-  const nodeType = node.type || 'message';
-  // Não precisamos mais de uma chave para o formulário
-  
-  // Usar useMemo para criar valores padrão e evitar recriação a cada renderização
-  const defaultValues = useMemo(() => ({
-    label: node.data.label || '',
-    ...node.data,
-  }), [node.id]); // Usar node.id como dependência para manter estável
-  
-  // Usar uma única instância do formulário por nó
-  const nodeForm = useForm({
-    defaultValues,
-  });
-
-  // Função estável para submissão
-  const onSubmit = useCallback((data: any) => {
-    onSave(data);
-  }, [onSave]);
-
-  return (
-    <div>
-      <form onSubmit={nodeForm.handleSubmit(onSubmit)}>
-        <div className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="label">Nome do nó</Label>
-            <Input
-              id="label"
-              {...nodeForm.register('label')}
-            />
-          </div>
-          
-          {/* Campos específicos para cada tipo de nó */}
-          {nodeType === 'message' && (
-            <div className="grid gap-2">
-              <Label htmlFor="content">Mensagem</Label>
-              <Textarea
-                id="content"
-                rows={4}
-                {...nodeForm.register('content')}
-                placeholder="Digite a mensagem que será enviada ao usuário..."
-              />
-              <p className="text-xs text-neutral-500">
-                Dica: Você pode usar marcadores como {'{nome}'} para inserir variáveis.
-              </p>
-            </div>
-          )}
-          
-          {nodeType === 'input' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="question">Pergunta</Label>
-                <Textarea
-                  id="question"
-                  rows={3}
-                  {...nodeForm.register('question')}
-                  placeholder="Digite a pergunta que será feita ao usuário..."
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="variableName">Nome da variável</Label>
-                <Input
-                  id="variableName"
-                  {...nodeForm.register('variableName')}
-                  placeholder="Ex: nome, email, telefone"
-                />
-                <p className="text-xs text-neutral-500">
-                  A resposta do usuário será armazenada nesta variável
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="validation">Validação</Label>
-                <Select 
-                  defaultValue={node.data.validation || 'none'}
-                  onValueChange={(value) => nodeForm.setValue('validation', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de validação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Telefone</SelectItem>
-                    <SelectItem value="number">Número</SelectItem>
-                    <SelectItem value="date">Data</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-          
-          {nodeType === 'condition' && (
-            <div className="grid gap-2">
-              <Label htmlFor="condition">Condição</Label>
-              <Textarea
-                id="condition"
-                rows={3}
-                {...nodeForm.register('condition')}
-                placeholder="Ex: nome != null || idade > 18"
-              />
-              <p className="text-xs text-neutral-500">
-                Use chaves duplas {'{{'} e {'}}'} para acessar variáveis
-              </p>
-            </div>
-          )}
-          
-          {nodeType === 'api_request' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="url">URL da API</Label>
-                <Input
-                  id="url"
-                  {...nodeForm.register('url')}
-                  placeholder="https://api.exemplo.com/endpoint"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="method">Método</Label>
-                <Select 
-                  defaultValue={node.data.method || 'GET'}
-                  onValueChange={(value) => nodeForm.setValue('method', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o método HTTP" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GET">GET</SelectItem>
-                    <SelectItem value="POST">POST</SelectItem>
-                    <SelectItem value="PUT">PUT</SelectItem>
-                    <SelectItem value="DELETE">DELETE</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="headers">Headers (JSON)</Label>
-                <Textarea
-                  id="headers"
-                  rows={2}
-                  {...nodeForm.register('headers')}
-                  placeholder='{"Content-Type": "application/json"}'
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="body">Body (JSON)</Label>
-                <Textarea
-                  id="body"
-                  rows={3}
-                  {...nodeForm.register('body')}
-                  placeholder='{"key": "value"}'
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="resultVariable">Variável para resultado</Label>
-                <Input
-                  id="resultVariable"
-                  {...nodeForm.register('resultVariable')}
-                  placeholder="Ex: apiResponse"
-                />
-              </div>
-            </>
-          )}
-          
-          {nodeType === 'menu' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="prompt">Texto do menu</Label>
-                <Textarea
-                  id="prompt"
-                  rows={3}
-                  {...nodeForm.register('prompt')}
-                  placeholder="Digite o texto que apresentará as opções..."
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Opções</Label>
-                <div className="space-y-2">
-                  {[0, 1, 2, 3, 4].map((index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        placeholder={`Opção ${index + 1}`}
-                        {...nodeForm.register(`options.${index}.text`)}
-                        defaultValue={node.data.options?.[index]?.text || ''}
-                      />
-                      <Input
-                        placeholder="Valor"
-                        {...nodeForm.register(`options.${index}.value`)}
-                        defaultValue={node.data.options?.[index]?.value || ''}
-                        className="w-24"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-neutral-500">
-                  A opção selecionada pelo usuário será armazenada na variável 'menuSelection'
-                </p>
-              </div>
-            </>
-          )}
-          
-          {nodeType === 'wait' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="duration">Duração (segundos)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min={1}
-                  {...nodeForm.register('duration')}
-                  defaultValue={node.data.duration || 5}
-                />
-              </div>
-            </>
-          )}
-          
-          {nodeType === 'goto' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="targetFlow">Fluxo de destino</Label>
-                <Input
-                  id="targetFlow"
-                  {...nodeForm.register('targetFlow')}
-                  placeholder="ID do fluxo de destino"
-                />
-                <p className="text-xs text-neutral-500">
-                  Deixe em branco para continuar no fluxo atual
-                </p>
-              </div>
-            </>
-          )}
-          
-          {nodeType === 'media' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="mediaType">Tipo de mídia</Label>
-                <Select 
-                  defaultValue={node.data.mediaType || 'image'}
-                  onValueChange={(value) => nodeForm.setValue('mediaType', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de mídia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="image">Imagem</SelectItem>
-                    <SelectItem value="video">Vídeo</SelectItem>
-                    <SelectItem value="audio">Áudio</SelectItem>
-                    <SelectItem value="file">Arquivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="mediaUrl">URL da mídia</Label>
-                <Input
-                  id="mediaUrl"
-                  {...nodeForm.register('mediaUrl')}
-                  placeholder="https://exemplo.com/imagem.jpg"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="caption">Legenda</Label>
-                <Textarea
-                  id="caption"
-                  rows={2}
-                  {...nodeForm.register('caption')}
-                  placeholder="Legenda opcional para a mídia"
-                />
-              </div>
-            </>
-          )}
-          
-          {nodeType === 'end' && (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="endMessage">Mensagem de encerramento</Label>
-                <Textarea
-                  id="endMessage"
-                  rows={3}
-                  {...nodeForm.register('endMessage')}
-                  placeholder="Mensagem opcional para encerrar a conversa"
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Switch
-                  id="storeConversation"
-                  checked={nodeForm.watch('storeConversation') || false}
-                  onCheckedChange={(checked) => nodeForm.setValue('storeConversation', checked)}
-                />
-                <Label htmlFor="storeConversation">Armazenar conversa</Label>
-              </div>
-            </>
-          )}
-          
-          <div className="flex justify-between pt-4">
-            <Button 
-              type="button"
-              variant="destructive"
-              onClick={onDelete}
-            >
-              Excluir
-            </Button>
-            <Button type="submit">Salvar alterações</Button>
-          </div>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// Componente EdgeEditor para editar propriedades de arestas
-function EdgeEditor({ edge, onSave, onDelete }: { 
-  edge: Edge, 
-  onSave: (data: any) => void,
-  onDelete: () => void
-}) {
-  // Não precisamos mais de uma chave para o formulário
-  
-  // Usar useMemo para criar valores padrão e evitar recriação a cada renderização
-  const defaultValues = useMemo(() => ({
-    label: edge.label || '',
-    condition: edge.data?.condition || null,
-  }), [edge.id]); // Usar edge.id como dependência para manter estável
-  
-  const edgeForm = useForm({
-    defaultValues,
-  });
-
-  // Função estável para submissão
-  const onSubmit = useCallback((data: any) => {
-    onSave(data);
-  }, [onSave]);
-
-  return (
-    <div>
-      <form onSubmit={edgeForm.handleSubmit(onSubmit)}>
-        <div className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="label">Rótulo da conexão</Label>
-            <Input
-              id="label"
-              {...edgeForm.register('label')}
-              placeholder="Ex: Sim, Não, Próximo"
-            />
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="condition">Condição (opcional)</Label>
-            <Textarea
-              id="condition"
-              rows={3}
-              {...edgeForm.register('condition')}
-              placeholder="Ex: resposta === 'sim'"
-            />
-            <p className="text-xs text-neutral-500">
-              Use chaves duplas {'{{'} e {'}}'} para acessar variáveis. Deixe em branco para uma conexão sem condição.
-            </p>
-          </div>
-          
-          <div className="flex justify-between pt-4">
-            <Button 
-              type="button"
-              variant="destructive"
-              onClick={onDelete}
-            >
-              Excluir
-            </Button>
-            <Button type="submit">Salvar alterações</Button>
-          </div>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// Componente DraggableNode para arrastar e soltar
-function DraggableNode({ type, label, icon }: { type: string, label: string, icon: React.ReactNode }) {
-  const onDragStart = (event: React.DragEvent<HTMLDivElement>) => {
-    event.dataTransfer.setData('application/reactflow/type', type);
-    event.dataTransfer.effectAllowed = 'move';
-  };
-
-  return (
-    <div
-      className="border p-2 rounded-md flex items-center justify-center text-xs bg-white hover:bg-gray-50 cursor-grab"
-      onDragStart={onDragStart}
-      draggable
-    >
-      {icon}
-      {label}
-    </div>
-  );
-}
-
-// Componente NodeTypeButton para o diálogo de adicionar nó
-function NodeTypeButton({ type, label, description, icon, onClick }: { 
-  type: string, 
-  label: string, 
-  description: string,
-  icon: React.ReactNode,
-  onClick: () => void 
+// Botão para tipo de nó
+function NodeTypeButton({ label, description, icon, onClick }: {
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
     <Button
       variant="outline"
-      className="h-auto py-4 px-4 flex flex-col items-center justify-center text-center"
+      className="flex flex-col items-center justify-center h-20 text-center p-2"
       onClick={onClick}
     >
-      <div className="mb-2">{icon}</div>
-      <div className="font-medium">{label}</div>
-      <div className="text-xs text-neutral-500 mt-1">{description}</div>
+      <div className="mb-1">{icon}</div>
+      <div className="text-sm font-medium">{label}</div>
+      <div className="text-xs text-muted-foreground">{description}</div>
     </Button>
   );
 }
 
-// Funções auxiliares
+// Componente para o nó arrastrável
+function DraggableNode({ type, label, icon }: { 
+  type: string; 
+  label: string; 
+  icon: React.ReactNode;
+}) {
+  const onDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.setData('application/reactflow', type);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+  
+  return (
+    <div
+      className="border border-dashed border-neutral-300 rounded-md p-2 flex flex-col items-center justify-center cursor-grab bg-white hover:bg-neutral-50 text-center h-20"
+      onDragStart={onDragStart}
+      draggable
+    >
+      <div className="text-muted-foreground mb-1">{icon}</div>
+      <div className="text-xs font-medium">{label}</div>
+    </div>
+  );
+}
+
 function getNodeTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     message: 'Mensagem',
@@ -640,33 +253,50 @@ function getNodeTypeLabel(type: string): string {
     api_request: 'API',
     menu: 'Menu',
     wait: 'Espera',
-    goto: 'Ir para',
+    goto: 'Redirecionamento',
     media: 'Mídia',
-    end: 'Fim'
+    end: 'Finalizar',
   };
+  
   return labels[type] || type;
 }
 
-function getDefaultNodeData(type: string): any {
+function getNodeTypeDescription(type: string): string {
+  const descriptions: Record<string, string> = {
+    message: 'Envia uma mensagem para o usuário',
+    input: 'Solicita uma entrada do usuário',
+    condition: 'Cria um fluxo condicional',
+    api_request: 'Faz uma chamada para API externa',
+    menu: 'Apresenta opções para o usuário',
+    wait: 'Adiciona um tempo de espera',
+    goto: 'Redireciona para outro fluxo',
+    media: 'Envia uma mídia para o usuário',
+    end: 'Finaliza a conversa',
+  };
+  
+  return descriptions[type] || '';
+}
+
+function getNodeDefaults(type: string) {
   const defaults: Record<string, any> = {
     message: {
       label: 'Nova Mensagem',
-      content: 'Digite sua mensagem aqui...',
+      content: 'Olá! Como posso ajudar?',
     },
     input: {
       label: 'Nova Entrada',
-      question: 'Digite sua pergunta aqui...',
+      question: 'Por favor, responda a seguinte pergunta:',
       variableName: 'resposta',
       validation: 'none',
     },
     condition: {
       label: 'Nova Condição',
-      condition: '',
+      condition: '{{variavel}} == "valor"',
     },
     api_request: {
-      label: 'Nova API',
-      url: '',
+      label: 'Nova Requisição API',
       method: 'GET',
+      url: 'https://',
       headers: '',
       body: '',
       resultVariable: 'resultado',
@@ -695,7 +325,7 @@ function getDefaultNodeData(type: string): any {
     },
     end: {
       label: 'Finalizar',
-      endMessage: 'Obrigado pelo contato!',
+      endMessage: 'Obrigado por utilizar nosso serviço!',
       storeConversation: true,
     },
   };
@@ -712,539 +342,804 @@ export function ChatbotFlowEditor({ flow, onBack }: { flow: ChatbotFlow, onBack:
   const [isDirty, setIsDirty] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   
   // Buscar nós e arestas do fluxo
   const { data: flowNodes = [], isLoading: isLoadingNodes } = useQuery({
     queryKey: ['/api/flows', flow.id, 'nodes'],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/flows/${flow.id}/nodes`);
-      return await res.json() as ChatbotNode[];
-    },
+      const response = await apiRequest('GET', `/api/flows/${flow.id}/nodes`);
+      const data = await response.json();
+      return data as ChatbotNode[];
+    }
   });
-
+  
   const { data: flowEdges = [], isLoading: isLoadingEdges } = useQuery({
     queryKey: ['/api/flows', flow.id, 'edges'],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/flows/${flow.id}/edges`);
-      return await res.json() as ChatbotEdge[];
-    },
+      const response = await apiRequest('GET', `/api/flows/${flow.id}/edges`);
+      const data = await response.json();
+      return data as ChatbotEdge[];
+    }
   });
-
-  // Mutations para criar/atualizar/excluir nós e arestas
-  const createNodeMutation = useMutation({
+  
+  // Mutações para operações CRUD
+  const { mutate: createNode, isPending: isCreatingNode } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest('POST', `/api/flows/${flow.id}/nodes`, data);
-      return await res.json() as ChatbotNode;
+      const response = await apiRequest('POST', `/api/flows/${flow.id}/nodes`, data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'nodes'] });
-      setIsAddNodeDialogOpen(false);
-      toast({
-        title: 'Nó criado',
-        description: 'O nó foi criado com sucesso!',
-      });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Erro ao criar nó',
         description: error.message,
         variant: 'destructive',
       });
-    },
+    }
   });
-
-  const updateNodeMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number, data: any }) => {
-      const res = await apiRequest('PUT', `/api/nodes/${id}`, data);
-      return await res.json() as ChatbotNode;
+  
+  const { mutate: updateNode, isPending: isUpdatingNode } = useMutation({
+    mutationFn: async (nodeId: string, data: any) => {
+      const response = await apiRequest('PUT', `/api/nodes/${nodeId}`, data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'nodes'] });
-      // Não fechamos o painel lateral após salvar
-      toast({
-        title: 'Nó atualizado',
-        description: 'O nó foi atualizado com sucesso!',
-      });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Erro ao atualizar nó',
         description: error.message,
         variant: 'destructive',
       });
-    },
+    }
   });
-
-  const deleteNodeMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/nodes/${id}`);
+  
+  const { mutate: deleteNode, isPending: isDeletingNode } = useMutation({
+    mutationFn: async (nodeId: string) => {
+      const response = await apiRequest('DELETE', `/api/nodes/${nodeId}`);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'nodes'] });
-      toast({
-        title: 'Nó excluído',
-        description: 'O nó foi excluído com sucesso!',
-      });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Erro ao excluir nó',
         description: error.message,
         variant: 'destructive',
       });
-    },
+    }
   });
-
-  const createEdgeMutation = useMutation({
+  
+  const { mutate: createEdge, isPending: isCreatingEdge } = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest('POST', `/api/flows/${flow.id}/edges`, data);
-      return await res.json() as ChatbotEdge;
+      const response = await apiRequest('POST', `/api/flows/${flow.id}/edges`, data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'edges'] });
-      toast({
-        title: 'Conexão criada',
-        description: 'A conexão foi criada com sucesso!',
-      });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Erro ao criar conexão',
         description: error.message,
         variant: 'destructive',
       });
-    },
+    }
   });
-
-  const updateEdgeMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number, data: any }) => {
-      const res = await apiRequest('PUT', `/api/edges/${id}`, data);
-      return await res.json() as ChatbotEdge;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'edges'] });
-      // Não fechamos o painel lateral após salvar
-      toast({
-        title: 'Conexão atualizada',
-        description: 'A conexão foi atualizada com sucesso!',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Erro ao atualizar conexão',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const deleteEdgeMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/edges/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/flows', flow.id, 'edges'] });
-      toast({
-        title: 'Conexão excluída',
-        description: 'A conexão foi excluída com sucesso!',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Erro ao excluir conexão',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Converter nós e arestas para o formato do ReactFlow
+  
+  // Flag para verificar se está salvando
+  const isSaving = isCreatingNode || isUpdatingNode || isDeletingNode || isCreatingEdge;
+  
+  // Converter nós e arestas do banco de dados para o formato do react-flow
   useEffect(() => {
     if (flowNodes.length > 0) {
-      const rfNodes = flowNodes.map((node: ChatbotNode) => {
-        return {
-          id: node.id.toString(),
-          type: node.nodeType,
-          position: node.position as { x: number, y: number },
-          data: {
-            ...(node.data as object),
-            label: node.name,
-            originalId: node.id, 
-          },
-        };
-      });
+      const rfNodes = flowNodes.map((node) => ({
+        id: node.id.toString(),
+        type: node.nodeType,
+        position: node.position || { x: 0, y: 0 },
+        data: {
+          label: node.name,
+          ...node.data,
+        },
+      }));
+      
       setNodes(rfNodes);
     }
   }, [flowNodes, setNodes]);
-
+  
   useEffect(() => {
     if (flowEdges.length > 0) {
-      const rfEdges = flowEdges.map((edge: ChatbotEdge) => {
-        return {
-          id: edge.id.toString(),
-          source: edge.sourceNodeId.toString(),
-          target: edge.targetNodeId.toString(),
-          sourceHandle: edge.sourceHandle || undefined,
-          targetHandle: edge.targetHandle || undefined,
-          label: edge.label || undefined,
-          data: {
-            condition: edge.condition,
-            originalId: edge.id,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-          },
-        };
-      });
+      const rfEdges = flowEdges.map((edge) => ({
+        id: edge.id.toString(),
+        source: edge.sourceId.toString(),
+        target: edge.targetId.toString(),
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+        label: edge.label,
+        animated: edge.animated,
+        type: 'default',
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        data: edge.data,
+      }));
+      
       setEdges(rfEdges);
     }
   }, [flowEdges, setEdges]);
-
-  // Manipuladores de eventos
+  
+  // Função para lidar com a conexão de arestas
   const onConnect = useCallback(
-    (connection: Connection) => {
+    (params: Connection) => {
       const newEdge = {
-        ...connection,
-        id: `temp-${Date.now()}`,
+        ...params,
         markerEnd: {
           type: MarkerType.ArrowClosed,
         },
       };
       
       setEdges((eds) => addEdge(newEdge, eds));
-      
-      // Salvar no banco de dados
-      createEdgeMutation.mutate({
-        flowId: flow.id,
-        sourceNodeId: parseInt(connection.source!),
-        targetNodeId: parseInt(connection.target!),
-        sourceHandle: connection.sourceHandle,
-        targetHandle: connection.targetHandle,
-        label: '',
-        condition: null,
-      });
-      
       setIsDirty(true);
+      
+      createEdge({
+        sourceId: parseInt(params.source!),
+        targetId: parseInt(params.target!),
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle,
+        label: '',
+        animated: false,
+        data: {},
+      });
     },
-    [setEdges, createEdgeMutation, flow.id]
+    [setEdges, createEdge]
   );
-
-  // Tratamento simplificado para edição
-  const handleSimplesNodeEdit = (node: Node) => {
-    // Atualizar imediatamente no banco de dados
-    updateNodeMutation.mutate({
-      id: node.data.originalId,
-      data: {
-        name: node.data.label || 'Nó sem nome',
-        data: {
-          ...node.data,
-        }
-      }
-    });
-  };
-
-  // Tratamento de clique em nós - versão ultrasimples
-  const onNodeClick = (event: React.MouseEvent, node: Node) => {
-    // Impedir a propagação do evento para evitar interações indesejadas
-    event.stopPropagation();
-    event.preventDefault();
-    
-    // Em vez de prompt, apenas editar diretamente
-    handleSimplesNodeEdit(node);
-    
-    // Mostrar mensagem de feedback
-    toast({
-      title: "Nó selecionado",
-      description: `Nó '${node.data.label || 'sem nome'}' selecionado e salvo.`,
-    });
-  };
-
-  // Tratamento de clique em arestas - versão ultrasimples
-  const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
-    // Impedir a propagação do evento para evitar interações indesejadas
-    event.stopPropagation();
-    event.preventDefault();
-    
-    // Atualizar imediatamente no banco de dados
-    updateEdgeMutation.mutate({
-      id: edge.data?.originalId,
-      data: {
-        label: edge.label ? String(edge.label) : '',
-        condition: edge.data?.condition,
-      }
-    });
-    
-    // Mostrar mensagem de feedback
-    toast({
-      title: "Conexão selecionada",
-      description: `Conexão ${edge.data?.originalId || ''} selecionada e salva.`,
-    });
-  };
-
-  const onNodeDragStop = (_: React.MouseEvent, node: Node) => {
-    // Atualizar posição do nó no banco de dados
-    updateNodeMutation.mutate({
-      id: node.data.originalId,
-      data: {
-        position: node.position,
-      },
-    });
-    
-    setIsDirty(true);
-  };
-
-  const onAddNode = (type: string, position: { x: number, y: number }) => {
-    // Criar um novo nó com base no tipo
-    const newNodeData = getDefaultNodeData(type);
-    
-    createNodeMutation.mutate({
-      flowId: flow.id,
-      nodeType: type,
-      name: newNodeData.label,
-      data: newNodeData,
-      position,
-    });
-    
-    setIsDirty(true);
-    setIsAddNodeDialogOpen(false);
-  };
-
-  // Manipulador para arrastar e soltar novos nós
-  const onDragOver = useCallback((event: React.DragEvent) => {
+  
+  // Funções para arrastar e soltar novos nós
+  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
-
+  
   const onDrop = useCallback(
-    (event: React.DragEvent) => {
+    (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-
-      const type = event.dataTransfer.getData('application/reactflow/type');
       
-      if (!type || !reactFlowInstance) {
-        return;
-      }
-
+      if (!reactFlowInstance) return;
+      
+      const type = event.dataTransfer.getData('application/reactflow');
+      
+      if (!type) return;
+      
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
       
-      onAddNode(type, position);
+      // Adicionar o nó ao banco de dados
+      createNode({
+        nodeType: type,
+        name: getNodeTypeLabel(type),
+        position,
+        data: getNodeDefaults(type),
+      });
+      
+      setIsDirty(true);
     },
-    [reactFlowInstance, onAddNode]
+    [reactFlowInstance, createNode]
   );
-
-  // Renderização do editor de fluxo
+  
+  const onAddNode = useCallback(
+    (type: string, position = { x: 100, y: 100 }) => {
+      createNode({
+        nodeType: type,
+        name: getNodeTypeLabel(type),
+        position,
+        data: getNodeDefaults(type),
+      });
+      
+      setIsDirty(true);
+      setIsAddNodeDialogOpen(false);
+    },
+    [createNode]
+  );
+  
+  // Função para abrir o diálogo de adição de nó
+  const handleAddNode = () => {
+    setIsAddNodeDialogOpen(true);
+  };
+  
+  // Funções para interação com nós e arestas
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    event.stopPropagation();
+    setSelectedNode(node);
+    setSidebarVisible(true);
+  }, []);
+  
+  const onNodeDragStop = useCallback((event: React.MouseEvent, node: Node) => {
+    setIsDirty(true);
+    
+    // Atualizar a posição do nó no banco de dados
+    updateNode(node.id, {
+      position: node.position
+    });
+  }, [updateNode]);
+  
+  // Função para salvar o fluxo
+  const handleSave = useCallback(() => {
+    if (isDirty) {
+      setIsDirty(false);
+      toast({
+        title: 'Fluxo salvo',
+        description: 'Todas as alterações foram salvas com sucesso.',
+      });
+    }
+  }, [isDirty, toast]);
+  
+  // Função para atualização da posição do nó
+  const updateNodePosition = useCallback((nodeId: string, position: { x: number; y: number }) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            position,
+          };
+        }
+        return node;
+      })
+    );
+    
+    setIsDirty(true);
+  }, [setNodes]);
+  
+  // Função para atualização de dados do nó
+  const handleUpdateNodeData = (nodeId: string, newData: any) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...newData,
+            },
+          };
+        }
+        return node;
+      })
+    );
+    
+    setIsDirty(true);
+    
+    // Atualizar o nó no banco de dados
+    const node = nodes.find((n) => n.id === nodeId);
+    if (node) {
+      updateNode(nodeId, {
+        data: {
+          ...node.data,
+          ...newData,
+        },
+      });
+    }
+  };
+  
+  // Renderização do editor
   return (
-    <div className="h-screen flex flex-col">
-      <div className="border-b p-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="text-lg font-medium">{flow.name}</h2>
+    <div className="h-screen flex">
+      {/* Área principal do editor */}
+      <div className={`h-full ${sidebarVisible ? 'w-2/3' : 'w-full'} flex flex-col transition-all duration-200`}>
+        <div className="border-b p-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h2 className="text-lg font-medium">{flow.name}</h2>
+            {isDirty && <span className="ml-2 text-xs text-muted-foreground">(não salvo)</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleAddNode}>
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar Nó
+            </Button>
+            <Button 
+              variant={isDirty ? "default" : "outline"} 
+              size="sm"
+              onClick={handleSave}
+              disabled={!isDirty || isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-1" />
+                  Salvar
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant={isDirty ? "default" : "outline"} 
-            onClick={() => {
-              toast({
-                title: 'Fluxo salvo',
-                description: 'Todas as alterações foram salvas com sucesso!',
-              });
-              setIsDirty(false);
-            }}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Salvar
-          </Button>
-        </div>
-      </div>
-      
-      <div className="flex-grow relative" ref={reactFlowWrapper}>
-        <ReactFlowProvider>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onEdgeClick={onEdgeClick}
-            onNodeDragStop={onNodeDragStop}
-            onInit={setReactFlowInstance}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            nodeTypes={nodeTypes}
-            fitView
-          >
-            <Background />
-            <Controls />
-            <MiniMap />
-            
-            <Panel position="top-right" className="bg-white p-4 rounded-lg shadow-md border">
-              <div className="text-sm font-medium mb-2">Adicionar nós</div>
-              <div className="grid grid-cols-2 gap-2">
-                <DraggableNode type="message" label="Mensagem" icon={<MessageSquare className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="input" label="Entrada" icon={<Keyboard className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="condition" label="Condição" icon={<GitBranch className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="api_request" label="API" icon={<Server className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="menu" label="Menu" icon={<List className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="wait" label="Espera" icon={<Clock className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="goto" label="Ir para" icon={<CornerDownRight className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="media" label="Mídia" icon={<ImagePlus className="h-3 w-3 mr-1" />} />
-                <DraggableNode type="end" label="Fim" icon={<X className="h-3 w-3 mr-1" />} />
-              </div>
+        
+        <div className="flex-grow relative" ref={reactFlowWrapper}>
+          <ReactFlowProvider>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onNodeDragStop={onNodeDragStop}
+              onInit={setReactFlowInstance}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              nodeTypes={nodeTypes}
+              fitView
+              deleteKeyCode={['Backspace', 'Delete']}
+              onNodesDelete={(nodes) => {
+                setIsDirty(true);
+                nodes.forEach((node) => deleteNode(node.id));
+                
+                // Fechar o painel se o nó selecionado foi excluído
+                if (selectedNode && nodes.some(n => n.id === selectedNode.id)) {
+                  setSelectedNode(null);
+                  setSidebarVisible(false);
+                }
+              }}
+              onEdgesDelete={(edges) => {
+                setIsDirty(true);
+                // Implementar exclusão de arestas se necessário
+              }}
+              onPaneClick={() => {
+                // Opcional: desselecionar nó ao clicar no painel
+                // setSelectedNode(null);
+                // setSidebarVisible(false);
+              }}
+            >
+              <Background variant="dots" gap={12} size={1} />
+              <Controls />
+              <MiniMap nodeStrokeWidth={3} zoomable pannable />
               
-              <div className="mt-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => setIsAddNodeDialogOpen(true)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Adicionar nó
-                </Button>
-              </div>
-            </Panel>
-          </ReactFlow>
-        </ReactFlowProvider>
+              <Panel position="top-right" className="bg-white p-4 rounded-lg shadow-md border">
+                <div className="text-sm font-medium mb-2">Adicionar nós</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <DraggableNode type="message" label="Mensagem" icon={<MessageSquare className="h-3 w-3 mr-1" />} />
+                  <DraggableNode type="input" label="Entrada" icon={<Keyboard className="h-3 w-3 mr-1" />} />
+                  <DraggableNode type="condition" label="Condição" icon={<GitBranch className="h-3 w-3 mr-1" />} />
+                  <DraggableNode type="api_request" label="API" icon={<Server className="h-3 w-3 mr-1" />} />
+                  <DraggableNode type="menu" label="Menu" icon={<List className="h-3 w-3 mr-1" />} />
+                  <DraggableNode type="wait" label="Espera" icon={<Clock className="h-3 w-3 mr-1" />} />
+                  <DraggableNode type="media" label="Mídia" icon={<ImagePlus className="h-3 w-3 mr-1" />} />
+                  <DraggableNode type="end" label="Fim" icon={<X className="h-3 w-3 mr-1" />} />
+                </div>
+              </Panel>
+            </ReactFlow>
+          </ReactFlowProvider>
+        </div>
       </div>
       
-      {/* Removido editor lateral em favor de prompts nativos do navegador */}
-      
-      {/* Diálogo para adicionar nó */}
-      <Dialog open={isAddNodeDialogOpen} onOpenChange={setIsAddNodeDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Adicionar nó</DialogTitle>
-            <DialogDescription>
-              Selecione o tipo de nó que deseja adicionar.
-            </DialogDescription>
-          </DialogHeader>
+      {/* Painel lateral de edição */}
+      {sidebarVisible && selectedNode && (
+        <div className="h-full w-1/3 bg-background border-l border-border overflow-y-auto p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Editar {getNodeTypeLabel(selectedNode.type || 'message')}</h3>
+            <Button variant="ghost" size="sm" onClick={() => setSidebarVisible(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
           
-          <div className="py-4">
-            <div className="grid grid-cols-2 gap-3">
-              <NodeTypeButton 
-                type="message" 
-                label="Mensagem" 
-                description="Envia uma mensagem ao usuário"
-                icon={<MessageSquare className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('message', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="input" 
-                label="Entrada" 
-                description="Captura entrada do usuário"
-                icon={<Keyboard className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('input', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="condition" 
-                label="Condição" 
-                description="Avalia condições lógicas"
-                icon={<GitBranch className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('condition', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="api_request" 
-                label="API" 
-                description="Realiza chamadas de API"
-                icon={<Server className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('api_request', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="menu" 
-                label="Menu" 
-                description="Apresenta opções ao usuário"
-                icon={<List className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('menu', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="wait" 
-                label="Espera" 
-                description="Aguarda um período de tempo"
-                icon={<Clock className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('wait', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="goto" 
-                label="Ir para" 
-                description="Redireciona para outro fluxo"
-                icon={<CornerDownRight className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('goto', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="media" 
-                label="Mídia" 
-                description="Envia imagem, vídeo ou arquivo"
-                icon={<ImagePlus className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('media', center);
-                }}
-              />
-              <NodeTypeButton 
-                type="end" 
-                label="Fim" 
-                description="Finaliza o fluxo de conversa"
-                icon={<X className="h-4 w-4" />}
-                onClick={() => {
-                  const center = reactFlowInstance.screenToFlowPosition({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                  });
-                  onAddNode('end', center);
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="node-label">Nome do nó</Label>
+              <Input 
+                id="node-label" 
+                value={selectedNode.data.label || ''} 
+                onChange={(e) => {
+                  handleUpdateNodeData(selectedNode.id, { label: e.target.value });
                 }}
               />
             </div>
+            
+            {selectedNode.type === 'message' && (
+              <div className="space-y-2">
+                <Label htmlFor="content">Mensagem</Label>
+                <Textarea
+                  id="content"
+                  value={selectedNode.data.content || ''}
+                  rows={5}
+                  onChange={(e) => {
+                    handleUpdateNodeData(selectedNode.id, { content: e.target.value });
+                  }}
+                />
+              </div>
+            )}
+            
+            {selectedNode.type === 'input' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="question">Pergunta</Label>
+                  <Textarea
+                    id="question"
+                    value={selectedNode.data.question || ''}
+                    rows={3}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { question: e.target.value });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="variableName">Nome da variável</Label>
+                  <Input
+                    id="variableName"
+                    value={selectedNode.data.variableName || ''}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { variableName: e.target.value });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="validation">Validação</Label>
+                  <Select
+                    value={selectedNode.data.validation || 'none'}
+                    onValueChange={(value) => {
+                      handleUpdateNodeData(selectedNode.id, { validation: value });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a validação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="phone">Telefone</SelectItem>
+                      <SelectItem value="number">Número</SelectItem>
+                      <SelectItem value="date">Data</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            
+            {selectedNode.type === 'api_request' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="method">Método</Label>
+                  <Select
+                    value={selectedNode.data.method || 'GET'}
+                    onValueChange={(value) => {
+                      handleUpdateNodeData(selectedNode.id, { method: value });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o método" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GET">GET</SelectItem>
+                      <SelectItem value="POST">POST</SelectItem>
+                      <SelectItem value="PUT">PUT</SelectItem>
+                      <SelectItem value="DELETE">DELETE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="url">URL</Label>
+                  <Input
+                    id="url"
+                    value={selectedNode.data.url || ''}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { url: e.target.value });
+                    }}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="resultVariable">Variável para resultado</Label>
+                  <Input
+                    id="resultVariable"
+                    value={selectedNode.data.resultVariable || ''}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { resultVariable: e.target.value });
+                    }}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="headers">Headers (JSON)</Label>
+                  <Textarea
+                    id="headers"
+                    value={selectedNode.data.headers || ''}
+                    rows={3}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { headers: e.target.value });
+                    }}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="body">Body (JSON)</Label>
+                  <Textarea
+                    id="body"
+                    value={selectedNode.data.body || ''}
+                    rows={3}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { body: e.target.value });
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            
+            {selectedNode.type === 'menu' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="prompt">Texto do menu</Label>
+                  <Textarea
+                    id="prompt"
+                    value={selectedNode.data.prompt || ''}
+                    rows={3}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { prompt: e.target.value });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Opções</Label>
+                  {(selectedNode.data.options || []).map((option: any, index: number) => (
+                    <div key={index} className="flex space-x-2 mb-2">
+                      <Input
+                        placeholder="Texto"
+                        value={option.text || ''}
+                        onChange={(e) => {
+                          const newOptions = [...(selectedNode.data.options || [])];
+                          newOptions[index] = { ...option, text: e.target.value };
+                          handleUpdateNodeData(selectedNode.id, { options: newOptions });
+                        }}
+                      />
+                      <Input
+                        placeholder="Valor"
+                        value={option.value || ''}
+                        onChange={(e) => {
+                          const newOptions = [...(selectedNode.data.options || [])];
+                          newOptions[index] = { ...option, value: e.target.value };
+                          handleUpdateNodeData(selectedNode.id, { options: newOptions });
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          const newOptions = [...(selectedNode.data.options || [])];
+                          newOptions.splice(index, 1);
+                          handleUpdateNodeData(selectedNode.id, { options: newOptions });
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newOptions = [...(selectedNode.data.options || []), { text: '', value: '' }];
+                      handleUpdateNodeData(selectedNode.id, { options: newOptions });
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar opção
+                  </Button>
+                </div>
+              </>
+            )}
+            
+            {selectedNode.type === 'condition' && (
+              <div className="space-y-2">
+                <Label htmlFor="condition">Condição</Label>
+                <Textarea
+                  id="condition"
+                  value={selectedNode.data.condition || ''}
+                  rows={3}
+                  onChange={(e) => {
+                    handleUpdateNodeData(selectedNode.id, { condition: e.target.value });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use {{variavel}} para referenciar variáveis na condição.
+                </p>
+              </div>
+            )}
+            
+            {selectedNode.type === 'wait' && (
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duração (segundos)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min={1}
+                  value={selectedNode.data.duration || 5}
+                  onChange={(e) => {
+                    handleUpdateNodeData(selectedNode.id, { duration: parseInt(e.target.value) });
+                  }}
+                />
+              </div>
+            )}
+            
+            {selectedNode.type === 'media' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="mediaType">Tipo de mídia</Label>
+                  <Select
+                    value={selectedNode.data.mediaType || 'image'}
+                    onValueChange={(value) => {
+                      handleUpdateNodeData(selectedNode.id, { mediaType: value });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="image">Imagem</SelectItem>
+                      <SelectItem value="audio">Áudio</SelectItem>
+                      <SelectItem value="video">Vídeo</SelectItem>
+                      <SelectItem value="document">Documento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mediaUrl">URL da mídia</Label>
+                  <Input
+                    id="mediaUrl"
+                    value={selectedNode.data.mediaUrl || ''}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { mediaUrl: e.target.value });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="caption">Legenda</Label>
+                  <Textarea
+                    id="caption"
+                    value={selectedNode.data.caption || ''}
+                    rows={2}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { caption: e.target.value });
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            
+            {selectedNode.type === 'end' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="endMessage">Mensagem final</Label>
+                  <Textarea
+                    id="endMessage"
+                    value={selectedNode.data.endMessage || ''}
+                    rows={3}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { endMessage: e.target.value });
+                    }}
+                  />
+                </div>
+                <div className="flex items-center space-x-2 mt-4">
+                  <input
+                    type="checkbox"
+                    id="storeConversation"
+                    checked={selectedNode.data.storeConversation || false}
+                    onChange={(e) => {
+                      handleUpdateNodeData(selectedNode.id, { storeConversation: e.target.checked });
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="storeConversation">Armazenar conversa no histórico</Label>
+                </div>
+              </>
+            )}
+            
+            <div className="pt-4 flex justify-end">
+              <Button
+                variant="outline"
+                className="mr-2"
+                onClick={() => {
+                  setSelectedNode(null);
+                  setSidebarVisible(false);
+                }}
+              >
+                Fechar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (confirm('Tem certeza que deseja excluir este nó?')) {
+                    deleteNode(selectedNode.id);
+                    setSelectedNode(null);
+                    setSidebarVisible(false);
+                  }
+                }}
+              >
+                Excluir nó
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Dialog para adicionar nó */}
+      <Dialog open={isAddNodeDialogOpen} onOpenChange={setIsAddNodeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Nó</DialogTitle>
+            <DialogDescription>
+              Selecione o tipo de nó que deseja adicionar ao fluxo
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <NodeTypeButton 
+              label="Mensagem" 
+              description="Enviar mensagem ao usuário"
+              icon={<MessageSquare className="h-4 w-4" />}
+              onClick={() => onAddNode('message')}
+            />
+            
+            <NodeTypeButton 
+              label="Entrada" 
+              description="Solicitar dados do usuário"
+              icon={<Keyboard className="h-4 w-4" />}
+              onClick={() => onAddNode('input')}
+            />
+            
+            <NodeTypeButton 
+              label="Condição" 
+              description="Bifurcar com base em condição"
+              icon={<GitBranch className="h-4 w-4" />}
+              onClick={() => onAddNode('condition')}
+            />
+            
+            <NodeTypeButton 
+              label="API" 
+              description="Fazer chamada a API externa"
+              icon={<Server className="h-4 w-4" />}
+              onClick={() => onAddNode('api_request')}
+            />
+            
+            <NodeTypeButton 
+              label="Menu" 
+              description="Apresentar opções ao usuário"
+              icon={<List className="h-4 w-4" />}
+              onClick={() => onAddNode('menu')}
+            />
+            
+            <NodeTypeButton 
+              label="Espera" 
+              description="Aguardar um tempo específico"
+              icon={<Clock className="h-4 w-4" />}
+              onClick={() => onAddNode('wait')}
+            />
+            
+            <NodeTypeButton 
+              label="Mídia" 
+              description="Enviar imagem/vídeo/áudio"
+              icon={<ImagePlus className="h-4 w-4" />}
+              onClick={() => onAddNode('media')}
+            />
+            
+            <NodeTypeButton 
+              label="Fim" 
+              description="Finalizar conversa"
+              icon={<X className="h-4 w-4" />}
+              onClick={() => onAddNode('end')}
+            />
           </div>
           
           <DialogFooter>
