@@ -80,6 +80,7 @@ export default function ChatbotPage() {
   const [isFlowEditor, setIsFlowEditor] = useState(false);
   const [isNewChatbotDialogOpen, setIsNewChatbotDialogOpen] = useState(false);
   const [isNewChannelDialogOpen, setIsNewChannelDialogOpen] = useState(false);
+  const [isEditChannelDialogOpen, setIsEditChannelDialogOpen] = useState(false);
   const [isNewFlowDialogOpen, setIsNewFlowDialogOpen] = useState(false);
   
   // Queries para buscar dados
@@ -618,7 +619,10 @@ export default function ChatbotPage() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={() => setSelectedChannel(channel)}
+                                    onClick={() => {
+                                      setSelectedChannel(channel);
+                                      setIsEditChannelDialogOpen(true);
+                                    }}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -1419,6 +1423,280 @@ export default function ChatbotPage() {
                 </Button>
                 <Button type="submit">
                   Criar canal
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo para editar canal */}
+      <Dialog open={isEditChannelDialogOpen} onOpenChange={setIsEditChannelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar canal</DialogTitle>
+            <DialogDescription>
+              Edite as configurações do canal de comunicação.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...channelForm}>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              channelForm.handleSubmit((data) => {
+                if (selectedChannel) {
+                  updateChannelMutation.mutate({ id: selectedChannel.id, data });
+                  setIsEditChannelDialogOpen(false);
+                }
+              })();
+            }} className="space-y-4">
+              <FormField
+                control={channelForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Nome para identificar o canal
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={channelForm.control}
+                name="channelType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de canal</FormLabel>
+                    <FormControl>
+                      <Input disabled value={getChannelTypeLabel(field.value)} />
+                    </FormControl>
+                    <FormDescription>
+                      O tipo de canal não pode ser alterado
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Campos específicos para cada tipo de canal (igual ao diálogo de criação) */}
+              {channelForm.watch("channelType") === "whatsapp" && (
+                <>
+                  <FormItem>
+                    <FormLabel>Número de telefone</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: +5511999999999"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          const updatedCredentials = {
+                            ...credentials,
+                            phoneNumber: e.target.value
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
+                        }}
+                        defaultValue={channelForm.getValues("credentials")?.phoneNumber || ""}
+                        key={`phone-edit-${Date.now()}`}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Número do WhatsApp que será usado para enviar mensagens
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Token de acesso</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          const updatedCredentials = {
+                            ...credentials,
+                            accessToken: e.target.value
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
+                        }}
+                        defaultValue={channelForm.getValues("credentials")?.accessToken || ""}
+                        key={`token-edit-${Date.now()}`}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token de acesso à API do WhatsApp
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormField
+                    control={channelForm.control}
+                    name="webhookUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL de webhook</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          URL para receber notificações do WhatsApp
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+              
+              {channelForm.watch("channelType") === "telegram" && (
+                <>
+                  <FormItem>
+                    <FormLabel>Token do Bot</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: 123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          const updatedCredentials = {
+                            ...credentials,
+                            botToken: e.target.value
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
+                        }}
+                        defaultValue={channelForm.getValues("credentials")?.botToken || ""}
+                        key={`bot-token-edit-${Date.now()}`}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token obtido do BotFather no Telegram
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Nome do Bot</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: MeuEmpresaBot"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          const updatedCredentials = {
+                            ...credentials,
+                            botName: e.target.value
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
+                        }}
+                        defaultValue={channelForm.getValues("credentials")?.botName || ""}
+                        key={`bot-name-edit-${Date.now()}`}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Nome do seu bot no Telegram
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormField
+                    control={channelForm.control}
+                    name="webhookUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL de webhook</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          URL para receber notificações do Telegram
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+              
+              {channelForm.watch("channelType") === "webchat" && (
+                <>
+                  <FormItem>
+                    <FormLabel>Nome do widget</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: Suporte"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          const updatedCredentials = {
+                            ...credentials,
+                            widgetName: e.target.value
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
+                        }}
+                        defaultValue={channelForm.getValues("credentials")?.widgetName || ""}
+                        key={`widget-name-edit-${Date.now()}`}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Nome que será exibido no widget do chat
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Cor primária</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="color"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          const updatedCredentials = {
+                            ...credentials,
+                            primaryColor: e.target.value
+                          };
+                          channelForm.setValue("credentials", updatedCredentials);
+                        }}
+                        defaultValue={channelForm.getValues("credentials")?.primaryColor || "#4F46E5"}
+                        key={`color-edit-${Date.now()}`}
+                        className="h-10 w-full"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Cor principal do widget
+                    </FormDescription>
+                  </FormItem>
+                </>
+              )}
+              
+              <FormField
+                control={channelForm.control}
+                name="active"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Canal ativo
+                      </FormLabel>
+                      <FormDescription>
+                        Permite desativar o canal temporariamente sem excluí-lo
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditChannelDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  Salvar alterações
                 </Button>
               </DialogFooter>
             </form>
