@@ -101,6 +101,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup Chatbot routes
   setupChatbotRoutes(app, requireAuth);
+  
+  // Setup Unified Flow routes (interface entre chatbot e planos de discagem)
+  setupUnifiedFlowRoutes(app, requireAuth);
 
   // Client routes
   app.get("/api/clients", requireAuth, async (req, res) => {
