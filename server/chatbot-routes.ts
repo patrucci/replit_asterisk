@@ -200,12 +200,15 @@ export function setupChatbotRoutes(app: Express, requireAuth: any) {
         return res.status(403).json({ error: "Acesso negado" });
       }
       
+      console.log("Tentando criar canal com dados:", req.body);
+      
       const result = chatbotSchema.insertChatbotChannelSchema.safeParse({
         ...req.body,
         chatbotId,
       });
       
       if (!result.success) {
+        console.error("Erro de validação ao criar canal:", result.error.format());
         return res.status(400).json({ error: "Dados inválidos", details: result.error.format() });
       }
       
@@ -232,6 +235,9 @@ export function setupChatbotRoutes(app: Express, requireAuth: any) {
         return res.status(403).json({ error: "Acesso negado" });
       }
       
+      // Log para debug
+      console.log("Dados recebidos para atualização de canal:", req.body);
+      
       const updateSchema = chatbotSchema.insertChatbotChannelSchema.omit({ chatbotId: true }).partial();
       const result = updateSchema.safeParse(req.body);
       
@@ -241,8 +247,9 @@ export function setupChatbotRoutes(app: Express, requireAuth: any) {
       
       const updatedChannel = await chatbotStorage.updateChannel(channelId, result.data);
       res.json(updatedChannel);
-    } catch (error) {
-      res.status(500).json({ error: "Erro ao atualizar canal" });
+    } catch (error: any) {
+      console.error("Erro ao atualizar canal:", error);
+      res.status(500).json({ error: "Erro ao atualizar canal", details: error.message });
     }
   });
 
