@@ -27,6 +27,7 @@ import SoftphonePage from "@/pages/softphone-page";
 import ChatbotPage from "@/pages/chatbot-page";
 import DiagnosticoPage from "@/pages/diagnostico-page";
 import UnifiedFlowPage from "@/pages/unified-flow-page";
+import UnifiedFlowEditorPage from "@/pages/unified-flow-editor-page";
 
 function Router() {
   return (
@@ -49,6 +50,7 @@ function Router() {
       <ProtectedRoute path="/softphone" component={SoftphonePage} />
       <ProtectedRoute path="/chatbot" component={ChatbotPage} />
       <ProtectedRoute path="/unified-flow" component={UnifiedFlowPage} />
+      <ProtectedRoute path="/unified-flow/:id" component={UnifiedFlowEditorPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,11 +114,12 @@ export default function UnifiedFlowPage() {
     }
   };
 
+  // Hook para navegação
+  const [, navigate] = useLocation();
+  
   // Função para navegar para o editor de fluxo
   const navigateToEditor = (flow: UnifiedFlow) => {
-    // Implementar a navegação para o editor de fluxo unificado
-    alert(`Navegando para editor do fluxo: ${flow.name} (ID: ${flow.id})`);
-    // Use React Router ou outra forma de navegação quando estiver implementado
+    navigate(`/unified-flow/${flow.id}`);
   };
 
   // Se estiver carregando, mostrar indicador
