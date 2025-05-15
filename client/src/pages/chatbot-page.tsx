@@ -64,6 +64,25 @@ const channelFormSchema = z.object({
   active: z.boolean().default(true),
 });
 
+// Schemas específicos para as credenciais dos canais sociais
+const facebookCredentialsSchema = z.object({
+  pageId: z.string().optional(),
+  pageAccessToken: z.string().optional(),
+  appSecret: z.string().optional(),
+});
+
+const instagramCredentialsSchema = z.object({
+  instagramAccountId: z.string().optional(),
+  accessToken: z.string().optional(),
+});
+
+const linkedinCredentialsSchema = z.object({
+  linkedinPageId: z.string().optional(),
+  clientId: z.string().optional(),
+  clientSecret: z.string().optional(),
+  accessToken: z.string().optional(),
+});
+
 // Schema de validação para criação/edição de fluxos
 const flowFormSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
@@ -83,7 +102,12 @@ export default function ChatbotPage() {
   const [isEditChannelDialogOpen, setIsEditChannelDialogOpen] = useState(false);
   const [isNewFlowDialogOpen, setIsNewFlowDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [channelCredentials, setChannelCredentials] = useState<Record<string, string>>({}); // Para gerenciar as credenciais de forma independente
+  
+  // Estados para gerenciar os formulários de credenciais das redes sociais
+  const [facebookCredentials, setFacebookCredentials] = useState(facebookCredentialsSchema.parse({}));
+  const [instagramCredentials, setInstagramCredentials] = useState(instagramCredentialsSchema.parse({}));
+  const [linkedinCredentials, setLinkedinCredentials] = useState(linkedinCredentialsSchema.parse({}));
+  const [channelCredentials, setChannelCredentials] = useState<Record<string, string>>({}); // Para outros canais
   
   // Queries para buscar dados
   const { data: chatbots = [], isLoading: isLoadingChatbots } = useQuery({
@@ -412,20 +436,46 @@ export default function ChatbotPage() {
       console.log("Editando canal:", selectedChannel);
       console.log("Credenciais do canal:", selectedChannel.credentials);
       
-      // Salvar as credenciais em um estado separado para facilitar a edição
-      setChannelCredentials(selectedChannel.credentials as Record<string, string> || {});
+      const credentials = selectedChannel.credentials as Record<string, string> || {};
+      
+      // Configurar as credenciais para o tipo de canal específico
+      if (selectedChannel.channelType === "facebook") {
+        setFacebookCredentials(facebookCredentialsSchema.parse({
+          pageId: credentials.pageId || "",
+          pageAccessToken: credentials.pageAccessToken || "",
+          appSecret: credentials.appSecret || ""
+        }));
+      } else if (selectedChannel.channelType === "instagram") {
+        setInstagramCredentials(instagramCredentialsSchema.parse({
+          instagramAccountId: credentials.instagramAccountId || "",
+          accessToken: credentials.accessToken || ""
+        }));
+      } else if (selectedChannel.channelType === "linkedin") {
+        setLinkedinCredentials(linkedinCredentialsSchema.parse({
+          linkedinPageId: credentials.linkedinPageId || "",
+          clientId: credentials.clientId || "",
+          clientSecret: credentials.clientSecret || "",
+          accessToken: credentials.accessToken || ""
+        }));
+      } else {
+        // Para outros canais
+        setChannelCredentials(credentials);
+      }
       
       // Resetar o formulário com os valores atuais
       channelForm.reset({
         name: selectedChannel.name,
         channelType: selectedChannel.channelType,
-        credentials: selectedChannel.credentials as Record<string, string> || {},
+        credentials: credentials,
         webhookUrl: selectedChannel.webhookUrl || "",
         active: selectedChannel.active === null ? undefined : selectedChannel.active,
       });
     } else if (isNewChannelDialogOpen) {
       // Limpar as credenciais para o novo canal
       setChannelCredentials({});
+      setFacebookCredentials(facebookCredentialsSchema.parse({}));
+      setInstagramCredentials(instagramCredentialsSchema.parse({}));
+      setLinkedinCredentials(linkedinCredentialsSchema.parse({}));
       
       channelForm.reset({
         name: "",
