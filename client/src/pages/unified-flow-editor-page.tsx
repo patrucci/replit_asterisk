@@ -9,6 +9,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { NodeEditor } from './unified-flow-node-editor';
 import {
   ArrowLeft,
@@ -18,7 +27,8 @@ import {
   Phone,
   MessageSquare,
   ArrowRightLeft,
-  Loader2
+  Loader2,
+  Edit
 } from 'lucide-react';
 
 // Utilizamos uma interface local para evitar erros de importação
