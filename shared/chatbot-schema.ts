@@ -114,6 +114,8 @@ export const insertChatbotChannelSchema = createInsertSchema(chatbotChannels).om
   id: true,
   createdAt: true,
   updatedAt: true
+}).extend({
+  credentials: z.record(z.string().optional()).optional().default({})
 });
 
 export const insertChatbotFlowSchema = createInsertSchema(chatbotFlows).omit({

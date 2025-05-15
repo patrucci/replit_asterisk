@@ -211,8 +211,9 @@ export function setupChatbotRoutes(app: Express, requireAuth: any) {
       
       const channel = await chatbotStorage.createChannel(result.data);
       res.status(201).json(channel);
-    } catch (error) {
-      res.status(500).json({ error: "Erro ao criar canal" });
+    } catch (error: any) {
+      console.error("Erro ao criar canal:", error);
+      res.status(500).json({ error: "Erro ao criar canal", details: error.message });
     }
   });
 
