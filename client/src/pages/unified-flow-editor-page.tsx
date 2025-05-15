@@ -1137,44 +1137,141 @@ export default function UnifiedFlowEditorPage() {
               ) : nodes.length > 0 ? (
                 <div className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {nodes.map((node) => (
-                      <Card key={node.id} className="overflow-hidden">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">{node.name}</CardTitle>
-                          <CardDescription>Tipo: {node.nodeType}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="pb-2">
-                          <div className="text-xs text-muted-foreground">
-                            Posição: X: {node.position.x}, Y: {node.position.y}
-                          </div>
-                          {node.supportedChannels && node.supportedChannels.length > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Canais: {node.supportedChannels.join(', ')}
-                            </div>
-                          )}
-                          {node.data && (
-                            <div className="mt-2 p-2 bg-muted/30 rounded-sm text-xs">
-                              {Object.entries(node.data).map(([key, value]) => (
-                                <div key={key} className="flex justify-between mb-1">
-                                  <span className="font-medium">{key}:</span>
-                                  <span>{value as string}</span>
+                    {nodes.map((node) => {
+                      const isEditing = selectedNode?.id === node.id;
+                      
+                      return (
+                        <Card key={node.id} className="overflow-hidden">
+                          {isEditing ? (
+                            <div className="p-4 space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`edit-name-${node.id}`}>Nome do Componente</Label>
+                                <Input
+                                  id={`edit-name-${node.id}`}
+                                  value={editNodeData.name || ''}
+                                  onChange={(e) => setEditNodeData({
+                                    ...editNodeData,
+                                    name: e.target.value
+                                  })}
+                                />
+                              </div>
+                              
+                              {/* Campos específicos por tipo de nó */}
+                              {node.nodeType === 'message' && (
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-message-${node.id}`}>Mensagem</Label>
+                                  <Input
+                                    id={`edit-message-${node.id}`}
+                                    value={editNodeData.data?.message || ''}
+                                    onChange={(e) => setEditNodeData({
+                                      ...editNodeData,
+                                      data: { ...editNodeData.data, message: e.target.value }
+                                    })}
+                                  />
                                 </div>
-                              ))}
+                              )}
+                              
+                              {node.nodeType === 'input' && (
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-prompt-${node.id}`}>Texto da Pergunta</Label>
+                                  <Input
+                                    id={`edit-prompt-${node.id}`}
+                                    value={editNodeData.data?.prompt || ''}
+                                    onChange={(e) => setEditNodeData({
+                                      ...editNodeData,
+                                      data: { ...editNodeData.data, prompt: e.target.value }
+                                    })}
+                                  />
+                                  
+                                  <Label htmlFor={`edit-timeout-${node.id}`}>Timeout (segundos)</Label>
+                                  <Input
+                                    id={`edit-timeout-${node.id}`}
+                                    type="number"
+                                    value={editNodeData.data?.timeout || 30}
+                                    onChange={(e) => setEditNodeData({
+                                      ...editNodeData,
+                                      data: { ...editNodeData.data, timeout: parseInt(e.target.value) }
+                                    })}
+                                  />
+                                </div>
+                              )}
+                              
+                              {node.nodeType === 'condition' && (
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-condition-${node.id}`}>Condição</Label>
+                                  <Input
+                                    id={`edit-condition-${node.id}`}
+                                    value={editNodeData.data?.condition || ''}
+                                    onChange={(e) => setEditNodeData({
+                                      ...editNodeData,
+                                      data: { ...editNodeData.data, condition: e.target.value }
+                                    })}
+                                  />
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between pt-4">
+                                <Button variant="outline" onClick={handleCloseNodeEditor}>
+                                  Cancelar
+                                </Button>
+                                <Button 
+                                  onClick={() => handleSaveNodeEdits({
+                                    id: node.id,
+                                    name: editNodeData.name,
+                                    data: editNodeData.data,
+                                    supportedChannels: editNodeData.supportedChannels
+                                  })}
+                                  disabled={updateNodeMutation.isPending}
+                                >
+                                  {updateNodeMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    "Salvar"
+                                  )}
+                                </Button>
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-lg">{node.name}</CardTitle>
+                                <CardDescription>Tipo: {node.nodeType}</CardDescription>
+                              </CardHeader>
+                              <CardContent className="pb-2">
+                                <div className="text-xs text-muted-foreground">
+                                  Posição: X: {node.position.x}, Y: {node.position.y}
+                                </div>
+                                {node.supportedChannels && node.supportedChannels.length > 0 && (
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Canais: {node.supportedChannels.join(', ')}
+                                  </div>
+                                )}
+                                {node.data && (
+                                  <div className="mt-2 p-2 bg-muted/30 rounded-sm text-xs">
+                                    {Object.entries(node.data).map(([key, value]) => (
+                                      <div key={key} className="flex justify-between mb-1">
+                                        <span className="font-medium">{key}:</span>
+                                        <span>{value as string}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </CardContent>
+                              <CardFooter className="pt-2 pb-2 bg-muted/30 border-t">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full text-xs h-7"
+                                  onClick={() => handleEditNode(node)}
+                                >
+                                  Configurar
+                                </Button>
+                              </CardFooter>
+                            </>
                           )}
-                        </CardContent>
-                        <CardFooter className="pt-2 pb-2 bg-muted/30 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-xs h-7"
-                            onClick={() => handleEditNode(node)}
-                          >
-                            Configurar
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
