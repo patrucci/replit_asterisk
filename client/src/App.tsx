@@ -26,6 +26,7 @@ import QueueConfigPage from "@/pages/queue-config-page";
 import SoftphonePage from "@/pages/softphone-page";
 import ChatbotPage from "@/pages/chatbot-page";
 import DiagnosticoPage from "@/pages/diagnostico-page";
+import UnifiedFlowPage from "@/pages/unified-flow-page";
 
 function Router() {
   return (
@@ -47,6 +48,7 @@ function Router() {
       <ProtectedRoute path="/queue-config" component={QueueConfigPage} />
       <ProtectedRoute path="/softphone" component={SoftphonePage} />
       <ProtectedRoute path="/chatbot" component={ChatbotPage} />
+      <ProtectedRoute path="/unified-flow" component={UnifiedFlowPage} />
       <Route component={NotFound} />
     </Switch>
   );
