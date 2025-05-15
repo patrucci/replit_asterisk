@@ -833,6 +833,26 @@ export default function UnifiedFlowEditorPage() {
                               data: {...editNodeData.data, message: e.target.value}
                             })}
                           />
+                          {/* Campo adicional para voz em mensagens de voz */}
+                          {editNodeData.data?.voice !== undefined && (
+                            <>
+                              <Label htmlFor="voiceType" className="mt-2">Tipo de Voz</Label>
+                              <select
+                                id="voiceType"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                value={editNodeData.data?.voice || 'female1'}
+                                onChange={(e) => setEditNodeData({
+                                  ...editNodeData, 
+                                  data: {...editNodeData.data, voice: e.target.value}
+                                })}
+                              >
+                                <option value="female1">Feminina 1</option>
+                                <option value="female2">Feminina 2</option>
+                                <option value="male1">Masculina 1</option>
+                                <option value="male2">Masculina 2</option>
+                              </select>
+                            </>
+                          )}
                         </div>
                       )}
 
@@ -857,6 +877,21 @@ export default function UnifiedFlowEditorPage() {
                               data: {...editNodeData.data, timeout: parseInt(e.target.value)}
                             })}
                           />
+                          {/* Campos adicionais para entrada telefônica */}
+                          {editNodeData.data?.maxDigits !== undefined && (
+                            <>
+                              <Label htmlFor="maxDigits" className="mt-2">Número máximo de dígitos</Label>
+                              <Input
+                                id="maxDigits"
+                                type="number"
+                                value={editNodeData.data?.maxDigits || 1}
+                                onChange={(e) => setEditNodeData({
+                                  ...editNodeData, 
+                                  data: {...editNodeData.data, maxDigits: parseInt(e.target.value)}
+                                })}
+                              />
+                            </>
+                          )}
                         </div>
                       )}
 
@@ -883,7 +918,7 @@ export default function UnifiedFlowEditorPage() {
                         </div>
                       )}
 
-                      {selectedNode.nodeType === 'api_request' && (
+                      {selectedNode.nodeType === 'api_request' || selectedNode.nodeType === 'api_integration' && (
                         <div className="space-y-2">
                           <Label htmlFor="apiUrl">URL da API</Label>
                           <Input
@@ -909,6 +944,343 @@ export default function UnifiedFlowEditorPage() {
                             <option value="PUT">PUT</option>
                             <option value="DELETE">DELETE</option>
                           </select>
+                          <Label htmlFor="apiHeaders" className="mt-2">Headers (JSON)</Label>
+                          <Input
+                            id="apiHeaders"
+                            value={JSON.stringify(editNodeData.data?.headers || {})}
+                            onChange={(e) => {
+                              try {
+                                const headers = JSON.parse(e.target.value);
+                                setEditNodeData({
+                                  ...editNodeData, 
+                                  data: {...editNodeData.data, headers}
+                                });
+                              } catch (err) {
+                                // Permite digitação inválida durante a edição
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'menu' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="menuPrompt">Texto do Menu</Label>
+                          <Input
+                            id="menuPrompt"
+                            value={editNodeData.data?.prompt || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, prompt: e.target.value}
+                            })}
+                          />
+                          <div className="mt-2">
+                            <Label>Opções do Menu</Label>
+                            {(editNodeData.data?.options || []).map((option: any, index: number) => (
+                              <div key={index} className="flex gap-2 mt-1">
+                                <Input
+                                  placeholder="Valor"
+                                  className="flex-1"
+                                  value={option.value}
+                                  onChange={(e) => {
+                                    const options = [...(editNodeData.data?.options || [])];
+                                    options[index] = { ...options[index], value: e.target.value };
+                                    setEditNodeData({
+                                      ...editNodeData,
+                                      data: { ...editNodeData.data, options }
+                                    });
+                                  }}
+                                />
+                                <Input
+                                  placeholder="Texto"
+                                  className="flex-1"
+                                  value={option.label}
+                                  onChange={(e) => {
+                                    const options = [...(editNodeData.data?.options || [])];
+                                    options[index] = { ...options[index], label: e.target.value };
+                                    setEditNodeData({
+                                      ...editNodeData,
+                                      data: { ...editNodeData.data, options }
+                                    });
+                                  }}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const options = [...(editNodeData.data?.options || [])];
+                                    options.splice(index, 1);
+                                    setEditNodeData({
+                                      ...editNodeData,
+                                      data: { ...editNodeData.data, options }
+                                    });
+                                  }}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="h-4 w-4" viewBox="0 0 16 16">
+                                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                  </svg>
+                                </Button>
+                              </div>
+                            ))}
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="mt-2"
+                              onClick={() => {
+                                const options = [...(editNodeData.data?.options || [])];
+                                options.push({ value: '', label: '' });
+                                setEditNodeData({
+                                  ...editNodeData,
+                                  data: { ...editNodeData.data, options }
+                                });
+                              }}
+                            >
+                              Adicionar Opção
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'play_tts' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="ttsText">Texto para Fala</Label>
+                          <Input
+                            id="ttsText"
+                            value={editNodeData.data?.text || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, text: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="ttsVoice" className="mt-2">Voz</Label>
+                          <select
+                            id="ttsVoice"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.voice || 'female1'}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, voice: e.target.value}
+                            })}
+                          >
+                            <option value="female1">Feminina 1</option>
+                            <option value="female2">Feminina 2</option>
+                            <option value="male1">Masculina 1</option>
+                            <option value="male2">Masculina 2</option>
+                          </select>
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'play_audio' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="audioFile">Arquivo de Áudio</Label>
+                          <Input
+                            id="audioFile"
+                            value={editNodeData.data?.audioFile || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, audioFile: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'transfer' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="transferType">Tipo de Transferência</Label>
+                          <select
+                            id="transferType"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.destination || 'extension'}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, destination: e.target.value}
+                            })}
+                          >
+                            <option value="extension">Ramal</option>
+                            <option value="external">Número Externo</option>
+                            <option value="queue">Fila</option>
+                          </select>
+                          <Label htmlFor="transferNumber" className="mt-2">Número/Destino</Label>
+                          <Input
+                            id="transferNumber"
+                            value={editNodeData.data?.number || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, number: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'queue' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="queueName">Nome da Fila</Label>
+                          <Input
+                            id="queueName"
+                            value={editNodeData.data?.queueName || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, queueName: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="queueTimeout" className="mt-2">Timeout (segundos)</Label>
+                          <Input
+                            id="queueTimeout"
+                            type="number"
+                            value={editNodeData.data?.timeout || 300}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, timeout: parseInt(e.target.value)}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'voicemail' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="voicemailExt">Ramal</Label>
+                          <Input
+                            id="voicemailExt"
+                            value={editNodeData.data?.extension || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, extension: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'hangup' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="hangupReason">Motivo</Label>
+                          <select
+                            id="hangupReason"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.reason || 'normal'}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, reason: e.target.value}
+                            })}
+                          >
+                            <option value="normal">Normal</option>
+                            <option value="busy">Ocupado</option>
+                            <option value="congestion">Congestionamento</option>
+                            <option value="no_answer">Sem Resposta</option>
+                          </select>
+                          <Label htmlFor="hangupMessage" className="mt-2">Mensagem de Despedida</Label>
+                          <Input
+                            id="hangupMessage"
+                            value={editNodeData.data?.message || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, message: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'get_input' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="getInputPrompt">Solicitação</Label>
+                          <Input
+                            id="getInputPrompt"
+                            value={editNodeData.data?.prompt || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, prompt: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="getInputTimeout" className="mt-2">Timeout (segundos)</Label>
+                          <Input
+                            id="getInputTimeout"
+                            type="number"
+                            value={editNodeData.data?.timeout || 10}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, timeout: parseInt(e.target.value)}
+                            })}
+                          />
+                          <Label htmlFor="getInputMaxDigits" className="mt-2">Máximo de Dígitos</Label>
+                          <Input
+                            id="getInputMaxDigits"
+                            type="number"
+                            value={editNodeData.data?.maxDigits || 1}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, maxDigits: parseInt(e.target.value)}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'ai_integration' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="aiPrompt">Prompt para IA</Label>
+                          <textarea
+                            id="aiPrompt"
+                            className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.prompt || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, prompt: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="aiModel" className="mt-2">Modelo de IA</Label>
+                          <select
+                            id="aiModel"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.model || 'gpt-4o'}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, model: e.target.value}
+                            })}
+                          >
+                            <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo (OpenAI)</option>
+                            <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Anthropic)</option>
+                            <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
+                          </select>
+                          <Label htmlFor="aiMaxTokens" className="mt-2">Máximo de Tokens</Label>
+                          <Input
+                            id="aiMaxTokens"
+                            type="number"
+                            value={editNodeData.data?.maxTokens || 1000}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, maxTokens: parseInt(e.target.value)}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {selectedNode.nodeType === 'db_query' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="dbQuery">Query SQL</Label>
+                          <textarea
+                            id="dbQuery"
+                            className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.query || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, query: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="dbParams" className="mt-2">Parâmetros (JSON)</Label>
+                          <Input
+                            id="dbParams"
+                            value={JSON.stringify(editNodeData.data?.params || [])}
+                            onChange={(e) => {
+                              try {
+                                const params = JSON.parse(e.target.value);
+                                setEditNodeData({
+                                  ...editNodeData, 
+                                  data: {...editNodeData.data, params}
+                                });
+                              } catch (err) {
+                                // Permite digitação inválida durante a edição
+                              }
+                            }}
+                          />
                         </div>
                       )}
 
