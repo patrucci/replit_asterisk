@@ -36,19 +36,22 @@ interface UnifiedFlow {
 interface UnifiedNode {
   id: number;
   flowId: number;
-  type: string;
+  nodeType: string;
   name: string;
   data: any;
   position: { x: number; y: number };
+  supportedChannels?: string[];
 }
 
 interface UnifiedEdge {
   id: number;
   flowId: number;
-  source: string;
-  target: string;
+  sourceNodeId: number;
+  targetNodeId: number;
+  sourceHandle?: string;
+  targetHandle?: string;
   label?: string;
-  animated?: boolean;
+  condition?: any;
 }
 
 export default function UnifiedFlowEditorPage() {
@@ -135,7 +138,7 @@ export default function UnifiedFlowEditorPage() {
 
   // Mutação para adicionar nó
   const addNodeMutation = useMutation({
-    mutationFn: async (data: { flowId: number, type: string, name: string, data: any, position: { x: number, y: number } }) => {
+    mutationFn: async (data: { flowId: number, nodeType: string, name: string, data: any, position: { x: number, y: number } }) => {
       const response = await apiRequest('POST', `/api/unified-flows/${params?.id}/nodes`, data);
       return await response.json();
     },
@@ -180,25 +183,32 @@ export default function UnifiedFlowEditorPage() {
 
     // Dados específicos baseados no tipo de nó
     let nodeData = {};
+    let nodeType2send = '';
     
     switch (nodeType) {
       case 'call_input':
         nodeData = { prompt: 'Chamada recebida' };
+        nodeType2send = 'input';
         break;
       case 'voice_response':
         nodeData = { message: 'Olá, como posso ajudar?' };
+        nodeType2send = 'message';
         break;
       case 'message_input':
         nodeData = { prompt: 'Nova mensagem recebida' };
+        nodeType2send = 'input';
         break;
       case 'chatbot_response':
         nodeData = { message: 'Olá, como posso ajudar?' };
+        nodeType2send = 'message';
         break;
       case 'condition':
         nodeData = { condition: 'true', description: 'Verificar condição' };
+        nodeType2send = 'condition';
         break;
       default:
         nodeData = {};
+        nodeType2send = 'message';
     }
 
     // Calcula uma posição aleatória no canvas
@@ -209,7 +219,7 @@ export default function UnifiedFlowEditorPage() {
 
     addNodeMutation.mutate({
       flowId: flow.id,
-      type: nodeType,
+      nodeType: nodeType2send,
       name: nodeName,
       data: nodeData,
       position
@@ -438,12 +448,17 @@ export default function UnifiedFlowEditorPage() {
                       <Card key={node.id} className="overflow-hidden">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg">{node.name}</CardTitle>
-                          <CardDescription>Tipo: {node.type}</CardDescription>
+                          <CardDescription>Tipo: {node.nodeType}</CardDescription>
                         </CardHeader>
                         <CardContent>
                           <div className="text-xs text-muted-foreground">
                             Posição: X: {node.position.x}, Y: {node.position.y}
                           </div>
+                          {node.supportedChannels && node.supportedChannels.length > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Canais: {node.supportedChannels.join(', ')}
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
