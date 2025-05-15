@@ -259,12 +259,76 @@ export default function UnifiedFlowEditorPage() {
 
   // Função para abrir o editor de nó
   const handleEditNode = (node: UnifiedNode) => {
+    console.log("Editando nó:", node); // Debug
     setSelectedNode(node);
+    
+    // Populando dados iniciais com defaults baseados no tipo de nó
+    let initialData = { ...node.data };
+    
+    // Inicializa campos específicos por tipo, se estiverem vazios
+    switch(node.nodeType) {
+      case 'message':
+        initialData = { 
+          message: initialData.message || 'Digite a mensagem aqui',
+          ...initialData 
+        };
+        break;
+      case 'input':
+        initialData = { 
+          prompt: initialData.prompt || 'O que você gostaria de saber?', 
+          timeout: initialData.timeout || 30,
+          ...initialData 
+        };
+        break;
+      case 'condition':
+        initialData = { 
+          condition: initialData.condition || 'context.lastMessage == "sim"',
+          description: initialData.description || 'Verifica se a última mensagem é "sim"',
+          ...initialData 
+        };
+        break;
+      case 'api_request':
+      case 'api_integration':
+        initialData = { 
+          url: initialData.url || 'https://api.example.com/data',
+          method: initialData.method || 'GET',
+          headers: initialData.headers || {},
+          ...initialData 
+        };
+        break;
+      case 'menu':
+        initialData = { 
+          prompt: initialData.prompt || 'Escolha uma opção:',
+          options: initialData.options || [
+            { value: '1', label: 'Opção 1' },
+            { value: '2', label: 'Opção 2' }
+          ],
+          ...initialData 
+        };
+        break;
+      case 'play_tts':
+        initialData = { 
+          text: initialData.text || 'Texto a ser convertido em fala',
+          voice: initialData.voice || 'female1',
+          ...initialData 
+        };
+        break;
+      case 'get_input':
+        initialData = { 
+          prompt: initialData.prompt || 'Digite um número de 1 a 5',
+          timeout: initialData.timeout || 10,
+          maxDigits: initialData.maxDigits || 1,
+          ...initialData 
+        };
+        break;
+    }
+    
     setEditNodeData({
       name: node.name,
-      data: { ...node.data },
+      data: initialData,
       supportedChannels: node.supportedChannels || ['all']
     });
+    
     setShowNodeEditor(true);
   };
 
@@ -918,7 +982,7 @@ export default function UnifiedFlowEditorPage() {
                         </div>
                       )}
 
-                      {selectedNode.nodeType === 'api_request' || selectedNode.nodeType === 'api_integration' && (
+                      {(selectedNode.nodeType === 'api_request' || selectedNode.nodeType === 'api_integration') && (
                         <div className="space-y-2">
                           <Label htmlFor="apiUrl">URL da API</Label>
                           <Input
