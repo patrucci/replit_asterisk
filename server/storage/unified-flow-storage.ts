@@ -98,7 +98,7 @@ export class UnifiedFlowStorage implements IUnifiedFlowStorage {
         .delete(unifiedSchema.unifiedFlows)
         .where(eq(unifiedSchema.unifiedFlows.id, id));
       
-      return result.rowCount > 0;
+      return result.rowCount ? result.rowCount > 0 : false;
     } catch (error) {
       console.error("Erro ao excluir fluxo unificado:", error);
       return false;
@@ -158,7 +158,7 @@ export class UnifiedFlowStorage implements IUnifiedFlowStorage {
         .delete(unifiedSchema.unifiedNodes)
         .where(eq(unifiedSchema.unifiedNodes.id, id));
       
-      return result.rowCount > 0;
+      return result.rowCount ? result.rowCount > 0 : false;
     } catch (error) {
       console.error("Erro ao excluir nó:", error);
       return false;
@@ -206,7 +206,7 @@ export class UnifiedFlowStorage implements IUnifiedFlowStorage {
       .delete(unifiedSchema.unifiedEdges)
       .where(eq(unifiedSchema.unifiedEdges.id, id));
     
-    return result.rowCount > 0;
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Implementação dos métodos para gatilhos
@@ -250,7 +250,7 @@ export class UnifiedFlowStorage implements IUnifiedFlowStorage {
       .delete(unifiedSchema.unifiedTriggers)
       .where(eq(unifiedSchema.unifiedTriggers.id, id));
     
-    return result.rowCount > 0;
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Implementação dos métodos para variáveis
@@ -294,7 +294,7 @@ export class UnifiedFlowStorage implements IUnifiedFlowStorage {
       .delete(unifiedSchema.unifiedVariables)
       .where(eq(unifiedSchema.unifiedVariables.id, id));
     
-    return result.rowCount > 0;
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
 
