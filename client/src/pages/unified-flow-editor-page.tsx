@@ -538,6 +538,73 @@ export default function UnifiedFlowEditorPage() {
                     <TabsTrigger value="editor">Lista de Nós</TabsTrigger>
                   </TabsList>
                   
+                  <TabsContent value="channels" className="p-0">
+                    <div className="p-4 space-y-4">
+                      <h3 className="text-sm font-medium">Configuração de Canais</h3>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Configure quais canais este fluxo poderá utilizar. Ao selecionar canais específicos, 
+                        apenas os componentes compatíveis com esses canais estarão disponíveis.
+                      </p>
+                      
+                      <div className="grid grid-cols-1 gap-2">
+                        {availableChannels.map((channel) => (
+                          <div key={channel.id} className="flex items-center space-x-2 rounded-md border p-3">
+                            <Checkbox 
+                              id={`channel-${channel.id}`}
+                              checked={flowChannels.includes(channel.id)}
+                              onCheckedChange={(checked) => {
+                                if (channel.id === 'all') {
+                                  if (checked) {
+                                    setFlowChannels(['all']);
+                                  } else {
+                                    // Não permitir desmarcar todos
+                                  }
+                                } else {
+                                  if (checked) {
+                                    // Adicionando canal específico, remove 'all' se estiver presente
+                                    const newChannels = flowChannels.filter(c => c !== 'all').concat(channel.id);
+                                    setFlowChannels(newChannels);
+                                  } else {
+                                    // Removendo canal específico
+                                    const newChannels = flowChannels.filter(c => c !== channel.id);
+                                    // Se não sobrar nenhum, volta para 'all'
+                                    if (newChannels.length === 0) {
+                                      setFlowChannels(['all']);
+                                    } else {
+                                      setFlowChannels(newChannels);
+                                    }
+                                  }
+                                }
+                              }}
+                            />
+                            <Label 
+                              htmlFor={`channel-${channel.id}`}
+                              className="flex-grow"
+                            >
+                              {channel.name}
+                            </Label>
+                            
+                            {channel.id !== 'all' && channel.id !== 'voice' && channel.id !== 'chat' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // Aqui abriria um modal para configurar o canal específico
+                                  toast({
+                                    title: `Configurar ${channel.name}`,
+                                    description: `Funcionalidade para configurar o canal ${channel.name} será implementada em breve.`
+                                  });
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
                   <TabsContent value="components" className="p-0">
                     <div className="p-4 space-y-4">
                       <div className="space-y-2">
