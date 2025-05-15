@@ -173,12 +173,16 @@ export function setupUnifiedFlowRoutes(app: Express, requireAuth: any) {
         return res.status(403).json({ error: "Acesso negado" });
       }
       
+      // Log dos dados recebidos para debug
+      console.log("Dados recebidos para criar nó:", JSON.stringify(req.body, null, 2));
+      
       const result = unifiedSchema.insertUnifiedNodeSchema.safeParse({
         ...req.body,
         flowId
       });
       
       if (!result.success) {
+        console.log("Erro de validação:", JSON.stringify(result.error.format(), null, 2));
         return res.status(400).json({ 
           error: "Dados inválidos", 
           details: result.error.format() 
