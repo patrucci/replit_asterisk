@@ -83,6 +83,10 @@ export default function UnifiedFlowEditorPage() {
   const [isNodeEditorDialogOpen, setIsNodeEditorDialogOpen] = useState(false);
   const [editNodeData, setEditNodeData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Estados para gerenciamento de canais
+  const [isChannelsConfigOpen, setIsChannelsConfigOpen] = useState(false);
+  const [flowChannels, setFlowChannels] = useState<string[]>(['all']);
 
   // Buscar detalhes do fluxo
   const { data: flowData, isLoading: isLoadingFlow, error: flowError } = useQuery({
@@ -528,8 +532,9 @@ export default function UnifiedFlowEditorPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <Tabs defaultValue="components" className="w-full">
-                  <TabsList className="w-full grid grid-cols-2">
+                  <TabsList className="w-full grid grid-cols-3">
                     <TabsTrigger value="components">Componentes</TabsTrigger>
+                    <TabsTrigger value="channels">Canais</TabsTrigger>
                     <TabsTrigger value="editor">Lista de Nós</TabsTrigger>
                   </TabsList>
                   
