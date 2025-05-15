@@ -58,6 +58,9 @@ export default function UnifiedFlowEditorPage() {
   const [flow, setFlow] = useState<UnifiedFlow | null>(null);
   const [nodes, setNodes] = useState<UnifiedNode[]>([]);
   const [edges, setEdges] = useState<UnifiedEdge[]>([]);
+  const [showAddNodeForm, setShowAddNodeForm] = useState(false);
+  const [nodeType, setNodeType] = useState<string>('');
+  const [nodeName, setNodeName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
   // Buscar detalhes do fluxo
@@ -129,6 +132,89 @@ export default function UnifiedFlowEditorPage() {
       });
     }
   });
+
+  // Mutação para adicionar nó
+  const addNodeMutation = useMutation({
+    mutationFn: async (data: { flowId: number, type: string, name: string, data: any, position: { x: number, y: number } }) => {
+      const response = await apiRequest('POST', `/api/unified-flows/${params?.id}/nodes`, data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Componente adicionado',
+        description: 'O componente foi adicionado ao fluxo com sucesso.',
+      });
+      setNodes(prev => [...prev, data]);
+      setNodeType('');
+      setNodeName('');
+      setShowAddNodeForm(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/unified-flows', params?.id, 'nodes'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao adicionar componente',
+        description: error.message || 'Ocorreu um erro ao adicionar o componente ao fluxo.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Função para adicionar um novo nó
+  const handleAddNode = (type: string) => {
+    setNodeType(type);
+    setShowAddNodeForm(true);
+  };
+
+  // Função para enviar o formulário de adição de nó
+  const handleSubmitNodeForm = () => {
+    if (!nodeName.trim()) {
+      toast({
+        title: 'Nome obrigatório',
+        description: 'Informe um nome para o componente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!flow?.id) return;
+
+    // Dados específicos baseados no tipo de nó
+    let nodeData = {};
+    
+    switch (nodeType) {
+      case 'call_input':
+        nodeData = { prompt: 'Chamada recebida' };
+        break;
+      case 'voice_response':
+        nodeData = { message: 'Olá, como posso ajudar?' };
+        break;
+      case 'message_input':
+        nodeData = { prompt: 'Nova mensagem recebida' };
+        break;
+      case 'chatbot_response':
+        nodeData = { message: 'Olá, como posso ajudar?' };
+        break;
+      case 'condition':
+        nodeData = { condition: 'true', description: 'Verificar condição' };
+        break;
+      default:
+        nodeData = {};
+    }
+
+    // Calcula uma posição aleatória no canvas
+    const position = {
+      x: 100 + Math.floor(Math.random() * 300),
+      y: 100 + Math.floor(Math.random() * 300)
+    };
+
+    addNodeMutation.mutate({
+      flowId: flow.id,
+      type: nodeType,
+      name: nodeName,
+      data: nodeData,
+      position
+    });
+  };
 
   // Se ocorreu um erro, mostrar mensagem
   if (flowError) {
@@ -252,23 +338,43 @@ export default function UnifiedFlowEditorPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3">
-                  <Button variant="outline" className="justify-start text-left">
+                  <Button 
+                    variant="outline" 
+                    className="justify-start text-left"
+                    onClick={() => handleAddNode('call_input')}
+                  >
                     <Phone className="mr-2 h-4 w-4" />
                     Entrada de Chamada
                   </Button>
-                  <Button variant="outline" className="justify-start text-left">
+                  <Button 
+                    variant="outline" 
+                    className="justify-start text-left"
+                    onClick={() => handleAddNode('voice_response')}
+                  >
                     <Phone className="mr-2 h-4 w-4" />
                     Resposta de Voz
                   </Button>
-                  <Button variant="outline" className="justify-start text-left">
+                  <Button 
+                    variant="outline" 
+                    className="justify-start text-left"
+                    onClick={() => handleAddNode('message_input')}
+                  >
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Mensagem de Texto
                   </Button>
-                  <Button variant="outline" className="justify-start text-left">
+                  <Button 
+                    variant="outline" 
+                    className="justify-start text-left"
+                    onClick={() => handleAddNode('chatbot_response')}
+                  >
                     <MessageSquare className="mr-2 h-4 w-4" />
                     Resposta de Chatbot
                   </Button>
-                  <Button variant="outline" className="justify-start text-left">
+                  <Button 
+                    variant="outline" 
+                    className="justify-start text-left"
+                    onClick={() => handleAddNode('condition')}
+                  >
                     <ArrowRightLeft className="mr-2 h-4 w-4" />
                     Condição
                   </Button>
@@ -285,19 +391,78 @@ export default function UnifiedFlowEditorPage() {
               <CardTitle>Editor Visual</CardTitle>
             </CardHeader>
             <CardContent className="p-0 h-full bg-neutral-50">
-              <div className="h-full w-full flex items-center justify-center">
-                <div className="text-center">
-                  <ArrowRightLeft className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Editor em Desenvolvimento</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    O editor visual para fluxos unificados está em desenvolvimento. Em breve você poderá criar fluxos avançados integrando telefonia e chatbot.
-                  </p>
-                  <Button variant="outline">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Adicionar componente
-                  </Button>
+              {showAddNodeForm ? (
+                <div className="h-full w-full flex items-center justify-center">
+                  <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                    <h3 className="text-xl font-semibold mb-4">Adicionar Componente</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nodeName">Nome do Componente</Label>
+                        <Input
+                          id="nodeName"
+                          placeholder="Ex: Resposta Inicial"
+                          value={nodeName}
+                          onChange={(e) => setNodeName(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="flex justify-between pt-4">
+                        <Button variant="outline" onClick={() => {
+                          setShowAddNodeForm(false);
+                          setNodeName('');
+                          setNodeType('');
+                        }}>
+                          Cancelar
+                        </Button>
+                        
+                        <Button 
+                          onClick={handleSubmitNodeForm}
+                          disabled={addNodeMutation.isPending}
+                        >
+                          {addNodeMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="mr-2 h-4 w-4" />
+                          )}
+                          Adicionar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : nodes.length > 0 ? (
+                <div className="p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {nodes.map((node) => (
+                      <Card key={node.id} className="overflow-hidden">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg">{node.name}</CardTitle>
+                          <CardDescription>Tipo: {node.type}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-xs text-muted-foreground">
+                            Posição: X: {node.position.x}, Y: {node.position.y}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <div className="text-center">
+                    <ArrowRightLeft className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Editor em Desenvolvimento</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md">
+                      Selecione um componente do painel esquerdo para adicionar ao seu fluxo unificado.
+                    </p>
+                    <p className="text-muted-foreground mb-6 max-w-md">
+                      O editor visual avançado está em desenvolvimento e em breve permitirá conectar os componentes.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
