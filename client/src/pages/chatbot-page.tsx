@@ -225,6 +225,7 @@ export default function ChatbotPage() {
 
   const updateChannelMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<z.infer<typeof channelFormSchema>> }) => {
+      console.log("Atualizando canal:", id, "com dados:", data);
       const res = await apiRequest("PUT", `/api/channels/${id}`, data);
       return await res.json() as ChatbotChannel;
     },
@@ -408,13 +409,17 @@ export default function ChatbotPage() {
 
   useEffect(() => {
     if (selectedChannel && isEditChannelDialogOpen) {
+      console.log("Editando canal:", selectedChannel);
+      console.log("Credenciais do canal:", selectedChannel.credentials);
+      
       // Salvar as credenciais em um estado separado para facilitar a edição
       setChannelCredentials(selectedChannel.credentials as Record<string, string> || {});
       
+      // Resetar o formulário com os valores atuais
       channelForm.reset({
         name: selectedChannel.name,
         channelType: selectedChannel.channelType,
-        credentials: selectedChannel.credentials as Record<string, string>,
+        credentials: selectedChannel.credentials as Record<string, string> || {},
         webhookUrl: selectedChannel.webhookUrl || "",
         active: selectedChannel.active === null ? undefined : selectedChannel.active,
       });
@@ -644,6 +649,15 @@ export default function ChatbotPage() {
                                     size="icon"
                                     className="h-8 w-8"
                                     onClick={() => {
+                                      // Limpar o formulário antes de abrir o modal para evitar conflitos
+                                      channelForm.reset({
+                                        name: "",
+                                        channelType: "webchat",
+                                        credentials: {},
+                                        webhookUrl: "",
+                                        active: true
+                                      });
+                                      // Definir o canal selecionado e abrir o modal
                                       setSelectedChannel(channel);
                                       setIsEditChannelDialogOpen(true);
                                     }}
@@ -1730,6 +1744,11 @@ export default function ChatbotPage() {
                   </FormItem>
                 )}
               />
+              
+              {/* Para debug durante a edição */}
+              <div className="text-xs text-neutral-500 p-2 mb-2 bg-neutral-50 rounded">
+                <pre>{JSON.stringify(channelForm.getValues().credentials, null, 2)}</pre>
+              </div>
               
               {/* Campos específicos para cada tipo de canal (igual ao diálogo de criação) */}
               {channelForm.watch("channelType") === "whatsapp" && (
