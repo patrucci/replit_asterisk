@@ -79,7 +79,7 @@ export default function UnifiedFlowEditorPage() {
   
   // Estado para edição de nó
   const [selectedNode, setSelectedNode] = useState<UnifiedNode | null>(null);
-  const [showNodeEditor, setShowNodeEditor] = useState(false);
+  const [isNodeEditorDialogOpen, setIsNodeEditorDialogOpen] = useState(false);
   const [editNodeData, setEditNodeData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -205,7 +205,7 @@ export default function UnifiedFlowEditorPage() {
       });
       setNodes(prev => prev.map(node => node.id === data.id ? data : node));
       setSelectedNode(null);
-      setShowNodeEditor(false);
+      setIsNodeEditorDialogOpen(false);
       setEditNodeData({});
       queryClient.invalidateQueries({ queryKey: ['/api/unified-flows', params?.id, 'nodes'] });
     },
@@ -340,13 +340,13 @@ export default function UnifiedFlowEditorPage() {
       supportedChannels: node.supportedChannels || ['all']
     });
     
-    setShowNodeEditor(true);
+    setIsNodeEditorDialogOpen(true);
   };
 
   // Função para fechar o editor de nó
   const handleCloseNodeEditor = () => {
     setSelectedNode(null);
-    setShowNodeEditor(false);
+    setIsNodeEditorDialogOpen(false);
     setEditNodeData({});
   };
 
