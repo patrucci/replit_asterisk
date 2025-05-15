@@ -65,6 +65,11 @@ export default function UnifiedFlowEditorPage() {
   const [nodeType, setNodeType] = useState<string>('');
   const [nodeName, setNodeName] = useState<string>('');
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  
+  // Estado para edição de nó
+  const [selectedNode, setSelectedNode] = useState<UnifiedNode | null>(null);
+  const [showNodeEditor, setShowNodeEditor] = useState(false);
+  const [editNodeData, setEditNodeData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
 
   // Buscar detalhes do fluxo
@@ -170,6 +175,38 @@ export default function UnifiedFlowEditorPage() {
     }
   });
 
+  // Mutação para atualizar nó existente
+  const updateNodeMutation = useMutation({
+    mutationFn: async (data: { 
+      id: number,
+      name?: string, 
+      data?: any,
+      position?: { x: number, y: number },
+      supportedChannels?: string[]
+    }) => {
+      const response = await apiRequest('PUT', `/api/unified-nodes/${data.id}`, data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Componente atualizado',
+        description: 'O componente foi atualizado com sucesso.',
+      });
+      setNodes(prev => prev.map(node => node.id === data.id ? data : node));
+      setSelectedNode(null);
+      setShowNodeEditor(false);
+      setEditNodeData({});
+      queryClient.invalidateQueries({ queryKey: ['/api/unified-flows', params?.id, 'nodes'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao atualizar componente',
+        description: error.message || 'Ocorreu um erro ao atualizar o componente.',
+        variant: 'destructive',
+      });
+    }
+  });
+
   // Canais disponíveis para seleção
   const availableChannels = [
     { id: 'all', name: 'Todos os canais' },
@@ -220,6 +257,44 @@ export default function UnifiedFlowEditorPage() {
     }
   };
 
+  // Função para abrir o editor de nó
+  const handleEditNode = (node: UnifiedNode) => {
+    setSelectedNode(node);
+    setEditNodeData({
+      name: node.name,
+      data: { ...node.data },
+      supportedChannels: node.supportedChannels || ['all']
+    });
+    setShowNodeEditor(true);
+  };
+
+  // Função para fechar o editor de nó
+  const handleCloseNodeEditor = () => {
+    setSelectedNode(null);
+    setShowNodeEditor(false);
+    setEditNodeData({});
+  };
+
+  // Função para salvar as alterações de um nó
+  const handleSaveNodeEdits = () => {
+    if (!selectedNode) return;
+    if (!editNodeData.name || !editNodeData.name.trim()) {
+      toast({
+        title: 'Nome obrigatório',
+        description: 'Informe um nome para o componente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    updateNodeMutation.mutate({
+      id: selectedNode.id,
+      name: editNodeData.name,
+      data: editNodeData.data,
+      supportedChannels: editNodeData.supportedChannels
+    });
+  };
+
   // Função para enviar o formulário de adição de nó
   const handleSubmitNodeForm = () => {
     if (!nodeName.trim()) {
@@ -238,16 +313,17 @@ export default function UnifiedFlowEditorPage() {
     let nodeType2send = '';
     
     switch (nodeType) {
+      // Nós comuns a todos os canais
       case 'call_input':
-        nodeData = { prompt: 'Chamada recebida' };
+        nodeData = { prompt: 'Chamada recebida', timeout: 30 };
         nodeType2send = 'input';
         break;
       case 'voice_response':
-        nodeData = { message: 'Olá, como posso ajudar?' };
+        nodeData = { message: 'Olá, como posso ajudar?', voice: 'female1' };
         nodeType2send = 'message';
         break;
       case 'message_input':
-        nodeData = { prompt: 'Nova mensagem recebida' };
+        nodeData = { prompt: 'Nova mensagem recebida', timeout: 30 };
         nodeType2send = 'input';
         break;
       case 'chatbot_response':
@@ -255,12 +331,89 @@ export default function UnifiedFlowEditorPage() {
         nodeType2send = 'message';
         break;
       case 'condition':
-        nodeData = { condition: 'true', description: 'Verificar condição' };
+        nodeData = { condition: 'context.lastInput == "sim"', description: 'Verificar se a entrada foi "sim"' };
         nodeType2send = 'condition';
         break;
+        
+      // Nós específicos para chatbot
+      case 'CHATBOT_BASIC_MESSAGE':
+        nodeData = { message: 'Digite a mensagem aqui' };
+        nodeType2send = 'message';
+        break;
+      case 'CHATBOT_COLLECT_USER_INPUT':
+        nodeData = { prompt: 'O que você gostaria de saber?', timeout: 30 };
+        nodeType2send = 'input';
+        break;
+      case 'CHATBOT_CONDITIONAL':
+        nodeData = { condition: 'context.lastMessage == "sim"', description: 'Verifica se a última mensagem é "sim"' };
+        nodeType2send = 'condition';
+        break;
+      case 'CHATBOT_API_REQUEST':
+        nodeData = { url: 'https://api.example.com/data', method: 'GET', headers: {} };
+        nodeType2send = 'api_request';
+        break;
+      case 'CHATBOT_MENU_OPTIONS':
+        nodeData = { 
+          prompt: 'Escolha uma opção:', 
+          options: [
+            { value: '1', label: 'Opção 1' },
+            { value: '2', label: 'Opção 2' }
+          ] 
+        };
+        nodeType2send = 'menu';
+        break;
+        
+      // Nós específicos para Asterisk
+      case 'ASTERISK_PLAY_TTS':
+        nodeData = { text: 'Texto a ser convertido em fala', voice: 'female1' };
+        nodeType2send = 'play_tts';
+        break;
+      case 'ASTERISK_GET_INPUT':
+        nodeData = { prompt: 'Digite um número de 1 a 5', timeout: 10, maxDigits: 1 };
+        nodeType2send = 'get_input';
+        break;
+      case 'ASTERISK_TRANSFER':
+        nodeData = { destination: 'extension', number: '1000' };
+        nodeType2send = 'transfer';
+        break;
+      case 'ASTERISK_CONDITIONAL':
+        nodeData = { condition: 'input == 1', description: 'Verifica se a entrada é igual a 1' };
+        nodeType2send = 'condition';
+        break;
+      case 'ASTERISK_PLAY_AUDIO':
+        nodeData = { audioFile: 'welcome.wav' };
+        nodeType2send = 'play_audio';
+        break;
+      case 'ASTERISK_QUEUE':
+        nodeData = { queueName: 'support', timeout: 300 };
+        nodeType2send = 'queue';
+        break;
+      case 'ASTERISK_VOICEMAIL':
+        nodeData = { extension: '1000' };
+        nodeType2send = 'voicemail';
+        break;
+      case 'ASTERISK_HANGUP':
+        nodeData = { reason: 'normal', message: 'Obrigado pela sua ligação' };
+        nodeType2send = 'hangup';
+        break;
+        
+      // Nós de integração
+      case 'API_INTEGRATION':
+        nodeData = { url: '', method: 'GET', headers: {}, body: {} };
+        nodeType2send = 'api_integration';
+        break;
+      case 'DATABASE_QUERY':
+        nodeData = { query: '', params: [] };
+        nodeType2send = 'db_query';
+        break;
+      case 'AI_INTEGRATION':
+        nodeData = { prompt: '', model: 'gpt-4o', maxTokens: 1000 };
+        nodeType2send = 'ai_integration';
+        break;
+        
       default:
         nodeData = {};
-        nodeType2send = 'message';
+        nodeType2send = nodeType;
     }
 
     // Calcula uma posição aleatória no canvas
@@ -653,7 +806,188 @@ export default function UnifiedFlowEditorPage() {
               <CardTitle>Editor Visual</CardTitle>
             </CardHeader>
             <CardContent className="p-0 h-full bg-neutral-50">
-              {showAddNodeForm ? (
+              {showNodeEditor && selectedNode ? (
+                <div className="h-full w-full flex items-center justify-center">
+                  <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                    <h3 className="text-xl font-semibold mb-4">Configurar Componente</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="editNodeName">Nome do Componente</Label>
+                        <Input
+                          id="editNodeName"
+                          value={editNodeData.name || ''}
+                          onChange={(e) => setEditNodeData({...editNodeData, name: e.target.value})}
+                        />
+                      </div>
+                      
+                      {/* Campos específicos para cada tipo de nó */}
+                      {selectedNode.nodeType === 'message' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="messageText">Mensagem</Label>
+                          <Input
+                            id="messageText"
+                            value={editNodeData.data?.message || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, message: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+
+                      {selectedNode.nodeType === 'input' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="promptText">Solicitação</Label>
+                          <Input
+                            id="promptText"
+                            value={editNodeData.data?.prompt || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, prompt: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="timeoutValue" className="mt-2">Timeout (segundos)</Label>
+                          <Input
+                            id="timeoutValue"
+                            type="number"
+                            value={editNodeData.data?.timeout || 30}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, timeout: parseInt(e.target.value)}
+                            })}
+                          />
+                        </div>
+                      )}
+
+                      {selectedNode.nodeType === 'condition' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="conditionExpr">Expressão da Condição</Label>
+                          <Input
+                            id="conditionExpr"
+                            value={editNodeData.data?.condition || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, condition: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="conditionDescription" className="mt-2">Descrição</Label>
+                          <Input
+                            id="conditionDescription"
+                            value={editNodeData.data?.description || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, description: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+
+                      {selectedNode.nodeType === 'api_request' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="apiUrl">URL da API</Label>
+                          <Input
+                            id="apiUrl"
+                            value={editNodeData.data?.url || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, url: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="apiMethod" className="mt-2">Método</Label>
+                          <select
+                            id="apiMethod"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.method || 'GET'}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, method: e.target.value}
+                            })}
+                          >
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Canais suportados para qualquer tipo de nó */}
+                      <div className="space-y-2">
+                        <Label>Canais Suportados</Label>
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          {availableChannels.map(channel => (
+                            <div 
+                              key={channel.id}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox 
+                                id={`edit-channel-${channel.id}`}
+                                checked={(editNodeData.supportedChannels || []).includes(channel.id)}
+                                onCheckedChange={() => {
+                                  const channels = [...(editNodeData.supportedChannels || [])];
+                                  
+                                  if (channel.id === 'all') {
+                                    // Se 'all' está sendo selecionado, limpa os outros
+                                    if (!channels.includes('all')) {
+                                      setEditNodeData({...editNodeData, supportedChannels: ['all']});
+                                    }
+                                  } else {
+                                    // Se qualquer outro canal está sendo selecionado
+                                    if (channels.includes(channel.id)) {
+                                      // Removendo o canal
+                                      const newChannels = channels.filter(c => c !== channel.id);
+                                      if (newChannels.length === 0) {
+                                        setEditNodeData({...editNodeData, supportedChannels: ['all']});
+                                      } else {
+                                        setEditNodeData({...editNodeData, supportedChannels: newChannels});
+                                      }
+                                    } else {
+                                      // Adicionando o canal
+                                      const newChannels = channels.filter(c => c !== 'all').concat(channel.id);
+                                      setEditNodeData({...editNodeData, supportedChannels: newChannels});
+                                    }
+                                  }
+                                }}
+                                disabled={
+                                  channel.id !== 'all' && 
+                                  (editNodeData.supportedChannels || []).includes('all')
+                                }
+                              />
+                              <Label 
+                                htmlFor={`edit-channel-${channel.id}`}
+                                className="text-xs cursor-pointer"
+                              >
+                                {channel.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between pt-4">
+                        <Button variant="outline" onClick={handleCloseNodeEditor}>
+                          Cancelar
+                        </Button>
+                        
+                        <Button 
+                          onClick={handleSaveNodeEdits}
+                          disabled={updateNodeMutation.isPending}
+                        >
+                          {updateNodeMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="mr-2 h-4 w-4" viewBox="0 0 16 16">
+                              <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                            </svg>
+                          )}
+                          Salvar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : showAddNodeForm ? (
                 <div className="h-full w-full flex items-center justify-center">
                   <div className="bg-white p-6 rounded-lg shadow-lg w-96">
                     <h3 className="text-xl font-semibold mb-4">Adicionar Componente</h3>
@@ -731,7 +1065,7 @@ export default function UnifiedFlowEditorPage() {
                           <CardTitle className="text-lg">{node.name}</CardTitle>
                           <CardDescription>Tipo: {node.nodeType}</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pb-2">
                           <div className="text-xs text-muted-foreground">
                             Posição: X: {node.position.x}, Y: {node.position.y}
                           </div>
@@ -740,7 +1074,27 @@ export default function UnifiedFlowEditorPage() {
                               Canais: {node.supportedChannels.join(', ')}
                             </div>
                           )}
+                          {node.data && (
+                            <div className="mt-2 p-2 bg-muted/30 rounded-sm text-xs">
+                              {Object.entries(node.data).map(([key, value]) => (
+                                <div key={key} className="flex justify-between mb-1">
+                                  <span className="font-medium">{key}:</span>
+                                  <span>{value as string}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </CardContent>
+                        <CardFooter className="pt-2 pb-2 bg-muted/30 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs h-7"
+                            onClick={() => handleEditNode(node)}
+                          >
+                            Configurar
+                          </Button>
+                        </CardFooter>
                       </Card>
                     ))}
                   </div>
