@@ -6,6 +6,7 @@ import { setupAsteriskRoutes } from "./asterisk-routes";
 import { setupQueueRoutes } from "./queue-routes";
 import { setupChatbotRoutes } from "./chatbot-routes";
 import { setupApiRoutes } from "./api-routes";
+import { setupUnifiedFlowRoutes } from "./unified-flow-routes";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
