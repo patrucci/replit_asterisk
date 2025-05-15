@@ -847,7 +847,10 @@ export default function UnifiedFlowEditorPage() {
             </div>
             
             {/* Campos específicos por tipo de nó */}
-            {selectedNode?.nodeType === 'message' && (
+            {/* Nós de mensagem */}
+            {(selectedNode?.nodeType === 'message' || 
+              selectedNode?.nodeType === 'chatbot_response' || 
+              selectedNode?.nodeType === 'voice_response') && (
               <div className="space-y-2">
                 <Label htmlFor="messageText">Mensagem</Label>
                 <Textarea
@@ -859,10 +862,33 @@ export default function UnifiedFlowEditorPage() {
                   })}
                   rows={4}
                 />
+                {selectedNode?.nodeType === 'voice_response' && (
+                  <div className="mt-2">
+                    <Label htmlFor="voiceType">Tipo de Voz</Label>
+                    <select
+                      id="voiceType"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      value={editNodeData.data?.voice || 'female1'}
+                      onChange={(e) => setEditNodeData({
+                        ...editNodeData, 
+                        data: {...editNodeData.data, voice: e.target.value}
+                      })}
+                    >
+                      <option value="female1">Feminina 1</option>
+                      <option value="female2">Feminina 2</option>
+                      <option value="male1">Masculina 1</option>
+                      <option value="male2">Masculina 2</option>
+                    </select>
+                  </div>
+                )}
               </div>
             )}
             
-            {selectedNode?.nodeType === 'input' && (
+            {/* Nós de entrada/input */}
+            {(selectedNode?.nodeType === 'input' || 
+              selectedNode?.nodeType === 'call_input' || 
+              selectedNode?.nodeType === 'message_input' || 
+              selectedNode?.nodeType === 'get_input') && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="promptText">Texto da Pergunta</Label>
@@ -889,10 +915,27 @@ export default function UnifiedFlowEditorPage() {
                     })}
                   />
                 </div>
+                
+                {/* Campos específicos para entrada de telefonia */}
+                {(selectedNode?.nodeType === 'get_input') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="maxDigits">Número Máximo de Dígitos</Label>
+                    <Input
+                      id="maxDigits"
+                      type="number"
+                      value={editNodeData.data?.maxDigits || 1}
+                      onChange={(e) => setEditNodeData({
+                        ...editNodeData, 
+                        data: {...editNodeData.data, maxDigits: parseInt(e.target.value)}
+                      })}
+                    />
+                  </div>
+                )}
               </div>
             )}
             
-            {selectedNode?.nodeType === 'condition' && (
+            {/* Nós de condição */}
+            {(selectedNode?.nodeType === 'condition') && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="conditionExpr">Expressão da Condição</Label>
@@ -920,7 +963,9 @@ export default function UnifiedFlowEditorPage() {
               </div>
             )}
             
-            {(selectedNode?.nodeType === 'api_request' || selectedNode?.nodeType === 'api_integration') && (
+            {/* Nós de API */}
+            {(selectedNode?.nodeType === 'api_request' || 
+              selectedNode?.nodeType === 'api_integration') && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="apiUrl">URL da API</Label>
@@ -938,7 +983,7 @@ export default function UnifiedFlowEditorPage() {
                   <Label htmlFor="apiMethod">Método</Label>
                   <select
                     id="apiMethod"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                     value={editNodeData.data?.method || 'GET'}
                     onChange={(e) => setEditNodeData({
                       ...editNodeData, 
@@ -950,6 +995,297 @@ export default function UnifiedFlowEditorPage() {
                     <option value="PUT">PUT</option>
                     <option value="DELETE">DELETE</option>
                   </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="requestHeaders">Headers (JSON)</Label>
+                  <Textarea
+                    id="requestHeaders"
+                    value={typeof editNodeData.data?.headers === 'object' 
+                      ? JSON.stringify(editNodeData.data.headers, null, 2) 
+                      : '{}'}
+                    onChange={(e) => {
+                      try {
+                        const headers = JSON.parse(e.target.value);
+                        setEditNodeData({
+                          ...editNodeData, 
+                          data: {...editNodeData.data, headers}
+                        });
+                      } catch (error) {
+                        // Ignora erro de parsing
+                      }
+                    }}
+                    rows={3}
+                    placeholder='{"Content-Type": "application/json"}'
+                  />
+                </div>
+                
+                {editNodeData.data?.method === 'POST' || editNodeData.data?.method === 'PUT' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="requestBody">Body (JSON)</Label>
+                    <Textarea
+                      id="requestBody"
+                      value={typeof editNodeData.data?.body === 'object' 
+                        ? JSON.stringify(editNodeData.data.body, null, 2) 
+                        : '{}'}
+                      onChange={(e) => {
+                        try {
+                          const body = JSON.parse(e.target.value);
+                          setEditNodeData({
+                            ...editNodeData, 
+                            data: {...editNodeData.data, body}
+                          });
+                        } catch (error) {
+                          // Ignora erro de parsing
+                        }
+                      }}
+                      rows={3}
+                      placeholder='{"key": "value"}'
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )}
+            
+            {/* Nós de menu */}
+            {selectedNode?.nodeType === 'menu' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="menuPrompt">Texto do Menu</Label>
+                  <Textarea
+                    id="menuPrompt"
+                    value={editNodeData.data?.prompt || ''}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, prompt: e.target.value}
+                    })}
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Opções</Label>
+                  {(editNodeData.data?.options || []).map((option: any, index: number) => (
+                    <div key={index} className="flex items-center space-x-2 mt-2">
+                      <Input
+                        placeholder="Valor"
+                        className="flex-shrink-0 w-24"
+                        value={option.value || ''}
+                        onChange={(e) => {
+                          const newOptions = [...(editNodeData.data?.options || [])];
+                          newOptions[index] = {...newOptions[index], value: e.target.value};
+                          setEditNodeData({
+                            ...editNodeData,
+                            data: {...editNodeData.data, options: newOptions}
+                          });
+                        }}
+                      />
+                      <Input
+                        placeholder="Rótulo"
+                        className="flex-grow"
+                        value={option.label || ''}
+                        onChange={(e) => {
+                          const newOptions = [...(editNodeData.data?.options || [])];
+                          newOptions[index] = {...newOptions[index], label: e.target.value};
+                          setEditNodeData({
+                            ...editNodeData,
+                            data: {...editNodeData.data, options: newOptions}
+                          });
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          const newOptions = [...(editNodeData.data?.options || [])];
+                          newOptions.splice(index, 1);
+                          setEditNodeData({
+                            ...editNodeData,
+                            data: {...editNodeData.data, options: newOptions}
+                          });
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => {
+                      const newOptions = [...(editNodeData.data?.options || []), {value: '', label: ''}];
+                      setEditNodeData({
+                        ...editNodeData,
+                        data: {...editNodeData.data, options: newOptions}
+                      });
+                    }}
+                  >
+                    Adicionar Opção
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {/* Nós de Asterisk específicos */}
+            {selectedNode?.nodeType === 'play_tts' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ttsText">Texto para Fala</Label>
+                  <Textarea
+                    id="ttsText"
+                    value={editNodeData.data?.text || ''}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, text: e.target.value}
+                    })}
+                    rows={4}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="ttsVoice">Voz</Label>
+                  <select
+                    id="ttsVoice"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    value={editNodeData.data?.voice || 'female1'}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, voice: e.target.value}
+                    })}
+                  >
+                    <option value="female1">Feminina 1</option>
+                    <option value="female2">Feminina 2</option>
+                    <option value="male1">Masculina 1</option>
+                    <option value="male2">Masculina 2</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            
+            {selectedNode?.nodeType === 'play_audio' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="audioFile">Arquivo de Áudio</Label>
+                  <Input
+                    id="audioFile"
+                    value={editNodeData.data?.audioFile || ''}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, audioFile: e.target.value}
+                    })}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {selectedNode?.nodeType === 'transfer' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="destination">Tipo de Destino</Label>
+                  <select
+                    id="destination"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    value={editNodeData.data?.destination || 'extension'}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, destination: e.target.value}
+                    })}
+                  >
+                    <option value="extension">Ramal</option>
+                    <option value="number">Número Externo</option>
+                    <option value="queue">Fila</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="transferNumber">Número/Ramal/Fila</Label>
+                  <Input
+                    id="transferNumber"
+                    value={editNodeData.data?.number || ''}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, number: e.target.value}
+                    })}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {selectedNode?.nodeType === 'queue' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="queueName">Nome da Fila</Label>
+                  <Input
+                    id="queueName"
+                    value={editNodeData.data?.queueName || ''}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, queueName: e.target.value}
+                    })}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="queueTimeout">Timeout (segundos)</Label>
+                  <Input
+                    id="queueTimeout"
+                    type="number"
+                    value={editNodeData.data?.timeout || 300}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, timeout: parseInt(e.target.value)}
+                    })}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {selectedNode?.nodeType === 'voicemail' && (
+              <div className="space-y-2">
+                <Label htmlFor="extension">Ramal</Label>
+                <Input
+                  id="extension"
+                  value={editNodeData.data?.extension || ''}
+                  onChange={(e) => setEditNodeData({
+                    ...editNodeData, 
+                    data: {...editNodeData.data, extension: e.target.value}
+                  })}
+                />
+              </div>
+            )}
+            
+            {selectedNode?.nodeType === 'hangup' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hangupReason">Motivo</Label>
+                  <select
+                    id="hangupReason"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                    value={editNodeData.data?.reason || 'normal'}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, reason: e.target.value}
+                    })}
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="busy">Ocupado</option>
+                    <option value="congestion">Congestionamento</option>
+                    <option value="no_answer">Sem Resposta</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="hangupMessage">Mensagem Final</Label>
+                  <Input
+                    id="hangupMessage"
+                    value={editNodeData.data?.message || ''}
+                    onChange={(e) => setEditNodeData({
+                      ...editNodeData, 
+                      data: {...editNodeData.data, message: e.target.value}
+                    })}
+                  />
                 </div>
               </div>
             )}
