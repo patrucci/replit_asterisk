@@ -872,13 +872,198 @@ export default function UnifiedFlowEditorPage() {
             </CardHeader>
             <CardContent className="p-0 h-full bg-neutral-50">
               {showNodeEditor && selectedNode ? (
-                <div className="h-full w-full flex items-center justify-center">
-                  <NodeEditor 
-                    node={selectedNode}
-                    onClose={handleCloseNodeEditor}
-                    onSave={handleSaveNodeEdits}
-                    isLoading={updateNodeMutation.isPending}
-                  />
+                <div className="h-full w-full flex items-center justify-center overflow-auto p-4">
+                  <Card className="w-full max-w-md">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-xl">Configurar Componente</CardTitle>
+                      <Button variant="ghost" size="icon" onClick={handleCloseNodeEditor}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="h-4 w-4" viewBox="0 0 16 16">
+                          <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                      </Button>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4 pt-0">
+                      {/* Nome do componente */}
+                      <div className="space-y-2">
+                        <Label htmlFor="editNodeName">Nome do Componente</Label>
+                        <Input
+                          id="editNodeName"
+                          value={editNodeData.name || ''}
+                          onChange={(e) => setEditNodeData({...editNodeData, name: e.target.value})}
+                        />
+                      </div>
+                      
+                      {/* Campo de mensagem para nós do tipo "message" */}
+                      {selectedNode.nodeType === 'message' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="messageText">Mensagem</Label>
+                          <Input
+                            id="messageText"
+                            value={editNodeData.data?.message || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, message: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Campo de entrada para nós do tipo "input" */}
+                      {selectedNode.nodeType === 'input' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="promptText">Texto da Pergunta</Label>
+                          <Input
+                            id="promptText"
+                            value={editNodeData.data?.prompt || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, prompt: e.target.value}
+                            })}
+                          />
+                          
+                          <Label htmlFor="timeoutValue" className="mt-2">Timeout (segundos)</Label>
+                          <Input
+                            id="timeoutValue"
+                            type="number"
+                            value={editNodeData.data?.timeout || 30}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, timeout: parseInt(e.target.value)}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Condição */}
+                      {selectedNode.nodeType === 'condition' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="conditionExpr">Expressão da Condição</Label>
+                          <Input
+                            id="conditionExpr"
+                            value={editNodeData.data?.condition || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, condition: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="conditionDescription" className="mt-2">Descrição</Label>
+                          <Input
+                            id="conditionDescription"
+                            value={editNodeData.data?.description || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, description: e.target.value}
+                            })}
+                          />
+                        </div>
+                      )}
+                      
+                      {/* API Request */}
+                      {(selectedNode.nodeType === 'api_request' || selectedNode.nodeType === 'api_integration') && (
+                        <div className="space-y-2">
+                          <Label htmlFor="apiUrl">URL da API</Label>
+                          <Input
+                            id="apiUrl"
+                            value={editNodeData.data?.url || ''}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, url: e.target.value}
+                            })}
+                          />
+                          <Label htmlFor="apiMethod" className="mt-2">Método</Label>
+                          <select
+                            id="apiMethod"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={editNodeData.data?.method || 'GET'}
+                            onChange={(e) => setEditNodeData({
+                              ...editNodeData, 
+                              data: {...editNodeData.data, method: e.target.value}
+                            })}
+                          >
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                          </select>
+                        </div>
+                      )}
+                      
+                      {/* Canais suportados para qualquer tipo de nó */}
+                      <div className="space-y-2 pt-2 border-t mt-4">
+                        <Label>Canais Suportados</Label>
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          {availableChannels.map(channel => (
+                            <div 
+                              key={channel.id}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox 
+                                id={`edit-channel-${channel.id}`}
+                                checked={(editNodeData.supportedChannels || []).includes(channel.id)}
+                                onCheckedChange={() => {
+                                  const channels = [...(editNodeData.supportedChannels || [])];
+                                  
+                                  if (channel.id === 'all') {
+                                    // Se 'all' está sendo selecionado, limpa os outros
+                                    if (!channels.includes('all')) {
+                                      setEditNodeData({...editNodeData, supportedChannels: ['all']});
+                                    }
+                                  } else {
+                                    // Se qualquer outro canal está sendo selecionado
+                                    if (channels.includes(channel.id)) {
+                                      // Removendo o canal
+                                      const newChannels = channels.filter(c => c !== channel.id);
+                                      if (newChannels.length === 0) {
+                                        setEditNodeData({...editNodeData, supportedChannels: ['all']});
+                                      } else {
+                                        setEditNodeData({...editNodeData, supportedChannels: newChannels});
+                                      }
+                                    } else {
+                                      // Adicionando o canal
+                                      const newChannels = channels.filter(c => c !== 'all').concat(channel.id);
+                                      setEditNodeData({...editNodeData, supportedChannels: newChannels});
+                                    }
+                                  }
+                                }}
+                                disabled={
+                                  channel.id !== 'all' && 
+                                  (editNodeData.supportedChannels || []).includes('all')
+                                }
+                              />
+                              <Label 
+                                htmlFor={`edit-channel-${channel.id}`}
+                                className="text-xs cursor-pointer"
+                              >
+                                {channel.name}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                    
+                    <CardFooter className="flex justify-between">
+                      <Button variant="outline" onClick={handleCloseNodeEditor}>
+                        Cancelar
+                      </Button>
+                      <Button 
+                        onClick={() => handleSaveNodeEdits({
+                          id: selectedNode.id,
+                          name: editNodeData.name,
+                          data: editNodeData.data,
+                          supportedChannels: editNodeData.supportedChannels
+                        })}
+                        disabled={updateNodeMutation.isPending}
+                      >
+                        {updateNodeMutation.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          "Salvar"
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
                 </div>
               ) : showAddNodeForm ? (
                 <div className="h-full w-full flex items-center justify-center">
