@@ -16,6 +16,15 @@ const pageTitle: Record<string, string> = {
   "/schedule": "Agenda",
   "/payments": "Pagamentos",
   "/messages": "Mensagens",
+  "/chatbot": "Chatbot",
+  "/unified-flow": "Fluxo Unificado",
+  "/softphone": "Softphone",
+  "/asterisk-config": "Configuração Asterisk",
+  "/asterisk-ai": "Asterisk IA", 
+  "/queues": "Filas",
+  "/queue-dashboard": "Dashboard de Filas",
+  "/queue-realtime": "Monitor em Tempo Real",
+  "/queue-config": "Configuração de Filas",
   "/settings": "Configurações",
 };
 

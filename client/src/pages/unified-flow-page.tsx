@@ -15,7 +15,18 @@ import {
   ArrowRightLeft,
   Loader2
 } from 'lucide-react';
-import { UnifiedFlow } from '@shared/unified-flow-schema';
+// Utilizamos uma interface local para evitar erros de importação
+interface UnifiedFlow {
+  id: number;
+  organizationId: number;
+  name: string;
+  description?: string;
+  flowType?: string;
+  active?: boolean;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export default function UnifiedFlowPage() {
   const { toast } = useToast();
