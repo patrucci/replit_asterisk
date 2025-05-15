@@ -58,7 +58,7 @@ const chatbotFormSchema = z.object({
 // Schema de validação para criação/edição de canais
 const channelFormSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
-  channelType: z.enum(["whatsapp", "telegram", "webchat", "sms", "api"]),
+  channelType: z.enum(["whatsapp", "telegram", "webchat", "sms", "api", "facebook", "instagram", "linkedin"]),
   credentials: z.record(z.string()),
   webhookUrl: z.string().optional(),
   active: z.boolean().default(true),
@@ -1072,6 +1072,9 @@ export default function ChatbotPage() {
                         <SelectItem value="whatsapp">WhatsApp</SelectItem>
                         <SelectItem value="telegram">Telegram</SelectItem>
                         <SelectItem value="webchat">Widget para site</SelectItem>
+                        <SelectItem value="facebook">Facebook</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                        <SelectItem value="linkedin">LinkedIn</SelectItem>
                         <SelectItem value="sms">SMS</SelectItem>
                         <SelectItem value="api">API</SelectItem>
                       </SelectContent>
@@ -1085,6 +1088,203 @@ export default function ChatbotPage() {
               />
               
               {/* Campos específicos para cada tipo de canal */}
+              {channelForm.watch("channelType") === "facebook" && (
+                <>
+                  <FormItem>
+                    <FormLabel>ID da Página</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="ID da página do Facebook"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            pageId: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.pageId || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      ID da página do Facebook que será conectada ao chatbot
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Token de Acesso da Página</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Token de acesso da página"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            pageAccessToken: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.pageAccessToken || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token de acesso da página do Facebook para integração com a API do Messenger
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Segredo do Aplicativo</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Segredo do aplicativo"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            appSecret: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.appSecret || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Segredo do aplicativo Facebook usado para verificar as mensagens recebidas
+                    </FormDescription>
+                  </FormItem>
+                </>
+              )}
+              
+              {channelForm.watch("channelType") === "instagram" && (
+                <>
+                  <FormItem>
+                    <FormLabel>ID da Conta do Instagram</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="ID da conta do Instagram"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            instagramAccountId: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.instagramAccountId || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      ID da conta comercial do Instagram conectada à página do Facebook
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Token de Acesso</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Token de acesso"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            accessToken: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.accessToken || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token de acesso para a API do Instagram
+                    </FormDescription>
+                  </FormItem>
+                </>
+              )}
+              
+              {channelForm.watch("channelType") === "linkedin" && (
+                <>
+                  <FormItem>
+                    <FormLabel>ID da Página LinkedIn</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="ID da página LinkedIn"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            linkedinPageId: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.linkedinPageId || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      ID da página LinkedIn que será conectada ao chatbot
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Client ID</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Client ID do aplicativo LinkedIn"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            clientId: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.clientId || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Client ID do aplicativo LinkedIn para autenticação OAuth
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Client Secret</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Client Secret do aplicativo LinkedIn"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            clientSecret: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.clientSecret || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Client Secret do aplicativo LinkedIn para autenticação OAuth
+                    </FormDescription>
+                  </FormItem>
+                  
+                  <FormItem>
+                    <FormLabel>Token de Acesso</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Token de acesso"
+                        type="password"
+                        onChange={(e) => {
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
+                            accessToken: e.target.value
+                          });
+                        }}
+                        value={channelForm.getValues("credentials")?.accessToken || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Token de acesso para a API do LinkedIn
+                    </FormDescription>
+                  </FormItem>
+                </>
+              )}
+              
               {channelForm.watch("channelType") === "whatsapp" && (
                 <>
                   <FormItem>

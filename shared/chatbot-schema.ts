@@ -4,7 +4,7 @@ import { z } from "zod";
 import { organizations } from "./schema";
 
 // Enums para os tipos de canais e nós do fluxo
-export const channelTypeEnum = pgEnum('channel_type', ['whatsapp', 'telegram', 'webchat', 'sms', 'api']);
+export const channelTypeEnum = pgEnum('channel_type', ['whatsapp', 'telegram', 'webchat', 'sms', 'api', 'facebook', 'instagram', 'linkedin']);
 export const nodeTypeEnum = pgEnum('node_type', [
   'message',     // Mensagem simples
   'input',       // Captura de entrada do usuário
