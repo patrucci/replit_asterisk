@@ -1804,14 +1804,13 @@ export default function ChatbotPage() {
                       <Input 
                         placeholder="ID da página do Facebook"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             pageId: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.pageId || ""}
+                        value={channelForm.getValues("credentials")?.pageId || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1826,14 +1825,13 @@ export default function ChatbotPage() {
                         placeholder="Token de acesso da página"
                         type="password"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             pageAccessToken: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.pageAccessToken || ""}
+                        value={channelForm.getValues("credentials")?.pageAccessToken || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1848,14 +1846,13 @@ export default function ChatbotPage() {
                         placeholder="Segredo do aplicativo"
                         type="password"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             appSecret: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.appSecret || ""}
+                        value={channelForm.getValues("credentials")?.appSecret || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1890,14 +1887,13 @@ export default function ChatbotPage() {
                       <Input 
                         placeholder="ID da conta do Instagram"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             instagramAccountId: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.instagramAccountId || ""}
+                        value={channelForm.getValues("credentials")?.instagramAccountId || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1912,14 +1908,13 @@ export default function ChatbotPage() {
                         placeholder="Token de acesso"
                         type="password"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             accessToken: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.accessToken || ""}
+                        value={channelForm.getValues("credentials")?.accessToken || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1954,14 +1949,13 @@ export default function ChatbotPage() {
                       <Input 
                         placeholder="ID da página LinkedIn"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             linkedinPageId: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.linkedinPageId || ""}
+                        value={channelForm.getValues("credentials")?.linkedinPageId || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1975,14 +1969,13 @@ export default function ChatbotPage() {
                       <Input 
                         placeholder="Client ID do aplicativo LinkedIn"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             clientId: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.clientId || ""}
+                        value={channelForm.getValues("credentials")?.clientId || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -1997,14 +1990,13 @@ export default function ChatbotPage() {
                         placeholder="Client Secret do aplicativo LinkedIn"
                         type="password"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             clientSecret: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.clientSecret || ""}
+                        value={channelForm.getValues("credentials")?.clientSecret || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -2019,14 +2011,13 @@ export default function ChatbotPage() {
                         placeholder="Token de acesso"
                         type="password"
                         onChange={(e) => {
-                          const updatedCredentials = {
-                            ...channelCredentials,
+                          const credentials = channelForm.getValues("credentials") || {};
+                          channelForm.setValue("credentials", {
+                            ...credentials,
                             accessToken: e.target.value
-                          };
-                          setChannelCredentials(updatedCredentials);
-                          channelForm.setValue("credentials", updatedCredentials);
+                          });
                         }}
-                        value={channelCredentials.accessToken || ""}
+                        value={channelForm.getValues("credentials")?.accessToken || ""}
                       />
                     </FormControl>
                     <FormDescription>
